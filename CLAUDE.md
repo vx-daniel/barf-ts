@@ -5,12 +5,17 @@ TypeScript/Bun rewrite of the bash `barf` CLI — an issue/work management syste
 ## Commands
 
 ```bash
-bun install                                          # install deps
-bun test                                             # run tests
-bun build --compile --outfile=dist/barf src/index.ts # compile binary
-./dist/barf <command>                                # run compiled binary
-bun run check                                        # lint check (oxlint)
-bun run lint:fix                                     # auto-fix lint violations
+bun install              # install deps
+bun run dev <cmd>        # run from source (no compile step)
+bun test                 # run tests
+bun run build            # compile binary to dist/barf
+bun run format           # format with oxfmt (in-place)
+bun run format:check     # check formatting (CI)
+bun run lint             # lint with oxlint
+bun run lint:fix         # auto-fix lint violations
+bun run check            # format:check + lint (CI gate)
+bun run docs             # generate API docs to docs/api/
+./dist/barf <command>    # run compiled binary
 ```
 
 ## Architecture
@@ -18,28 +23,39 @@ bun run lint:fix                                     # auto-fix lint violations
 ```
 src/
   index.ts              # CLI entry (commander)
-  cli/commands/         # init.ts  plan.ts  build.ts  status.ts  doctor.ts
+  cli/commands/         # init.ts  plan.ts  build.ts  status.ts
   core/
-    issue.ts            # Frontmatter parser, typed state machine, .working lock
+    issue.ts            # Frontmatter parser, typed state machine
     context.ts          # Async stream parser, SIGTERM on context overflow
-    claude.ts           # Claude subprocess wrapper, prompt injection
-    config.ts           # .barfrc bash-compat parser
-    batch.ts            # Batch orchestration loop
-  hooks/
-    install.ts          # Writes .claude/settings.json hook entries
-  types/index.ts        # Issue, Config, IssueState, ClaudeEvent
+    claude.ts           # Claude subprocess wrapper
+    config.ts           # .barfrc KEY=VALUE parser
+    batch.ts            # Orchestration loop (plan/build/split)
+    issue-providers/
+      base.ts           # Abstract IssueProvider base class
+      local.ts          # File-system provider (POSIX mkdir locking)
+      github.ts         # GitHub Issues provider (gh CLI)
+      factory.ts        # Provider factory
+  types/index.ts        # Zod schemas + inferred types (Issue, Config, ClaudeEvent)
+  types/assets.d.ts     # .md text import declaration for Bun
+  utils/
+    execFileNoThrow.ts  # Shell-injection-safe subprocess helper
+    logger.ts           # Pino logger (JSON stderr; LOG_PRETTY=1 for dev)
+  prompts/
+    PROMPT_plan.md      # Planning prompt template
+    PROMPT_build.md     # Build prompt template
+    PROMPT_split.md     # Split prompt template
 tests/
-  unit/                 # issue.test.ts  context.test.ts  batch.test.ts
-  integration/          # workflow.test.ts
+  unit/                 # 64 tests across all modules
 ```
 
 ## Key Conventions
 
 - **State machine**: `IssueState` transitions are validated by `VALID_TRANSITIONS` in `core/issue.ts` — never mutate state directly, use `transition()`
 - **No globals**: ISSUE_ID/MODE/ISSUE_STATE were the bash bugs; pass state as function args
-- **Issue files**: Frontmatter markdown (`.barf/issues/`), not SQLite — git-trackable
+- **Issue files**: Frontmatter markdown in `issuesDir`, not SQLite — git-trackable
 - **Context monitoring**: Async iterator on Claude's stdout stream, not PostToolUse hooks
-- **Hooks**: `barf-hook-precommit` (PreToolUse/Bash) and `barf-hook-stop` (Stop) installed by `barf init`
+- **Path aliases**: Use `@/` for `src/` imports, `@tests/` for `tests/` imports — no relative `../` paths
+- **Error handling**: All I/O returns `Result`/`ResultAsync` from neverthrow — no thrown errors except at CLI boundary (`src/index.ts`)
 
 ## Planning Requirements
 
@@ -60,8 +76,5 @@ tests/
 
 ## Reference
 - **`docs/plans/00-PLAN.md`** — Full architecture spec with phases, state machine types, stream parser design
-- **`docs/plans`** — Plans
-- **`/home/daniel/Projects/barf-loop`** — Original v1 bash implementation (the first version)
-- **`/home/daniel/Projects/barf-loop/barf:620-750`** — Bash `run_loop` to port (study the state bugs, don't repeat them)
-- **`/home/daniel/Projects/barf-loop/lib/context.sh`** — Stream parser to replace with `context.ts` async iterator
-- **`/home/daniel/Projects/barf-loop/lib/issue.sh`** — Frontmatter/state machine to replace with `issue.ts`
+- **`docs/plans/`** — All implementation plans (numbered `NN-name.md`)
+- **`/home/daniel/Projects/barf-loop`** — Original v1 bash implementation (historical reference)
