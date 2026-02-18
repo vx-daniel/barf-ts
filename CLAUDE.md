@@ -9,6 +9,8 @@ bun install                                          # install deps
 bun test                                             # run tests
 bun build --compile --outfile=dist/barf src/index.ts # compile binary
 ./dist/barf <command>                                # run compiled binary
+bun run check                                        # lint check (oxlint)
+bun run lint:fix                                     # auto-fix lint violations
 ```
 
 ## Architecture

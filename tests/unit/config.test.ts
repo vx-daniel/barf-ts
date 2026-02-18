@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { parseBarfrc, loadConfig } from '../../src/core/config';
+import { parseBarfrc } from '../../src/core/config';
 
 describe('parseBarfrc', () => {
   it('returns defaults when content is empty', () => {
