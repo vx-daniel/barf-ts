@@ -1,4 +1,4 @@
-import { ResultAsync } from 'neverthrow';
+import { ResultAsync, errAsync } from 'neverthrow';
 import type { Issue, IssueState } from '../../types/index.js';
 import { validateTransition, parseAcceptanceCriteria } from '../issue.js';
 
@@ -26,9 +26,7 @@ export abstract class IssueProvider {
   transition(id: string, to: IssueState): ResultAsync<Issue, Error> {
     return this.fetchIssue(id).andThen((issue) => {
       const validation = validateTransition(issue.state, to);
-      if (validation.isErr()) {
-        return ResultAsync.fromSafePromise(Promise.reject(validation.error)) as ResultAsync<Issue, Error>;
-      }
+      if (validation.isErr()) return errAsync(validation.error);
       return this.writeIssue(id, { state: to });
     });
   }
