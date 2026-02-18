@@ -2,6 +2,7 @@
   "entryPoints": ["src"],
   "entryPointStrategy": "expand",
   "out": "docs/api",
+  "tsconfig": "./tsconfig.typedoc.json",
   "excludePrivate": true,
   "excludeInternal": true,
   "readme": "none",
