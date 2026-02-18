@@ -3,6 +3,8 @@ import { loadConfig } from './core/config.js';
 import { createIssueProvider } from './core/issue-providers/factory.js';
 import { initCommand } from './cli/commands/init.js';
 import { statusCommand } from './cli/commands/status.js';
+import { planCommand } from './cli/commands/plan.js';
+import { buildCommand } from './cli/commands/build.js';
 
 function getProvider(config: ReturnType<typeof loadConfig>) {
   return createIssueProvider(config).match(
@@ -35,6 +37,32 @@ program
     const config = loadConfig();
     const issues = getProvider(config);
     await statusCommand(issues, { format: opts.format });
+  });
+
+program
+  .command('plan')
+  .description('Plan an issue with Claude AI (NEW → PLANNED)')
+  .option('--issue <id>', 'Issue ID to plan (auto-selects NEW issue if omitted)')
+  .action(async (opts) => {
+    const config = loadConfig();
+    const provider = getProvider(config);
+    await planCommand(provider, { issue: opts.issue }, config);
+  });
+
+program
+  .command('build')
+  .description('Build an issue with Claude AI (PLANNED → COMPLETED)')
+  .option('--issue <id>', 'Issue ID to build (auto-selects if omitted)')
+  .option('--batch <n>', 'Number of issues to build concurrently', parseInt)
+  .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
+  .action(async (opts) => {
+    const config = loadConfig();
+    const provider = getProvider(config);
+    await buildCommand(
+      provider,
+      { issue: opts.issue, batch: opts.batch ?? 1, max: opts.max ?? 0 },
+      config,
+    );
   });
 
 program.parseAsync(process.argv);
