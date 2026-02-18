@@ -5,5 +5,11 @@
   },
   "[typescript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
-  }
+  },
+  "oxc.enable.oxlint": true,
+  "oxc.path.oxfmt": "node_modules",
+  "oxc.path.oxlint": "node_modules",
+  "oxc.path.node": "",
+  "oxc.requireConfig": true,
+  "editor.defaultFormatter": "oxc.oxc-vscode",
 }

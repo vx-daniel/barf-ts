@@ -1,7 +1,7 @@
 import { ResultAsync } from 'neverthrow'
-import { IssueProvider } from './base.js'
-import type { Issue, IssueState } from '../../types/index.js'
-import { parseIssue, serializeIssue } from '../issue.js'
+import { IssueProvider } from '@/core/issue-providers/base'
+import type { Issue, IssueState } from '@/types/index'
+import { parseIssue, serializeIssue } from '@/core/issue'
 import {
   readFileSync,
   writeFileSync,
@@ -59,17 +59,25 @@ export class LocalIssueProvider extends IssueProvider {
         const seen = new Set<string>()
         const issues: Issue[] = []
         for (const entry of entries) {
-          if (entry.startsWith('.')) {continue}
-          if (!entry.endsWith('.md') && !entry.endsWith('.md.working')) {continue}
+          if (entry.startsWith('.')) {
+            continue
+          }
+          if (!entry.endsWith('.md') && !entry.endsWith('.md.working')) {
+            continue
+          }
           const id = entry.replace(/\.md(\.working)?$/, '')
-          if (seen.has(id)) {continue}
+          if (seen.has(id)) {
+            continue
+          }
           seen.add(id)
           try {
             const content = readFileSync(this.issuePath(id), 'utf8')
             const result = parseIssue(content)
             if (result.isOk()) {
               const issue = result.value
-              if (!filter?.state || issue.state === filter.state) {issues.push(issue)}
+              if (!filter?.state || issue.state === filter.state) {
+                issues.push(issue)
+              }
             }
           } catch {
             /* skip unreadable files */
@@ -138,7 +146,9 @@ export class LocalIssueProvider extends IssueProvider {
         mkdirSync(this.lockDir(id), { recursive: false }) // atomic: throws if already locked
         const issuePath = join(this.issuesDir, `${id}.md`)
         const workingPath = join(this.issuesDir, `${id}.md.working`)
-        if (existsSync(issuePath)) {renameSync(issuePath, workingPath)}
+        if (existsSync(issuePath)) {
+          renameSync(issuePath, workingPath)
+        }
       }),
       e => (e instanceof Error ? e : new Error(String(e)))
     )
@@ -149,7 +159,9 @@ export class LocalIssueProvider extends IssueProvider {
       Promise.resolve().then(() => {
         const workingPath = join(this.issuesDir, `${id}.md.working`)
         const issuePath = join(this.issuesDir, `${id}.md`)
-        if (existsSync(workingPath)) {renameSync(workingPath, issuePath)}
+        if (existsSync(workingPath)) {
+          renameSync(workingPath, issuePath)
+        }
         rmSync(this.lockDir(id), { recursive: true, force: true })
       }),
       e => (e instanceof Error ? e : new Error(String(e)))

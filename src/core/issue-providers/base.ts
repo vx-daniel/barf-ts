@@ -1,6 +1,6 @@
 import { ResultAsync, errAsync } from 'neverthrow'
-import type { Issue, IssueState } from '../../types/index.js'
-import { validateTransition, parseAcceptanceCriteria } from '../issue.js'
+import type { Issue, IssueState } from '@/types/index'
+import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 
 /** Selects which priority queue to use when auto-picking an issue. */
 export type AutoSelectMode = 'plan' | 'build'
@@ -80,7 +80,9 @@ export abstract class IssueProvider {
   transition(id: string, to: IssueState): ResultAsync<Issue, Error> {
     return this.fetchIssue(id).andThen(issue => {
       const validation = validateTransition(issue.state, to)
-      if (validation.isErr()) {return errAsync(validation.error)}
+      if (validation.isErr()) {
+        return errAsync(validation.error)
+      }
       return this.writeIssue(id, { state: to })
     })
   }
@@ -103,7 +105,9 @@ export abstract class IssueProvider {
         const available = entries.filter(({ locked }) => !locked).map(({ issue }) => issue)
         for (const priority of AUTO_SELECT_PRIORITY[mode]) {
           const match = available.find(i => i.state === priority)
-          if (match) {return match}
+          if (match) {
+            return match
+          }
         }
         return null
       })

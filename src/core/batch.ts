@@ -1,17 +1,17 @@
 import { ResultAsync } from 'neverthrow'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import type { Config } from '../types/index.js'
-import type { IssueProvider } from './issue-providers/base.js'
-import { runClaudeIteration } from './claude.js'
-import { injectPromptVars } from './context.js'
-import { execFileNoThrow } from '../utils/execFileNoThrow.js'
-import { createLogger } from '../utils/logger.js'
+import type { Config } from '@/types/index'
+import type { IssueProvider } from '@/core/issue-providers/base'
+import { runClaudeIteration } from '@/core/claude'
+import { injectPromptVars } from '@/core/context'
+import { execFileNoThrow } from '@/utils/execFileNoThrow'
+import { createLogger } from '@/utils/logger'
 
 // Prompt templates — embedded into binary at compile time via Bun import attributes
-import planPromptTemplate from '../prompts/PROMPT_plan.md' with { type: 'text' }
-import buildPromptTemplate from '../prompts/PROMPT_build.md' with { type: 'text' }
-import splitPromptTemplate from '../prompts/PROMPT_split.md' with { type: 'text' }
+import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
+import buildPromptTemplate from '@/prompts/PROMPT_build.md' with { type: 'text' }
+import splitPromptTemplate from '@/prompts/PROMPT_split.md' with { type: 'text' }
 
 const logger = createLogger('batch')
 
@@ -58,9 +58,13 @@ export function handleOverflow(splitCount: number, config: Config): OverflowDeci
  */
 function resolveIssueFile(issueId: string, config: Config): string {
   const working = join(config.issuesDir, `${issueId}.md.working`)
-  if (existsSync(working)) {return working}
+  if (existsSync(working)) {
+    return working
+  }
   const md = join(config.issuesDir, `${issueId}.md`)
-  if (existsSync(md)) {return md}
+  if (existsSync(md)) {
+    return md
+  }
   return issueId // GitHub fallback — prompt receives issue ID only
 }
 
@@ -107,7 +111,9 @@ export function runLoop(
   return ResultAsync.fromPromise(
     (async (): Promise<void> => {
       const lockResult = await provider.lockIssue(issueId)
-      if (lockResult.isErr()) {throw lockResult.error}
+      if (lockResult.isErr()) {
+        throw lockResult.error
+      }
 
       try {
         let model = mode === 'plan' ? config.planModel : config.buildModel
@@ -121,15 +127,21 @@ export function runLoop(
             const s = issueResult.value.state
             if (s === 'NEW' || s === 'PLANNED') {
               const t = await provider.transition(issueId, 'IN_PROGRESS')
-              if (t.isErr()) {logger.warn({ error: t.error.message }, 'transition failed')}
+              if (t.isErr()) {
+                logger.warn({ error: t.error.message }, 'transition failed')
+              }
             }
           }
         }
 
         iterationLoop: while (shouldContinue(iteration, config)) {
           const issueResult = await provider.fetchIssue(issueId)
-          if (issueResult.isErr()) {throw issueResult.error}
-          if (issueResult.value.state === 'COMPLETED') {break}
+          if (issueResult.isErr()) {
+            throw issueResult.error
+          }
+          if (issueResult.value.state === 'COMPLETED') {
+            break
+          }
 
           const currentMode: LoopMode = splitPending ? 'split' : mode
           logger.info({ issueId, mode: currentMode, model, iteration }, 'starting iteration')
@@ -144,7 +156,9 @@ export function runLoop(
           })
 
           const iterResult = await runClaudeIteration(prompt, model, config)
-          if (iterResult.isErr()) {throw iterResult.error}
+          if (iterResult.isErr()) {
+            throw iterResult.error
+          }
           const { outcome, tokens } = iterResult.value
 
           logger.info({ issueId, iteration, outcome, tokens }, 'iteration complete')
@@ -168,7 +182,9 @@ export function runLoop(
           // ── Handle iteration outcome ───────────────────────────────────────
           if (outcome === 'overflow') {
             const fresh = await provider.fetchIssue(issueId)
-            if (fresh.isErr()) {throw fresh.error}
+            if (fresh.isErr()) {
+              throw fresh.error
+            }
             const decision = handleOverflow(fresh.value.split_count, config)
             if (decision.action === 'split') {
               splitPending = true

@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { ResultAsync, errAsync } from 'neverthrow'
-import { IssueProvider } from './base.js'
-import type { Issue, IssueState } from '../../types/index.js'
-import { execFileNoThrow, type ExecResult } from '../../utils/execFileNoThrow.js'
+import { IssueProvider } from '@/core/issue-providers/base'
+import type { Issue, IssueState } from '@/types/index'
+import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 
 type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>
 
@@ -73,7 +73,9 @@ export class GitHubIssueProvider extends IssueProvider {
   }
 
   private ensureAuth(): ResultAsync<string, Error> {
-    if (this.token) {return ResultAsync.fromSafePromise(Promise.resolve(this.token))}
+    if (this.token) {
+      return ResultAsync.fromSafePromise(Promise.resolve(this.token))
+    }
     return ResultAsync.fromPromise(this.spawnFile('gh', ['auth', 'token']), e =>
       e instanceof Error ? e : new Error(String(e))
     ).andThen(result => {
@@ -90,7 +92,9 @@ export class GitHubIssueProvider extends IssueProvider {
       ResultAsync.fromPromise(this.spawnFile('gh', ['api', ...args]), e =>
         e instanceof Error ? e : new Error(String(e))
       ).andThen(result => {
-        if (result.status !== 0) {return errAsync(new Error(`gh api error: ${result.stderr}`))}
+        if (result.status !== 0) {
+          return errAsync(new Error(`gh api error: ${result.stderr}`))
+        }
         const parsed = schema.safeParse(JSON.parse(result.stdout))
         return parsed.success
           ? ResultAsync.fromSafePromise(Promise.resolve(parsed.data))
@@ -129,8 +133,9 @@ export class GitHubIssueProvider extends IssueProvider {
         ]),
         e => (e instanceof Error ? e : new Error(String(e)))
       ).andThen(result => {
-        if (result.status !== 0)
-          {return errAsync(new Error(`Failed to create issue: ${result.stderr}`))}
+        if (result.status !== 0) {
+          return errAsync(new Error(`Failed to create issue: ${result.stderr}`))
+        }
         const parsed = GHIssueSchema.safeParse(JSON.parse(result.stdout))
         return parsed.success
           ? ResultAsync.fromSafePromise(Promise.resolve(ghToIssue(parsed.data)))
@@ -170,9 +175,15 @@ export class GitHubIssueProvider extends IssueProvider {
         )
       }
       const patchArgs = ['--method', 'PATCH', `/repos/${this.repo}/issues/${id}`]
-      if (fields.title) {patchArgs.push('-f', `title=${fields.title}`)}
-      if (fields.body !== undefined) {patchArgs.push('-f', `body=${fields.body}`)}
-      if (fields.state === 'COMPLETED') {patchArgs.push('-f', 'state=closed')}
+      if (fields.title) {
+        patchArgs.push('-f', `title=${fields.title}`)
+      }
+      if (fields.body !== undefined) {
+        patchArgs.push('-f', `body=${fields.body}`)
+      }
+      if (fields.state === 'COMPLETED') {
+        patchArgs.push('-f', 'state=closed')
+      }
       return ResultAsync.combine(steps).andThen(() =>
         this.ghApi(GHIssueSchema, patchArgs).map(ghToIssue)
       )

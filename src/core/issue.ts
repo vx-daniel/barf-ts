@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { Result, ok, err } from 'neverthrow'
-import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from '../types/index.js'
+import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from '@/types/index'
 
 /**
  * The allowed state transitions in the barf issue lifecycle.
@@ -38,17 +38,25 @@ export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
  */
 export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
-  if (!match) {return err(new Error('Invalid issue format: missing frontmatter delimiters'))}
+  if (!match) {
+    return err(new Error('Invalid issue format: missing frontmatter delimiters'))
+  }
   const [, fm, body] = match
   const fields: Record<string, unknown> = {}
   for (const line of fm.split('\n')) {
     const eq = line.indexOf('=')
-    if (eq === -1) {continue}
+    if (eq === -1) {
+      continue
+    }
     const key = line.slice(0, eq)
     const val = line.slice(eq + 1)
-    if (key === 'children') {fields[key] = val ? val.split(',').filter(Boolean) : []}
-    else if (key === 'split_count') {fields[key] = parseInt(val, 10)}
-    else {fields[key] = val}
+    if (key === 'children') {
+      fields[key] = val ? val.split(',').filter(Boolean) : []
+    } else if (key === 'split_count') {
+      fields[key] = parseInt(val, 10)
+    } else {
+      fields[key] = val
+    }
   }
   fields['body'] = body.trim()
   const parsed = IssueSchema.safeParse(fields)
@@ -97,6 +105,8 @@ export function validateTransition(
  */
 export function parseAcceptanceCriteria(content: string): boolean {
   const section = content.match(/## Acceptance Criteria\n([\s\S]*?)(?=\n## |\s*$)/)
-  if (!section) {return true}
+  if (!section) {
+    return true
+  }
   return !section[1].includes('- [ ]')
 }
