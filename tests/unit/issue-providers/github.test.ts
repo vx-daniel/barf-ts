@@ -1,9 +1,7 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
-
-const mockExec = mock(() => Promise.resolve({ stdout: '', stderr: '', status: 0 }));
-mock.module('../../../src/utils/execFileNoThrow', () => ({ execFileNoThrow: mockExec }));
-
 import { GitHubIssueProvider } from '../../../src/core/issue-providers/github';
+
+const mockSpawn = mock(() => Promise.resolve({ stdout: '', stderr: '', status: 0 }));
 
 const GH_ISSUE_NEW = {
   number: 1, title: 'First Issue',
@@ -17,12 +15,12 @@ describe('GitHubIssueProvider', () => {
   let provider: GitHubIssueProvider;
 
   beforeEach(() => {
-    mockExec.mockClear();
-    provider = new GitHubIssueProvider('owner/repo');
+    mockSpawn.mockClear();
+    provider = new GitHubIssueProvider('owner/repo', mockSpawn);
   });
 
   it('maps barf:new label to NEW state', async () => {
-    mockExec
+    mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 }) // auth
       .mockResolvedValueOnce({ stdout: JSON.stringify(GH_ISSUE_NEW), stderr: '', status: 0 });
     const result = await provider.fetchIssue('1');
@@ -32,7 +30,7 @@ describe('GitHubIssueProvider', () => {
 
   it('maps closed issue to COMPLETED', async () => {
     const closed = { ...GH_ISSUE_NEW, state: 'closed', labels: [{ name: 'barf:completed' }] };
-    mockExec
+    mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
       .mockResolvedValueOnce({ stdout: JSON.stringify(closed), stderr: '', status: 0 });
     const result = await provider.fetchIssue('1');
@@ -40,7 +38,7 @@ describe('GitHubIssueProvider', () => {
   });
 
   it('returns Err when gh auth fails', async () => {
-    mockExec.mockResolvedValueOnce({ stdout: '', stderr: 'not logged in', status: 1 });
+    mockSpawn.mockResolvedValueOnce({ stdout: '', stderr: 'not logged in', status: 1 });
     const result = await provider.fetchIssue('1');
     expect(result.isErr()).toBe(true);
     expect(result._unsafeUnwrapErr().message).toContain('gh auth');
@@ -48,7 +46,7 @@ describe('GitHubIssueProvider', () => {
 
   it('isLocked detects barf:locked label', async () => {
     const locked = { ...GH_ISSUE_NEW, labels: [{ name: 'barf:locked' }] };
-    mockExec
+    mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
       .mockResolvedValueOnce({ stdout: JSON.stringify(locked), stderr: '', status: 0 });
     expect((await provider.isLocked('1'))._unsafeUnwrap()).toBe(true);

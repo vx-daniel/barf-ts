@@ -1,8 +1,10 @@
 import { z } from 'zod';
-import { ResultAsync, ok, err, errAsync } from 'neverthrow';
+import { ResultAsync, errAsync } from 'neverthrow';
 import { IssueProvider } from './base.js';
 import type { Issue, IssueState } from '../../types/index.js';
-import { execFileNoThrow } from '../../utils/execFileNoThrow.js';
+import { execFileNoThrow, type ExecResult } from '../../utils/execFileNoThrow.js';
+
+type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>;
 
 const STATE_TO_LABEL: Record<IssueState, string> = {
   NEW: 'barf:new', PLANNED: 'barf:planned', IN_PROGRESS: 'barf:in-progress',
@@ -36,13 +38,17 @@ function ghToIssue(gh: GHIssue): Issue {
 
 export class GitHubIssueProvider extends IssueProvider {
   private token: string = '';
+  private spawnFile: SpawnFn;
 
-  constructor(private repo: string) { super(); }
+  constructor(private repo: string, spawnFn?: SpawnFn) {
+    super();
+    this.spawnFile = spawnFn ?? execFileNoThrow;
+  }
 
   private ensureAuth(): ResultAsync<string, Error> {
     if (this.token) return ResultAsync.fromSafePromise(Promise.resolve(this.token));
     return ResultAsync.fromPromise(
-      execFileNoThrow('gh', ['auth', 'token']),
+      this.spawnFile('gh', ['auth', 'token']),
       (e) => e instanceof Error ? e : new Error(String(e))
     ).andThen((result) => {
       if (result.status !== 0) {
@@ -56,7 +62,7 @@ export class GitHubIssueProvider extends IssueProvider {
   private ghApi<T>(schema: z.ZodType<T>, args: string[]): ResultAsync<T, Error> {
     return this.ensureAuth().andThen(() =>
       ResultAsync.fromPromise(
-        execFileNoThrow('gh', ['api', ...args]),
+        this.spawnFile('gh', ['api', ...args]),
         (e) => e instanceof Error ? e : new Error(String(e))
       ).andThen((result) => {
         if (result.status !== 0) return errAsync(new Error(`gh api error: ${result.stderr}`));
@@ -81,7 +87,7 @@ export class GitHubIssueProvider extends IssueProvider {
   createIssue(input: { title: string; body?: string; parent?: string }): ResultAsync<Issue, Error> {
     return this.ensureAuth().andThen(() =>
       ResultAsync.fromPromise(
-        execFileNoThrow('gh', [
+        this.spawnFile('gh', [
           'api', '--method', 'POST', `/repos/${this.repo}/issues`,
           '-f', `title=${input.title}`,
           '-f', `body=${input.body ?? ''}`,
@@ -106,12 +112,12 @@ export class GitHubIssueProvider extends IssueProvider {
         const newLabel = STATE_TO_LABEL[fields.state];
         steps.push(
           ResultAsync.fromPromise(
-            execFileNoThrow('gh', ['api', '--method', 'DELETE',
+            this.spawnFile('gh', ['api', '--method', 'DELETE',
               `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent(oldLabel)}`]),
             (e) => e instanceof Error ? e : new Error(String(e))
           ).andThen(() =>
             ResultAsync.fromPromise(
-              execFileNoThrow('gh', ['api', '--method', 'POST',
+              this.spawnFile('gh', ['api', '--method', 'POST',
                 `/repos/${this.repo}/issues/${id}/labels`,
                 '-f', `labels[]=${newLabel}`]),
               (e) => e instanceof Error ? e : new Error(String(e))
@@ -138,7 +144,7 @@ export class GitHubIssueProvider extends IssueProvider {
   lockIssue(id: string): ResultAsync<void, Error> {
     return this.ensureAuth().andThen(() =>
       ResultAsync.fromPromise(
-        execFileNoThrow('gh', ['api', '--method', 'POST',
+        this.spawnFile('gh', ['api', '--method', 'POST',
           `/repos/${this.repo}/issues/${id}/labels`,
           '-f', 'labels[]=barf:locked']),
         (e) => e instanceof Error ? e : new Error(String(e))
@@ -149,7 +155,7 @@ export class GitHubIssueProvider extends IssueProvider {
   unlockIssue(id: string): ResultAsync<void, Error> {
     return this.ensureAuth().andThen(() =>
       ResultAsync.fromPromise(
-        execFileNoThrow('gh', ['api', '--method', 'DELETE',
+        this.spawnFile('gh', ['api', '--method', 'DELETE',
           `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent('barf:locked')}`]),
         (e) => e instanceof Error ? e : new Error(String(e))
       ).map(() => undefined)
