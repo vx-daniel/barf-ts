@@ -1,0 +1,1 @@
+Add the ability to launch audit agent which will create up to 500 sub agents to ensure the actual tasks are complete, they follow the coding standards, have non biased testing, documentation and linting. At the end of a code audit the audit agent will report their findings and create additional issues that MUST bes resolved before the next build session.

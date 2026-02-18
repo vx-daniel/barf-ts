@@ -1,0 +1,1 @@
+Create the ability to use Claude as the orchstrator model provider but create a plugin to allow ChatGPT, Gemini or a LocalLLM model to do the work
