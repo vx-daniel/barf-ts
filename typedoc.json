@@ -11,5 +11,14 @@
     "invalidLink": true
   },
   "ignoredHighlightLanguages": ["mermaid"],
-  "plugin": ["@boneskull/typedoc-plugin-mermaid", "typedoc-plugin-zod", "typedoc-plugin-mdn-links"],
+  "plugin": [
+    "@boneskull/typedoc-plugin-mermaid",
+    "typedoc-theme-hierarchy",
+    "typedoc-plugin-zod",
+    "typedoc-plugin-mdn-links",
+    "typedoc-plugin-markdown",
+    "typedoc-plugin-coverage"
+  ],
+  "theme": "hierarchy",
+  "resolveUtilityTypes": true
 }

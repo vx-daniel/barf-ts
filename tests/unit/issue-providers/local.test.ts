@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { LocalIssueProvider } from '@/core/issue-providers/local'
+import { LocalIssueProvider } from '@/core/issue/providers/local'
 
 const ISSUE_001 = `---
 id=001

@@ -7,6 +7,8 @@ import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 /**
  * Injectable subprocess function matching the {@link execFileNoThrow} signature.
  * Pass a mock in tests to avoid real `gh` CLI network calls without process-global patching.
+ *
+ * @category Issue Providers
  */
 export type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>
 
@@ -63,6 +65,8 @@ function ghToIssue(gh: GHIssue): Issue {
  *
  * **Testing:** Pass a `spawnFn` to inject a mock `gh` implementation in tests.
  * This avoids real network calls without `mock.module` process-global patching.
+ *
+ * @category Issue Providers
  */
 export class GitHubIssueProvider extends IssueProvider {
   private token: string = ''

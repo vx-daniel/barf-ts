@@ -38,6 +38,8 @@ function buildLogger(name: string): pino.Logger {
  *
  * Writes JSON to both stderr and `barf.log` in the project directory.
  * Overrides: LOG_LEVEL, LOG_PRETTY=1, BARF_LOG_FILE=/abs/path
+ *
+ * @category Utilities
  */
 export function createLogger(name: string): pino.Logger {
   let instance: pino.Logger | null = null
@@ -50,5 +52,9 @@ export function createLogger(name: string): pino.Logger {
   })
 }
 
-/** Root logger for src/index.ts and top-level use. */
+/**
+ * Root logger for src/index.ts and top-level use.
+ *
+ * @category Utilities
+ */
 export const logger = createLogger('barf')

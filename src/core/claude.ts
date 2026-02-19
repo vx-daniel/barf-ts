@@ -14,6 +14,8 @@ const logger = createLogger('claude')
  * - `overflow`: context threshold exceeded (see {@link ContextOverflowError})
  * - `error`: Claude exited with a non-success status or timed out
  * - `rate_limited`: API rate limit hit; see `rateLimitResetsAt` for retry time
+ *
+ * @category Claude Agent
  */
 export type IterationOutcome = 'success' | 'overflow' | 'error' | 'rate_limited'
 
@@ -21,6 +23,8 @@ export type IterationOutcome = 'success' | 'overflow' | 'error' | 'rate_limited'
  * Result of a single Claude agent iteration, returned by {@link runClaudeIteration}.
  *
  * `tokens` is always populated. `rateLimitResetsAt` is set only when `outcome === 'rate_limited'`.
+ *
+ * @category Claude Agent
  */
 export interface IterationResult {
   outcome: IterationOutcome
@@ -38,6 +42,8 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
 /**
  * Computes the token threshold at which barf interrupts a Claude session.
  * threshold = floor(contextUsagePercent% × modelLimit)
+ *
+ * @category Claude Agent
  */
 export function getThreshold(model: string, contextUsagePercent: number): number {
   const limit = MODEL_CONTEXT_LIMITS[model] ?? 200_000
@@ -56,6 +62,7 @@ export function getThreshold(model: string, contextUsagePercent: number): number
  * @param config - Loaded barf configuration (timeout, context percent, stream log dir).
  * @param issueId - When set, stream output is appended to `config.streamLogDir/<issueId>.jsonl`.
  * @returns `ok(IterationResult)` on success, `err(Error)` if the process spawn fails unexpectedly.
+ * @category Claude Agent
  */
 export function runClaudeIteration(
   prompt: string,

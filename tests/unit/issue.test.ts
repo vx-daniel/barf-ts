@@ -5,7 +5,7 @@ import {
   validateTransition,
   parseAcceptanceCriteria
 } from '@/core/issue'
-import { InvalidTransitionError } from '@/types/index'
+import { InvalidTransitionError } from '@/types'
 
 const SAMPLE = `---
 id=001

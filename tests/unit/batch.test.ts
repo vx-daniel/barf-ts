@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test'
 import { shouldContinue, handleOverflow } from '@/core/batch'
-import { type Config, ConfigSchema } from '@/types/index'
+import { type Config, ConfigSchema } from '@/types'
 
 const defaultConfig = (): Config => ConfigSchema.parse({})
 

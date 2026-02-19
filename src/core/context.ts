@@ -2,6 +2,12 @@ import { z } from 'zod'
 import { createWriteStream, type WriteStream } from 'fs'
 import type { ClaudeEvent } from '@/types'
 
+/**
+ * Thrown by {@link parseClaudeStream} when cumulative token usage reaches the configured
+ * context threshold. Caught and converted to an `'overflow'` outcome by `runClaudeIteration`.
+ *
+ * @category Claude Stream
+ */
 export class ContextOverflowError extends Error {
   constructor(public readonly tokens: number) {
     super(`Context threshold exceeded: ${tokens} tokens`)
@@ -9,6 +15,13 @@ export class ContextOverflowError extends Error {
   }
 }
 
+/**
+ * Thrown by {@link parseClaudeStream} when Claude's API returns a rate-limit event.
+ * Caught and converted to a `'rate_limited'` outcome by `runClaudeIteration`.
+ * `resetsAt` is a Unix timestamp (seconds) if provided by the API.
+ *
+ * @category Claude Stream
+ */
 export class RateLimitError extends Error {
   constructor(public readonly resetsAt?: number) {
     const resetStr = resetsAt ? new Date(resetsAt * 1000).toLocaleTimeString() : 'soon'
@@ -50,6 +63,7 @@ const AssistantContentSchema = z.object({
  * @param streamLogFile - Optional file path; each raw JSONL line is appended for debugging.
  * @returns Async generator yielding {@link ClaudeEvent} objects; throws {@link ContextOverflowError}
  *   on threshold breach or {@link RateLimitError} on API rate limiting.
+ * @category Claude Stream
  */
 export async function* parseClaudeStream(
   proc: { stdout: ReadableStream<Uint8Array>; kill: (signal?: string) => void },
@@ -151,6 +165,7 @@ export async function* parseClaudeStream(
  * @param template - Raw prompt template containing `${BARF_*}` or `$BARF_*` placeholders.
  * @param vars - Substitution values for each supported placeholder.
  * @returns The template string with all recognized placeholders replaced by their string values.
+ * @category Claude Stream
  */
 export function injectPromptVars(
   template: string,

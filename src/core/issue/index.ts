@@ -7,6 +7,8 @@ import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from
  *
  * Used by {@link validateTransition} to reject illegal moves.
  * Terminal states (`SPLIT`, `COMPLETED`) have empty arrays — no further transitions allowed.
+ *
+ * @category Issue Model
  */
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
   NEW: ['PLANNED'],
@@ -35,6 +37,7 @@ export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
  * ```
  *
  * @returns `ok(Issue)` on success, `err(ZodError | Error)` if format is invalid.
+ * @category Issue Model
  */
 export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
@@ -66,6 +69,8 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
 /**
  * Serializes an {@link Issue} to frontmatter markdown.
  * Round-trips cleanly with {@link parseIssue}.
+ *
+ * @category Issue Model
  */
 export function serializeIssue(issue: Issue): string {
   const fm = [
@@ -84,6 +89,7 @@ export function serializeIssue(issue: Issue): string {
  *
  * @returns `ok(undefined)` if the transition is permitted,
  *   `err(InvalidTransitionError)` if it is not.
+ * @category Issue Model
  */
 export function validateTransition(
   from: IssueState,
@@ -102,6 +108,7 @@ export function validateTransition(
  * Returns `true` when none are found, or when the section is absent entirely.
  *
  * @param content - Raw issue body (the markdown text after the frontmatter `---`).
+ * @category Issue Model
  */
 export function parseAcceptanceCriteria(content: string): boolean {
   const section = content.match(/## Acceptance Criteria\n([\s\S]*?)(?=\n## |\s*$)/)

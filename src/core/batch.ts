@@ -15,7 +15,11 @@ import splitPromptTemplate from '@/prompts/PROMPT_split.md' with { type: 'text' 
 
 const logger = createLogger('batch')
 
-/** The mode passed to `runLoop`. `'split'` is used internally after an overflow decision. */
+/**
+ * The mode passed to `runLoop`. `'split'` is used internally after an overflow decision.
+ *
+ * @category Orchestration
+ */
 export type LoopMode = 'plan' | 'build' | 'split'
 
 const PROMPT_TEMPLATES: Record<LoopMode, string> = {
@@ -28,13 +32,19 @@ const PROMPT_TEMPLATES: Record<LoopMode, string> = {
  * The decision taken by `handleOverflow` when Claude's context fills up.
  * - `split`: decompose the issue into sub-issues using `splitModel`
  * - `escalate`: retry with `extendedContextModel` (larger context window)
+ *
+ * @category Orchestration
  */
 export interface OverflowDecision {
   action: 'split' | 'escalate'
   nextModel: string
 }
 
-/** Pure: should the loop run another iteration? */
+/**
+ * Pure: should the loop run another iteration?
+ *
+ * @category Orchestration
+ */
 export function shouldContinue(iteration: number, config: Config): boolean {
   return config.maxIterations === 0 || iteration < config.maxIterations
 }
@@ -43,6 +53,8 @@ export function shouldContinue(iteration: number, config: Config): boolean {
  * Pure: given current split count, decide split vs. escalate.
  * split_count < maxAutoSplits  → split (use splitModel)
  * split_count >= maxAutoSplits → escalate (use extendedContextModel)
+ *
+ * @category Orchestration
  */
 export function handleOverflow(splitCount: number, config: Config): OverflowDecision {
   if (splitCount < config.maxAutoSplits) {
@@ -103,6 +115,7 @@ async function planSplitChildren(
  * @param config - Loaded barf configuration.
  * @param provider - Issue provider used to lock, read, and write the issue.
  * @returns `ok(void)` when the loop exits cleanly, `err(Error)` if locking or a Claude iteration fails.
+ * @category Orchestration
  */
 export function runLoop(
   issueId: string,

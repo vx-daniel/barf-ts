@@ -2,7 +2,11 @@ import { ResultAsync, errAsync } from 'neverthrow'
 import type { Issue, IssueState, LockMode } from '@/types'
 import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 
-/** Selects which priority queue to use when auto-picking an issue. */
+/**
+ * Selects which priority queue to use when auto-picking an issue.
+ *
+ * @category Issue Providers
+ */
 export type AutoSelectMode = 'plan' | 'build'
 
 const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
@@ -18,6 +22,8 @@ const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
  * To add a custom backend: extend this class and implement the eight abstract methods.
  * The `transition`, `autoSelect`, and `checkAcceptanceCriteria` methods are
  * provided and shared by all providers.
+ *
+ * @category Issue Providers
  */
 export abstract class IssueProvider {
   // ── Abstract I/O — implemented per provider ───────────────────────────────
@@ -30,6 +36,7 @@ export abstract class IssueProvider {
    * @example
    * const result = await provider.fetchIssue('001');
    * if (result.isErr()) logger.error({ err: result.error }, 'fetch failed');
+   * @group I/O — Override in Provider
    */
   abstract fetchIssue(id: string): ResultAsync<Issue, Error>
 
@@ -41,6 +48,7 @@ export abstract class IssueProvider {
    * @example
    * const result = await provider.listIssues({ state: 'NEW' });
    * if (result.isOk()) result.value.forEach(i => logger.info({ id: i.id }, 'found'));
+   * @group I/O — Override in Provider
    */
   abstract listIssues(filter?: { state?: IssueState }): ResultAsync<Issue[], Error>
 
@@ -52,6 +60,7 @@ export abstract class IssueProvider {
    * @example
    * const result = await provider.createIssue({ title: 'Fix login bug', body: '...' });
    * if (result.isErr()) logger.error({ err: result.error }, 'create failed');
+   * @group I/O — Override in Provider
    */
   abstract createIssue(input: {
     title: string
@@ -69,6 +78,7 @@ export abstract class IssueProvider {
    * @example
    * const result = await provider.writeIssue('001', { title: 'Updated title' });
    * if (result.isErr()) logger.error({ err: result.error }, 'write failed');
+   * @group I/O — Override in Provider
    */
   abstract writeIssue(id: string, fields: Partial<Omit<Issue, 'id'>>): ResultAsync<Issue, Error>
 
@@ -81,6 +91,7 @@ export abstract class IssueProvider {
    * @example
    * const result = await provider.deleteIssue('001');
    * if (result.isErr()) logger.warn({ err: result.error }, 'delete unsupported, transition instead');
+   * @group I/O — Override in Provider
    */
   abstract deleteIssue(id: string): ResultAsync<void, Error>
 
@@ -96,6 +107,7 @@ export abstract class IssueProvider {
    * @example
    * const result = await provider.lockIssue('001', { mode: 'build' });
    * if (result.isErr()) throw new Error('Already locked by another process');
+   * @group I/O — Override in Provider
    */
   abstract lockIssue(id: string, meta?: { mode?: LockMode }): ResultAsync<void, Error>
 
@@ -106,6 +118,7 @@ export abstract class IssueProvider {
    * @returns `ok(void)` always — implementations must not return `err` for a no-op unlock.
    * @example
    * await provider.unlockIssue('001'); // safe even if not currently locked
+   * @group I/O — Override in Provider
    */
   abstract unlockIssue(id: string): ResultAsync<void, Error>
 
@@ -117,6 +130,7 @@ export abstract class IssueProvider {
    * @example
    * const result = await provider.isLocked('001');
    * if (result.isOk() && result.value) logger.warn({ id: '001' }, 'issue is locked, skipping');
+   * @group I/O — Override in Provider
    */
   abstract isLocked(id: string): ResultAsync<boolean, Error>
 
@@ -132,6 +146,7 @@ export abstract class IssueProvider {
    * @param to - Target state; must be reachable from the current state per `VALID_TRANSITIONS`.
    * @returns `ok(Issue)` with the updated issue, `err(InvalidTransitionError)` if the move is illegal,
    *   or `err(Error)` on I/O failure.
+   * @group Derived
    */
   transition(id: string, to: IssueState): ResultAsync<Issue, Error> {
     return this.fetchIssue(id).andThen(issue => {
@@ -153,6 +168,7 @@ export abstract class IssueProvider {
    * @param mode - Determines which states are considered and their priority order.
    * @returns `ok(Issue)` for the best candidate, `ok(null)` if no eligible unlocked issue exists,
    *   or `err(Error)` on I/O failure.
+   * @group Derived
    */
   autoSelect(mode: AutoSelectMode): ResultAsync<Issue | null, Error> {
     return this.listIssues().andThen(issues => {
@@ -179,6 +195,7 @@ export abstract class IssueProvider {
    * @param id - Issue to inspect.
    * @returns `ok(true)` if all criteria are checked (or the section is absent),
    *   `ok(false)` if any `- [ ]` item remains, or `err(Error)` if the issue cannot be fetched.
+   * @group Derived
    */
   checkAcceptanceCriteria(id: string): ResultAsync<boolean, Error> {
     return this.fetchIssue(id).map(issue => parseAcceptanceCriteria(issue.body))

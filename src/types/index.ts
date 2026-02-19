@@ -12,6 +12,9 @@ import { z } from 'zod'
  * ```
  *
  * Transitions are enforced by `validateTransition` — never mutate state directly.
+ *
+ * @category Issue Model
+ * @group Issue
  */
 export const IssueStateSchema = z.enum([
   'NEW',
@@ -21,7 +24,12 @@ export const IssueStateSchema = z.enum([
   'SPLIT',
   'COMPLETED'
 ])
-/** A barf issue state. Derived from {@link IssueStateSchema}. */
+/**
+ * A barf issue state. Derived from {@link IssueStateSchema}.
+ *
+ * @category Issue Model
+ * @group Issue
+ */
 export type IssueState = z.infer<typeof IssueStateSchema>
 
 /**
@@ -30,6 +38,9 @@ export type IssueState = z.infer<typeof IssueStateSchema>
  * The `body` field contains everything after the closing `---` delimiter.
  * `children` holds IDs of sub-issues created by a split operation.
  * `split_count` tracks how many times this issue has been split (used for overflow decisions).
+ *
+ * @category Issue Model
+ * @group Issue
  */
 export const IssueSchema = z.object({
   id: z.string(),
@@ -40,19 +51,37 @@ export const IssueSchema = z.object({
   split_count: z.number().int().nonnegative(),
   body: z.string()
 })
-/** A validated barf work item. Derived from {@link IssueSchema}. */
+/**
+ * A validated barf work item. Derived from {@link IssueSchema}.
+ *
+ * @category Issue Model
+ * @group Issue
+ */
 export type Issue = z.infer<typeof IssueSchema>
 
 // ── Lock ──────────────────────────────────────────────────────────────────────
 
-/** Runtime mode that acquired the lock. */
+/**
+ * Runtime mode that acquired the lock.
+ *
+ * @category Locking
+ * @group Locking
+ */
 export const LockModeSchema = z.enum(['plan', 'build', 'split'])
-/** A barf lock mode. Derived from {@link LockModeSchema}. */
+/**
+ * A barf lock mode. Derived from {@link LockModeSchema}.
+ *
+ * @category Locking
+ * @group Locking
+ */
 export type LockMode = z.infer<typeof LockModeSchema>
 
 /**
  * Contents of a `.barf/<id>.lock` file. Written atomically at lock acquisition.
  * Used for stale-lock detection (dead PID) and status display.
+ *
+ * @category Locking
+ * @group Locking
  */
 export const LockInfoSchema = z.object({
   pid: z.number().int().positive(),
@@ -60,7 +89,12 @@ export const LockInfoSchema = z.object({
   state: IssueStateSchema,
   mode: LockModeSchema
 })
-/** Parsed lock file contents. Derived from {@link LockInfoSchema}. */
+/**
+ * Parsed lock file contents. Derived from {@link LockInfoSchema}.
+ *
+ * @category Locking
+ * @group Locking
+ */
 export type LockInfo = z.infer<typeof LockInfoSchema>
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -71,6 +105,8 @@ export type LockInfo = z.infer<typeof LockInfoSchema>
  * Loaded from `.barfrc` (KEY=VALUE format) via `loadConfig`. Falls back to
  * these defaults when the file is absent or a key is missing.
  *
+ * @category Configuration
+ * @group Configuration
  */
 export const ConfigSchema = z.object({
   issuesDir: z.string().default('issues'),
@@ -90,7 +126,12 @@ export const ConfigSchema = z.object({
   streamLogDir: z.string().default(''),
   barfDir: z.string().default('.barf')
 })
-/** Validated barf runtime configuration. Derived from {@link ConfigSchema}. */
+/**
+ * Validated barf runtime configuration. Derived from {@link ConfigSchema}.
+ *
+ * @category Configuration
+ * @group Configuration
+ */
 export type Config = z.infer<typeof ConfigSchema>
 
 // ── Claude stream events ──────────────────────────────────────────────────────
@@ -102,17 +143,30 @@ export type Config = z.infer<typeof ConfigSchema>
  * - `tool`: a tool invocation name from an assistant message
  *
  * Emitted by `parseClaudeStream` in `core/context`.
+ *
+ * @category Claude Stream
+ * @group Claude Events
  */
 export const ClaudeEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('usage'), tokens: z.number() }),
   z.object({ type: z.literal('tool'), name: z.string() })
 ])
-/** A parsed Claude stream event. Derived from {@link ClaudeEventSchema}. */
+/**
+ * A parsed Claude stream event. Derived from {@link ClaudeEventSchema}.
+ *
+ * @category Claude Stream
+ * @group Claude Events
+ */
 export type ClaudeEvent = z.infer<typeof ClaudeEventSchema>
 
 // ── Error types ───────────────────────────────────────────────────────────────
 
-/** Thrown by `validateTransition` when a state change is not permitted. */
+/**
+ * Thrown by `validateTransition` when a state change is not permitted.
+ *
+ * @category Issue Model
+ * @group Issue
+ */
 export class InvalidTransitionError extends Error {
   constructor(from: IssueState, to: IssueState) {
     super(`Invalid transition: ${from} → ${to}`)
@@ -120,7 +174,12 @@ export class InvalidTransitionError extends Error {
   }
 }
 
-/** Wraps I/O errors from issue provider operations. */
+/**
+ * Wraps I/O errors from issue provider operations.
+ *
+ * @category Issue Providers
+ * @group Issue
+ */
 export class ProviderError extends Error {
   constructor(
     message: string,

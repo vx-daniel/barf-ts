@@ -10,6 +10,7 @@ import { GitHubIssueProvider } from '@/core/issue/providers/github'
  * @param config - Loaded barf configuration; `issueProvider` and `githubRepo` are read here.
  * @returns `ok(IssueProvider)` on success, `err(Error)` if `issueProvider` is `'github'`
  *   and `githubRepo` is not set.
+ * @category Issue Providers
  */
 export function createIssueProvider(config: Config): Result<IssueProvider, Error> {
   switch (config.issueProvider) {

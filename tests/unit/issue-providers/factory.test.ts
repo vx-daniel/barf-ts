@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test'
-import { createIssueProvider } from '@/core/issue-providers/factory'
-import { LocalIssueProvider } from '@/core/issue-providers/local'
-import { GitHubIssueProvider } from '@/core/issue-providers/github'
+import { createIssueProvider } from '@/core/issue/factory'
+import { LocalIssueProvider } from '@/core/issue/providers/local'
+import { GitHubIssueProvider } from '@/core/issue/providers/github'
 import { ConfigSchema } from '@/types/index'
 
 const defaultConfig = () => ConfigSchema.parse({})

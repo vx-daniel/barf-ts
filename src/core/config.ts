@@ -20,6 +20,7 @@ const RawConfigSchema = ConfigSchema.extend({
  *
  * @param content - Raw `.barfrc` file contents.
  * @returns `ok(Config)` on success, `err(ZodError)` if a required field fails validation.
+ * @category Configuration
  */
 export function parseBarfrc(content: string): Result<Config, z.ZodError> {
   const raw: Record<string, string> = {}
@@ -68,6 +69,7 @@ export function parseBarfrc(content: string): Result<Config, z.ZodError> {
  * Never throws — invalid config is silently replaced with defaults.
  *
  * @param rcPath - Path to the `.barfrc` file. Defaults to `<cwd>/.barfrc`.
+ * @category Configuration
  */
 export function loadConfig(rcPath?: string): Config {
   const filePath = rcPath ? resolve(rcPath) : join(process.cwd(), '.barfrc')

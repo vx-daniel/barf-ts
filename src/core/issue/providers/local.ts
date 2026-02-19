@@ -33,6 +33,8 @@ import { join } from 'path'
  *
  * **Writes:** All writes are atomic — data is written to `<file>.tmp` then `rename`d to
  * the target, preventing partial reads.
+ *
+ * @category Issue Providers
  */
 export class LocalIssueProvider extends IssueProvider {
   constructor(

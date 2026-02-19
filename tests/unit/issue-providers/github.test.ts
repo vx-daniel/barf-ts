@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test'
-import { GitHubIssueProvider } from '@/core/issue-providers/github'
+import { GitHubIssueProvider } from '@/core/issue/providers/github'
 
 const mockSpawn = mock(() => Promise.resolve({ stdout: '', stderr: '', status: 0 }))
 
