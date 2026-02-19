@@ -47,7 +47,8 @@ export function parseBarfrc(content: string): Result<Config, z.ZodError> {
       PUSH_STRATEGY: 'pushStrategy',
       ISSUE_PROVIDER: 'issueProvider',
       GITHUB_REPO: 'githubRepo',
-      STREAM_LOG_DIR: 'streamLogDir'
+      STREAM_LOG_DIR: 'streamLogDir',
+      BARF_DIR: 'barfDir'
     }
     const key = trimmed.slice(0, eq).trim()
     const val = trimmed.slice(eq + 1).trim()

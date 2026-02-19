@@ -1,11 +1,14 @@
-import type { Config } from '@/types'
+import type { Config, IssueState } from '@/types'
 import type { IssueProvider } from '@/core/issue-providers/base'
 import { runLoop } from '@/core/batch'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('auto')
 
 /** Issue states queued for planning on each {@link autoCommand} loop iteration. */
-const PLAN_STATES = new Set(['NEW'])
+const PLAN_STATES = new Set<IssueState>(['NEW'])
 /** Issue states queued for building on each {@link autoCommand} loop iteration. */
-const BUILD_STATES = new Set(['PLANNED', 'IN_PROGRESS'])
+const BUILD_STATES = new Set<IssueState>(['PLANNED', 'IN_PROGRESS'])
 
 /**
  * Continuously orchestrates plan → build until no actionable issues remain.
@@ -37,11 +40,21 @@ export async function autoCommand(
     if (toPlan.length === 0 && toBuild.length === 0) break
 
     for (const issue of toPlan) {
-      await runLoop(issue.id, 'plan', config, provider)
+      const result = await runLoop(issue.id, 'plan', config, provider)
+      if (result.isErr()) {
+        logger.warn({ issueId: issue.id, err: result.error.message }, 'plan loop failed')
+      }
     }
 
     if (toBuild.length > 0) {
-      await Promise.allSettled(toBuild.map(i => runLoop(i.id, 'build', config, provider)))
+      const results = await Promise.allSettled(
+        toBuild.map(i => runLoop(i.id, 'build', config, provider))
+      )
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value.isErr()) {
+          logger.warn({ err: r.value.error.message }, 'build loop failed')
+        }
+      }
     }
   }
 }

@@ -20,6 +20,6 @@ export function createIssueProvider(config: Config): Result<IssueProvider, Error
       return ok(new GitHubIssueProvider(config.githubRepo))
     case 'local':
     default:
-      return ok(new LocalIssueProvider(config.issuesDir))
+      return ok(new LocalIssueProvider(config.issuesDir, config.barfDir))
   }
 }

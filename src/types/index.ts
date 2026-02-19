@@ -43,6 +43,26 @@ export const IssueSchema = z.object({
 /** A validated barf work item. Derived from {@link IssueSchema}. */
 export type Issue = z.infer<typeof IssueSchema>
 
+// ── Lock ──────────────────────────────────────────────────────────────────────
+
+/** Runtime mode that acquired the lock. */
+export const LockModeSchema = z.enum(['plan', 'build', 'split'])
+/** A barf lock mode. Derived from {@link LockModeSchema}. */
+export type LockMode = z.infer<typeof LockModeSchema>
+
+/**
+ * Contents of a `.barf/<id>.lock` file. Written atomically at lock acquisition.
+ * Used for stale-lock detection (dead PID) and status display.
+ */
+export const LockInfoSchema = z.object({
+  pid: z.number().int().positive(),
+  acquiredAt: z.string().datetime(),
+  state: IssueStateSchema,
+  mode: LockModeSchema
+})
+/** Parsed lock file contents. Derived from {@link LockInfoSchema}. */
+export type LockInfo = z.infer<typeof LockInfoSchema>
+
 // ── Config ────────────────────────────────────────────────────────────────────
 
 /**
@@ -67,7 +87,8 @@ export const ConfigSchema = z.object({
   pushStrategy: z.enum(['iteration', 'on_complete', 'manual']).default('iteration'),
   issueProvider: z.enum(['local', 'github']).default('local'),
   githubRepo: z.string().default(''),
-  streamLogDir: z.string().default('')
+  streamLogDir: z.string().default(''),
+  barfDir: z.string().default('.barf')
 })
 /** Validated barf runtime configuration. Derived from {@link ConfigSchema}. */
 export type Config = z.infer<typeof ConfigSchema>

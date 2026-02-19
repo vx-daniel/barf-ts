@@ -53,14 +53,9 @@ export function handleOverflow(splitCount: number, config: Config): OverflowDeci
 
 /**
  * Resolves the file path for prompt injection.
- * Prefers .working file (locked) over .md (unlocked).
  * GitHub provider has no local file — returns a placeholder.
  */
 function resolveIssueFile(issueId: string, config: Config): string {
-  const working = join(config.issuesDir, `${issueId}.md.working`)
-  if (existsSync(working)) {
-    return working
-  }
   const md = join(config.issuesDir, `${issueId}.md`)
   if (existsSync(md)) {
     return md
@@ -117,7 +112,7 @@ export function runLoop(
 ): ResultAsync<void, Error> {
   return ResultAsync.fromPromise(
     (async (): Promise<void> => {
-      const lockResult = await provider.lockIssue(issueId)
+      const lockResult = await provider.lockIssue(issueId, { mode })
       if (lockResult.isErr()) {
         throw lockResult.error
       }

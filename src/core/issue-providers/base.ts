@@ -1,5 +1,5 @@
 import { ResultAsync, errAsync } from 'neverthrow'
-import type { Issue, IssueState } from '@/types/index'
+import type { Issue, IssueState, LockMode } from '@/types/index'
 import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 
 /** Selects which priority queue to use when auto-picking an issue. */
@@ -87,16 +87,17 @@ export abstract class IssueProvider {
   /**
    * Acquires an exclusive lock on the issue.
    *
-   * - `LocalIssueProvider`: `mkdir` atomicity + renames `.md` → `.md.working`
-   * - `GitHubIssueProvider`: adds the `barf:locked` label
+   * - `LocalIssueProvider`: `O_CREAT | O_EXCL` atomic file creation in `.barf/<id>.lock`
+   * - `GitHubIssueProvider`: adds the `barf:locked` label (meta ignored)
    *
    * @param id - Issue to lock.
+   * @param meta - Optional metadata written into the lock record.
    * @returns `ok(void)` on success, `err(Error)` if the issue is already locked.
    * @example
-   * const result = await provider.lockIssue('001');
+   * const result = await provider.lockIssue('001', { mode: 'build' });
    * if (result.isErr()) throw new Error('Already locked by another process');
    */
-  abstract lockIssue(id: string): ResultAsync<void, Error>
+  abstract lockIssue(id: string, meta?: { mode?: LockMode }): ResultAsync<void, Error>
 
   /**
    * Releases the lock acquired by {@link lockIssue}. Safe to call if not locked.

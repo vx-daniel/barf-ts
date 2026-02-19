@@ -1,5 +1,5 @@
-import { createWriteStream } from 'fs'
-import type { WriteStream } from 'fs'
+import { z } from 'zod'
+import { createWriteStream, type WriteStream } from 'fs'
 import type { ClaudeEvent } from '@/types/index'
 
 export class ContextOverflowError extends Error {
@@ -17,12 +17,39 @@ export class RateLimitError extends Error {
   }
 }
 
+// Internal schemas for validating Claude --output-format stream-json event shapes.
+// Not exported — these model Claude CLI internals, not the public ClaudeEvent contract.
+const RateLimitInfoSchema = z.object({
+  rate_limit_info: z
+    .object({ status: z.string().optional(), resetsAt: z.number().optional() })
+    .optional()
+})
+
+const UsageMessageSchema = z.object({
+  usage: z
+    .object({
+      cache_creation_input_tokens: z.number().optional(),
+      cache_read_input_tokens: z.number().optional()
+    })
+    .optional()
+})
+
+const AssistantContentSchema = z.object({
+  content: z.array(z.object({ type: z.string(), name: z.string().optional() })).optional()
+})
+
 /**
  * Async generator that parses Claude's --output-format stream-json stdout.
- * Yields ClaudeEvent (usage | tool). Kills proc and throws on overflow or rate limit.
+ * Yields {@link ClaudeEvent} (usage | tool). Kills proc and throws on overflow or rate limit.
  *
  * Token tracking: only from main context (parent_tool_use_id === null).
  * Sub-agent tokens are ignored to prevent premature interruption during tool calls.
+ *
+ * @param proc - The Claude subprocess; must expose a readable `stdout` and a `kill` method.
+ * @param threshold - Token count at which to kill the process and throw {@link ContextOverflowError}.
+ * @param streamLogFile - Optional file path; each raw JSONL line is appended for debugging.
+ * @returns Async generator yielding {@link ClaudeEvent} objects; throws {@link ContextOverflowError}
+ *   on threshold breach or {@link RateLimitError} on API rate limiting.
  */
 export async function* parseClaudeStream(
   proc: { stdout: ReadableStream<Uint8Array>; kill: (signal?: string) => void },
@@ -70,7 +97,8 @@ export async function* parseClaudeStream(
 
         // Rate limit detection
         if (obj['type'] === 'rate_limit_event') {
-          const info = obj['rate_limit_info'] as { status?: string; resetsAt?: number } | undefined
+          const parsed = RateLimitInfoSchema.safeParse(obj)
+          const info = parsed.success ? parsed.data.rate_limit_info : undefined
           if (info?.status === 'rejected') {
             proc.kill()
             throw new RateLimitError(info.resetsAt)
@@ -79,16 +107,11 @@ export async function* parseClaudeStream(
 
         // Token usage — main context only (parent_tool_use_id must be null)
         if (obj['parent_tool_use_id'] === null && obj['message']) {
-          const msg = obj['message'] as {
-            usage?: {
-              cache_creation_input_tokens?: number
-              cache_read_input_tokens?: number
-            }
-          }
-          if (msg.usage) {
+          const parsed = UsageMessageSchema.safeParse(obj['message'])
+          const usage = parsed.success ? parsed.data.usage : undefined
+          if (usage) {
             const tokens =
-              (msg.usage.cache_creation_input_tokens ?? 0) +
-              (msg.usage.cache_read_input_tokens ?? 0)
+              (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0)
             if (tokens > maxTokens) {
               maxTokens = tokens
               yield { type: 'usage', tokens }
@@ -102,10 +125,9 @@ export async function* parseClaudeStream(
 
         // Tool name from assistant messages
         if (obj['type'] === 'assistant' && obj['message']) {
-          const msg = obj['message'] as {
-            content?: Array<{ type: string; name?: string }>
-          }
-          const tool = msg.content?.find(c => c.type === 'tool_use' && c.name)
+          const parsed = AssistantContentSchema.safeParse(obj['message'])
+          const content = parsed.success ? parsed.data.content : undefined
+          const tool = content?.find(c => c.type === 'tool_use' && c.name)
           if (tool?.name) {
             yield { type: 'tool', name: tool.name }
           }
@@ -125,6 +147,10 @@ export async function* parseClaudeStream(
 /**
  * Injects barf template variables into a prompt string.
  * Simple string replacement — no eval, no shell, injection-safe.
+ *
+ * @param template - Raw prompt template containing `${BARF_*}` or `$BARF_*` placeholders.
+ * @param vars - Substitution values for each supported placeholder.
+ * @returns The template string with all recognized placeholders replaced by their string values.
  */
 export function injectPromptVars(
   template: string,

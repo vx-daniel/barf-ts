@@ -8,8 +8,20 @@ import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('claude')
 
+/**
+ * Outcome of a single Claude agent iteration.
+ * - `success`: iteration completed normally
+ * - `overflow`: context threshold exceeded (see {@link ContextOverflowError})
+ * - `error`: Claude exited with a non-success status or timed out
+ * - `rate_limited`: API rate limit hit; see `rateLimitResetsAt` for retry time
+ */
 export type IterationOutcome = 'success' | 'overflow' | 'error' | 'rate_limited'
 
+/**
+ * Result of a single Claude agent iteration, returned by {@link runClaudeIteration}.
+ *
+ * `tokens` is always populated. `rateLimitResetsAt` is set only when `outcome === 'rate_limited'`.
+ */
 export interface IterationResult {
   outcome: IterationOutcome
   tokens: number

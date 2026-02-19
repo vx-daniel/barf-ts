@@ -1,5 +1,9 @@
 import { spawn } from 'bun'
 
+/**
+ * Output captured from a subprocess spawned by {@link execFileNoThrow}.
+ * `status` is the process exit code (0 = success). Errors appear in `stderr`; the function never throws.
+ */
 export interface ExecResult {
   stdout: string
   stderr: string

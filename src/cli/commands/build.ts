@@ -1,5 +1,5 @@
-import type { IssueProvider } from '@/core/issue-providers/base.js'
-import type { Config } from '@/types/index'
+import type { IssueProvider } from '@/core/issue-providers/base'
+import type { Config, IssueState } from '@/types'
 import { runLoop } from '@/core/batch'
 import { createLogger } from '@/utils/logger'
 
@@ -45,7 +45,7 @@ export async function buildCommand(
   }
 
   /** Issue states eligible for the build loop. */
-  const BUILDABLE = new Set<string>(['IN_PROGRESS', 'PLANNED', 'NEW'])
+  const BUILDABLE = new Set<IssueState>(['IN_PROGRESS', 'PLANNED', 'NEW'])
   const candidates = listResult.value.filter(i => BUILDABLE.has(i.state)).slice(0, opts.batch)
 
   if (candidates.length === 0) {

@@ -15,7 +15,7 @@ function buildLogger(name: string): pino.Logger {
     try {
       return pino(
         { name, level },
-        pino.transport({ target: 'pino-pretty', options: { colorize: true, destination: 2 } }),
+        pino.transport({ target: 'pino-pretty', options: { colorize: true, destination: 2 } })
       )
     } catch {
       // pino-pretty not available in compiled binary — fall through
@@ -23,7 +23,7 @@ function buildLogger(name: string): pino.Logger {
   }
 
   const destinations: Parameters<typeof pino.multistream>[0] = [
-    { stream: pino.destination(resolveLogFile()) },
+    { stream: pino.destination(resolveLogFile()) }
   ]
   if (!process.stderr.isTTY) {
     destinations.unshift({ stream: pino.destination(2) })
@@ -46,7 +46,7 @@ export function createLogger(name: string): pino.Logger {
     get: (_t, prop) => {
       const val = get()[prop as keyof pino.Logger]
       return typeof val === 'function' ? (val as Function).bind(get()) : val
-    },
+    }
   })
 }
 

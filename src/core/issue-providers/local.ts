@@ -1,6 +1,13 @@
 import { ResultAsync } from 'neverthrow'
 import { IssueProvider } from '@/core/issue-providers/base'
-import type { Issue, IssueState } from '@/types/index'
+import {
+  LockInfo,
+  LockInfoSchema,
+  IssueStateSchema,
+  type LockMode,
+  type Issue,
+  type IssueState
+} from '@/types/index'
 import { parseIssue, serializeIssue } from '@/core/issue'
 import {
   readFileSync,
@@ -9,32 +16,70 @@ import {
   renameSync,
   mkdirSync,
   existsSync,
-  rmSync
+  rmSync,
+  openSync,
+  writeSync,
+  closeSync,
+  constants
 } from 'fs'
 import { join } from 'path'
 
 /**
  * File-system issue provider. Stores issues as frontmatter markdown files under `issuesDir`.
  *
- * **Locking:** Uses POSIX `mkdir` atomicity — `mkdir .locks/<id>` succeeds for exactly
- * one concurrent caller. The locked issue file is renamed to `<id>.md.working` to signal
- * in-progress state. Both the lock directory and `.working` file are restored by `unlockIssue`.
+ * **Locking:** Uses `O_CREAT | O_EXCL` atomicity — creates `.barf/<id>.lock` for exactly
+ * one concurrent caller. The lock file carries PID, timestamp, state, and mode.
+ * Stale locks (dead PID) are swept at construction and on every {@link isLocked} / {@link lockIssue} call.
  *
  * **Writes:** All writes are atomic — data is written to `<file>.tmp` then `rename`d to
  * the target, preventing partial reads.
  */
 export class LocalIssueProvider extends IssueProvider {
-  constructor(private issuesDir: string) {
+  constructor(
+    private issuesDir: string,
+    private barfDir: string
+  ) {
     super()
+    mkdirSync(barfDir, { recursive: true })
+    this.sweepStaleLocks()
+  }
+
+  /**
+   * Scans every `.lock` file in `barfDir` and removes those whose recorded PID is no
+   * longer alive. Called once at construction so stale locks from previous crashes are
+   * cleaned up regardless of which issue the next command targets.
+   */
+  private sweepStaleLocks(): void {
+    let entries: string[]
+    try {
+      entries = readdirSync(this.barfDir)
+    } catch {
+      return // barfDir not readable yet — skip
+    }
+    for (const entry of entries) {
+      if (!entry.endsWith('.lock')) {
+        continue
+      }
+      const lockFile = join(this.barfDir, entry)
+      try {
+        const info = LockInfoSchema.parse(JSON.parse(readFileSync(lockFile, 'utf8')))
+        try {
+          process.kill(info.pid, 0)
+        } catch {
+          rmSync(lockFile, { force: true }) // dead PID — stale
+        }
+      } catch {
+        rmSync(lockFile, { force: true }) // corrupt or unreadable — treat as stale
+      }
+    }
   }
 
   private issuePath(id: string): string {
-    const working = join(this.issuesDir, `${id}.md.working`)
-    return existsSync(working) ? working : join(this.issuesDir, `${id}.md`)
+    return join(this.issuesDir, `${id}.md`)
   }
 
-  private lockDir(id: string): string {
-    return join(this.issuesDir, '.locks', id)
+  private lockPath(id: string): string {
+    return join(this.barfDir, `${id}.lock`)
   }
 
   fetchIssue(id: string): ResultAsync<Issue, Error> {
@@ -56,20 +101,15 @@ export class LocalIssueProvider extends IssueProvider {
     return ResultAsync.fromPromise(
       Promise.resolve().then(() => {
         const entries = readdirSync(this.issuesDir)
-        const seen = new Set<string>()
         const issues: Issue[] = []
         for (const entry of entries) {
           if (entry.startsWith('.')) {
             continue
           }
-          if (!entry.endsWith('.md') && !entry.endsWith('.md.working')) {
+          if (!entry.endsWith('.md')) {
             continue
           }
-          const id = entry.replace(/\.md(\.working)?$/, '')
-          if (seen.has(id)) {
-            continue
-          }
-          seen.add(id)
+          const id = entry.replace(/\.md$/, '')
           try {
             const content = readFileSync(this.issuePath(id), 'utf8')
             const result = parseIssue(content)
@@ -92,7 +132,10 @@ export class LocalIssueProvider extends IssueProvider {
   createIssue(input: { title: string; body?: string; parent?: string }): ResultAsync<Issue, Error> {
     return this.listIssues().andThen(existing => {
       const maxId = existing
-        .map(i => parseInt(i.id.split('-')[0], 10))
+        .map(i => {
+          const num = parseInt(i.id.split('-')[0], 10)
+          return Number.isFinite(num) ? num : 0
+        })
         .reduce((a, b) => Math.max(a, b), 0)
       const id = String(maxId + 1).padStart(3, '0')
       const issue: Issue = {
@@ -139,15 +182,57 @@ export class LocalIssueProvider extends IssueProvider {
     )
   }
 
-  lockIssue(id: string): ResultAsync<void, Error> {
+  lockIssue(id: string, meta?: { mode?: LockMode }): ResultAsync<void, Error> {
     return ResultAsync.fromPromise(
       Promise.resolve().then(() => {
-        mkdirSync(join(this.issuesDir, '.locks'), { recursive: true }) // ensure parent exists
-        mkdirSync(this.lockDir(id), { recursive: false }) // atomic: throws if already locked
-        const issuePath = join(this.issuesDir, `${id}.md`)
-        const workingPath = join(this.issuesDir, `${id}.md.working`)
-        if (existsSync(issuePath)) {
-          renameSync(issuePath, workingPath)
+        const content = readFileSync(this.issuePath(id), 'utf8')
+        const stateMatch = content.match(/^state=(.+)$/m)
+        const state = IssueStateSchema.catch('NEW').parse(stateMatch?.[1]?.trim())
+
+        const lockData: LockInfo = {
+          pid: process.pid,
+          acquiredAt: new Date().toISOString(),
+          state,
+          mode: meta?.mode ?? 'build'
+        }
+
+        const writelock = () => {
+          // O_CREAT | O_EXCL: atomic, throws EEXIST if another process holds the lock
+          const fd = openSync(
+            this.lockPath(id),
+            constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
+          )
+          try {
+            writeSync(fd, JSON.stringify(lockData))
+          } finally {
+            closeSync(fd)
+          }
+        }
+
+        try {
+          writelock()
+        } catch (e) {
+          // On EEXIST, check if the existing lock belongs to a dead process
+          if (e instanceof Error && (e as NodeJS.ErrnoException).code === 'EEXIST') {
+            const lockFile = this.lockPath(id)
+            let stale = false
+            try {
+              const existing = LockInfoSchema.parse(JSON.parse(readFileSync(lockFile, 'utf8')))
+              try {
+                process.kill(existing.pid, 0)
+              } catch {
+                stale = true // ESRCH — process dead
+              }
+            } catch {
+              stale = true // corrupt/unreadable lock file
+            }
+            if (stale) {
+              rmSync(lockFile, { force: true })
+              writelock() // retry once with the stale lock cleared
+              return
+            }
+          }
+          throw e
         }
       }),
       e => (e instanceof Error ? e : new Error(String(e)))
@@ -157,22 +242,39 @@ export class LocalIssueProvider extends IssueProvider {
   unlockIssue(id: string): ResultAsync<void, Error> {
     return ResultAsync.fromPromise(
       Promise.resolve().then(() => {
-        const workingPath = join(this.issuesDir, `${id}.md.working`)
-        const issuePath = join(this.issuesDir, `${id}.md`)
-        if (existsSync(workingPath)) {
-          renameSync(workingPath, issuePath)
-        }
-        rmSync(this.lockDir(id), { recursive: true, force: true })
+        rmSync(this.lockPath(id), { force: true })
       }),
       e => (e instanceof Error ? e : new Error(String(e)))
     )
   }
 
   isLocked(id: string): ResultAsync<boolean, Error> {
-    return ResultAsync.fromSafePromise(
-      Promise.resolve(
-        existsSync(this.lockDir(id)) || existsSync(join(this.issuesDir, `${id}.md.working`))
-      )
+    return ResultAsync.fromPromise(
+      Promise.resolve().then(() => {
+        const lockFile = this.lockPath(id)
+        if (!existsSync(lockFile)) {
+          return false
+        }
+
+        let info: LockInfo
+        try {
+          info = LockInfoSchema.parse(JSON.parse(readFileSync(lockFile, 'utf8')))
+        } catch {
+          // Corrupt/unreadable lock file — treat as stale
+          rmSync(lockFile, { force: true })
+          return false
+        }
+
+        try {
+          process.kill(info.pid, 0) // signal 0: check existence only
+          return true // process alive → lock is valid
+        } catch {
+          // ESRCH: process dead → stale lock, auto-clean
+          rmSync(lockFile, { force: true })
+          return false
+        }
+      }),
+      e => (e instanceof Error ? e : new Error(String(e)))
     )
   }
 }

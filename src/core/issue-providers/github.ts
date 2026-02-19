@@ -1,9 +1,13 @@
 import { z } from 'zod'
 import { ResultAsync, errAsync } from 'neverthrow'
 import { IssueProvider } from '@/core/issue-providers/base'
-import type { Issue, IssueState } from '@/types/index'
+import type { Issue, IssueState, LockMode } from '@/types/index'
 import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 
+/**
+ * Injectable subprocess function matching the {@link execFileNoThrow} signature.
+ * Pass a mock in tests to avoid real `gh` CLI network calls without process-global patching.
+ */
 export type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>
 
 const STATE_TO_LABEL: Record<IssueState, string> = {
@@ -196,7 +200,7 @@ export class GitHubIssueProvider extends IssueProvider {
     )
   }
 
-  lockIssue(id: string): ResultAsync<void, Error> {
+  lockIssue(id: string, _meta?: { mode?: LockMode }): ResultAsync<void, Error> {
     return this.ensureAuth().andThen(() =>
       ResultAsync.fromPromise(
         this.spawnFile('gh', [
