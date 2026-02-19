@@ -51,8 +51,6 @@ export type Issue = z.infer<typeof IssueSchema>
  * Loaded from `.barfrc` (KEY=VALUE format) via `loadConfig`. Falls back to
  * these defaults when the file is absent or a key is missing.
  *
- * @see {@link loadConfig}
- * @see {@link parseBarfrc}
  */
 export const ConfigSchema = z.object({
   issuesDir: z.string().default('issues'),
@@ -81,7 +79,7 @@ export type Config = z.infer<typeof ConfigSchema>
  * - `usage`: cumulative token count from the main conversation context
  * - `tool`: a tool invocation name from an assistant message
  *
- * @see {@link parseClaudeStream}
+ * @see parseClaudeStream
  */
 export const ClaudeEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('usage'), tokens: z.number() }),

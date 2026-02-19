@@ -1,7 +1,7 @@
 {
   "entryPoints": ["src"],
   "entryPointStrategy": "expand",
-  "out": "docs/api",
+  "out": "dist/docs/api",
   "tsconfig": "./tsconfig.typedoc.json",
   "excludePrivate": true,
   "excludeInternal": true,
@@ -9,5 +9,7 @@
   "validation": {
     "notExported": true,
     "invalidLink": true
-  }
+  },
+  "ignoredHighlightLanguages": ["mermaid"],
+  "plugin": ["@boneskull/typedoc-plugin-mermaid", "typedoc-plugin-zod", "typedoc-plugin-mdn-links"],
 }

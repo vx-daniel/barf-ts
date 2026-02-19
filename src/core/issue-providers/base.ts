@@ -13,7 +13,7 @@ const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
 /**
  * Abstract base for all barf issue storage backends.
  *
- * Concrete implementations: {@link LocalIssueProvider}, {@link GitHubIssueProvider}.
+ * Concrete implementations: `LocalIssueProvider`, `GitHubIssueProvider`.
  *
  * To add a custom backend: extend this class and implement the eight abstract methods.
  * The `transition`, `autoSelect`, and `checkAcceptanceCriteria` methods are

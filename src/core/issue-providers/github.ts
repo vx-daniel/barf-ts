@@ -4,7 +4,7 @@ import { IssueProvider } from '@/core/issue-providers/base'
 import type { Issue, IssueState } from '@/types/index'
 import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 
-type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>
+export type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>
 
 const STATE_TO_LABEL: Record<IssueState, string> = {
   NEW: 'barf:new',
