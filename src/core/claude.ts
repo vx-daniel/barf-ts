@@ -1,4 +1,6 @@
 import { spawn } from 'bun'
+import { join } from 'path'
+import { mkdirSync } from 'fs'
 import { ResultAsync } from 'neverthrow'
 import type { Config } from '@/types/index'
 import { parseClaudeStream, ContextOverflowError, RateLimitError } from '@/core/context'
@@ -41,12 +43,15 @@ export function getThreshold(model: string, contextUsagePercent: number): number
 export function runClaudeIteration(
   prompt: string,
   model: string,
-  config: Config
+  config: Config,
+  issueId?: string
 ): ResultAsync<IterationResult, Error> {
   return ResultAsync.fromPromise(
     (async (): Promise<IterationResult> => {
       const threshold = getThreshold(model, config.contextUsagePercent)
+      const isTTY = process.stderr.isTTY ?? false
       let timedOut = false
+      let lastTool = ''
 
       const proc = spawn({
         cmd: [
@@ -78,16 +83,31 @@ export function runClaudeIteration(
         kill: (signal?: string) => proc.kill(signal as Parameters<typeof proc.kill>[0])
       }
 
+      let streamLogFile: string | undefined
+      if (config.streamLogDir && issueId) {
+        mkdirSync(config.streamLogDir, { recursive: true })
+        streamLogFile = join(config.streamLogDir, `${issueId}.jsonl`)
+      }
+
       let lastTokens = 0
       try {
-        for await (const event of parseClaudeStream(procAdapter, threshold)) {
+        for await (const event of parseClaudeStream(procAdapter, threshold, streamLogFile)) {
           if (event.type === 'usage') {
             lastTokens = event.tokens
-            logger.debug({ tokens: event.tokens }, 'context update')
+            logger.debug({ tokens: event.tokens, threshold }, 'context update')
+            if (isTTY) {
+              const pct = Math.round((event.tokens / threshold) * 100)
+              const toolPart = lastTool ? `  |  ${lastTool}` : ''
+              process.stderr.write(
+                `\r\x1b[K  context: ${event.tokens.toLocaleString()} / ${threshold.toLocaleString()} (${pct}%)${toolPart}`
+              )
+            }
           } else if (event.type === 'tool') {
+            lastTool = event.name
             logger.debug({ tool: event.name }, 'tool call')
           }
         }
+        if (isTTY) process.stderr.write('\r\x1b[K')
         await proc.exited
         if (timedOut) {
           logger.warn({ model, timeout: config.claudeTimeout }, 'claude timed out')

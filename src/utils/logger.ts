@@ -22,10 +22,13 @@ function buildLogger(name: string): pino.Logger {
     }
   }
 
-  const streams = pino.multistream([
-    { stream: pino.destination(2) },
+  const destinations: Parameters<typeof pino.multistream>[0] = [
     { stream: pino.destination(resolveLogFile()) },
-  ])
+  ]
+  if (!process.stderr.isTTY) {
+    destinations.unshift({ stream: pino.destination(2) })
+  }
+  const streams = pino.multistream(destinations)
   return pino({ name, level }, streams)
 }
 

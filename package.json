@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "dev:sample": "bun run src/index.ts --cwd tests/sample-project",
+    "run:local": "bun run src/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project auto",
+    "run:gh": "bun run src/index.ts --config tests/sample-project/.barfrc.github --cwd tests/sample-project auto",
+    "reset:local": "cd tests/sample-project && npm run reset-local",
+    "reset:gh": " cd tests/sample-project && npm run reset-gh",
     "test": "bun test",
     "build": "bun build --compile --outfile=dist/barf src/index.ts",
     "docs": "typedoc",

@@ -155,7 +155,7 @@ export function runLoop(
             planDir: config.planDir
           })
 
-          const iterResult = await runClaudeIteration(prompt, model, config)
+          const iterResult = await runClaudeIteration(prompt, model, config, issueId)
           if (iterResult.isErr()) {
             throw iterResult.error
           }

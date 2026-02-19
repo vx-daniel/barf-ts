@@ -45,7 +45,7 @@ src/
     PROMPT_build.md     # Build prompt template
     PROMPT_split.md     # Split prompt template
 tests/
-  unit/                 # 64 tests across all modules
+  unit/                 # 92 tests across all modules
 ```
 
 ## Key Conventions
@@ -54,8 +54,10 @@ tests/
 - **No globals**: ISSUE_ID/MODE/ISSUE_STATE were the bash bugs; pass state as function args
 - **Issue files**: Frontmatter markdown in `issuesDir`, not SQLite — git-trackable
 - **Context monitoring**: Async iterator on Claude's stdout stream, not PostToolUse hooks
+- **Stream logging**: Set `STREAM_LOG_DIR` in `.barfrc` to append raw JSONL per-issue to `{dir}/{issueId}.jsonl` (disabled by default). Useful for debugging Claude output.
 - **Path aliases**: Use `@/` for `src/` imports, `@tests/` for `tests/` imports — no relative `../` paths
 - **Error handling**: All I/O returns `Result`/`ResultAsync` from neverthrow — no thrown errors except at CLI boundary (`src/index.ts`)
+- **Logging**: Never use `console.*` — always use `createLogger(name)` from `@/utils/logger` (pino, JSON to stderr + log file). Use `LOG_PRETTY=1` in dev for readable output. Prefer structured context: `logger.info({ key: val }, 'message')` over string interpolation.
 
 ## Planning Requirements
 

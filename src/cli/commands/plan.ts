@@ -1,6 +1,9 @@
 import type { IssueProvider } from '@/core/issue-providers/base'
 import type { Config } from '@/types/index'
 import { runLoop } from '@/core/batch'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('plan')
 
 export async function planCommand(
   provider: IssueProvider,
@@ -12,21 +15,21 @@ export async function planCommand(
   if (!issueId) {
     const result = await provider.autoSelect('plan')
     if (result.isErr()) {
-      console.error(`Error: ${result.error.message}`)
+      logger.error({ err: result.error }, result.error.message)
       process.exit(1)
     }
     if (!result.value) {
-      console.info('No issues available for planning (no NEW issues found).')
+      logger.info('No issues available for planning (no NEW issues found).')
       return
     }
     issueId = result.value.id
   }
 
-  console.info(`Planning issue ${issueId}...`)
+  logger.info({ issueId }, 'Planning issue')
   const result = await runLoop(issueId, 'plan', config, provider)
   if (result.isErr()) {
-    console.error(`Error: ${result.error.message}`)
+    logger.error({ err: result.error }, result.error.message)
     process.exit(1)
   }
-  console.info(`Issue ${issueId} planned.`)
+  logger.info({ issueId }, 'Issue planned')
 }

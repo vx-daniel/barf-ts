@@ -1,3 +1,5 @@
+import { createWriteStream } from 'fs'
+import type { WriteStream } from 'fs'
 import type { ClaudeEvent } from '@/types/index'
 
 export class ContextOverflowError extends Error {
@@ -24,12 +26,16 @@ export class RateLimitError extends Error {
  */
 export async function* parseClaudeStream(
   proc: { stdout: ReadableStream<Uint8Array>; kill: (signal?: string) => void },
-  threshold: number
+  threshold: number,
+  streamLogFile?: string
 ): AsyncGenerator<ClaudeEvent> {
   const reader = proc.stdout.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
   let maxTokens = 0
+  const logStream: WriteStream | null = streamLogFile
+    ? createWriteStream(streamLogFile, { flags: 'a' })
+    : null
 
   try {
     while (true) {
@@ -52,6 +58,8 @@ export async function* parseClaudeStream(
         if (!trimmed) {
           continue
         }
+
+        logStream?.write(trimmed + '\n')
 
         let obj: Record<string, unknown>
         try {
@@ -110,6 +118,7 @@ export async function* parseClaudeStream(
     } catch {
       /* ignore double-release */
     }
+    logStream?.end()
   }
 }
 

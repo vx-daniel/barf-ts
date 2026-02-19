@@ -9,7 +9,8 @@ const RawConfigSchema = ConfigSchema.extend({
   contextUsagePercent: z.coerce.number().int().default(75),
   maxAutoSplits: z.coerce.number().int().default(3),
   maxIterations: z.coerce.number().int().default(0),
-  claudeTimeout: z.coerce.number().int().default(3600)
+  claudeTimeout: z.coerce.number().int().default(3600),
+  streamLogDir: z.coerce.string().default('')
 })
 
 /** Parse a .barfrc KEY=VALUE string into a validated Config. */
@@ -38,7 +39,8 @@ export function parseBarfrc(content: string): Result<Config, z.ZodError> {
       EXTENDED_CONTEXT_MODEL: 'extendedContextModel',
       PUSH_STRATEGY: 'pushStrategy',
       ISSUE_PROVIDER: 'issueProvider',
-      GITHUB_REPO: 'githubRepo'
+      GITHUB_REPO: 'githubRepo',
+      STREAM_LOG_DIR: 'streamLogDir'
     }
     const key = trimmed.slice(0, eq).trim()
     const val = trimmed.slice(eq + 1).trim()

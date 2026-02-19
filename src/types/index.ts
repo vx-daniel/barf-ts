@@ -66,7 +66,8 @@ export const ConfigSchema = z.object({
   extendedContextModel: z.string().default('claude-opus-4-6'),
   pushStrategy: z.enum(['iteration', 'on_complete', 'manual']).default('iteration'),
   issueProvider: z.enum(['local', 'github']).default('local'),
-  githubRepo: z.string().default('')
+  githubRepo: z.string().default(''),
+  streamLogDir: z.string().default('')
 })
 /** Validated barf runtime configuration. Derived from {@link ConfigSchema}. */
 export type Config = z.infer<typeof ConfigSchema>

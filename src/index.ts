@@ -2,16 +2,18 @@ import { resolve } from 'path'
 import { Command } from 'commander'
 import { loadConfig } from '@/core/config'
 import { createIssueProvider } from '@/core/issue-providers/factory'
+import { logger } from '@/utils/logger'
 import { initCommand } from '@/cli/commands/init'
 import { statusCommand } from '@/cli/commands/status'
 import { planCommand } from '@/cli/commands/plan'
 import { buildCommand } from '@/cli/commands/build'
+import { autoCommand } from '@/cli/commands/auto'
 
 function getProvider(config: ReturnType<typeof loadConfig>) {
   return createIssueProvider(config).match(
     p => p,
     e => {
-      console.error(`Error: ${e.message}`)
+      logger.error({ err: e }, e.message)
       process.exit(1)
     }
   )
@@ -25,8 +27,11 @@ program
   .option('--cwd <path>', 'Project directory (default: current directory)')
   .option('--config <path>', 'Path to .barfrc config file (default: <cwd>/.barfrc)')
   .hook('preAction', () => {
-    const cwd = program.opts().cwd
-    if (cwd) process.chdir(resolve(cwd))
+    const opts = program.opts()
+    // Resolve --config to absolute before chdir so it isn't re-interpreted
+    // relative to the new working directory
+    if (opts.config) program.setOptionValue('config', resolve(opts.config))
+    if (opts.cwd) process.chdir(resolve(opts.cwd))
   })
 
 program
@@ -80,6 +85,17 @@ program
       { issue: opts.issue, batch: opts.batch ?? 1, max: opts.max ?? 0 },
       config
     )
+  })
+
+program
+  .command('auto')
+  .description('Auto-orchestrate: plan all NEW then build all PLANNED/IN_PROGRESS')
+  .option('--batch <n>', 'Max concurrent builds', parseInt)
+  .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
+  .action(async opts => {
+    const config = loadConfig(program.opts().config)
+    const provider = getProvider(config)
+    await autoCommand(provider, { batch: opts.batch ?? 1, max: opts.max ?? 0 }, config)
   })
 
 program.parseAsync(process.argv)

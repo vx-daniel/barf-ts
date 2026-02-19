@@ -1,6 +1,9 @@
 import type { IssueProvider } from '@/core/issue-providers/base.js'
 import type { Config } from '@/types/index'
 import { runLoop } from '@/core/batch'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('build')
 
 export async function buildCommand(
   provider: IssueProvider,
@@ -11,20 +14,20 @@ export async function buildCommand(
   const effectiveConfig = opts.max > 0 ? { ...config, maxIterations: opts.max } : config
 
   if (opts.issue) {
-    console.info(`Building issue ${opts.issue}...`)
+    logger.info({ issueId: opts.issue }, 'Building issue')
     const result = await runLoop(opts.issue, 'build', effectiveConfig, provider)
     if (result.isErr()) {
-      console.error(`Error: ${result.error.message}`)
+      logger.error({ err: result.error }, result.error.message)
       process.exit(1)
     }
-    console.info(`Issue ${opts.issue} build complete.`)
+    logger.info({ issueId: opts.issue }, 'Issue build complete')
     return
   }
 
   // Batch mode: pick up to opts.batch issues in priority order
   const listResult = await provider.listIssues()
   if (listResult.isErr()) {
-    console.error(`Error: ${listResult.error.message}`)
+    logger.error({ err: listResult.error }, listResult.error.message)
     process.exit(1)
   }
 
@@ -32,11 +35,11 @@ export async function buildCommand(
   const candidates = listResult.value.filter(i => BUILDABLE.has(i.state)).slice(0, opts.batch)
 
   if (candidates.length === 0) {
-    console.info('No issues available for building.')
+    logger.info('No issues available for building.')
     return
   }
 
-  console.info(`Building ${candidates.length} issue(s) concurrently...`)
+  logger.info({ count: candidates.length }, 'Building issues concurrently')
 
   const results = await Promise.allSettled(
     candidates.map(issue => runLoop(issue.id, 'build', effectiveConfig, provider))
@@ -46,13 +49,13 @@ export async function buildCommand(
   for (const [i, r] of results.entries()) {
     const id = candidates[i]!.id
     if (r.status === 'rejected') {
-      console.error(`  ✗ ${id}: ${r.reason}`)
+      logger.error({ issueId: id, reason: r.reason }, 'Build rejected')
       failures++
     } else if (r.value.isErr()) {
-      console.error(`  ✗ ${id}: ${r.value.error.message}`)
+      logger.error({ issueId: id, err: r.value.error }, r.value.error.message)
       failures++
     } else {
-      console.info(`  ✓ ${id}`)
+      logger.info({ issueId: id }, 'Build complete')
     }
   }
 

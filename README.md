@@ -162,7 +162,11 @@ CLAUDE_TIMEOUT=3600         # seconds before killing a Claude process
 
 TEST_COMMAND=               # run after each iteration (e.g. "bun test")
 PUSH_STRATEGY=iteration     # iteration | on_complete | manual
+
+STREAM_LOG_DIR=             # directory for raw Claude stream logs (empty = disabled)
 ```
+
+When `STREAM_LOG_DIR` is set, each issue's raw Claude output is appended to `{STREAM_LOG_DIR}/{issueId}.jsonl` as JSONL — exactly as emitted by `--output-format stream-json`. Multiple iterations of the same issue append to the same file. Useful for debugging and auditing Claude's raw output.
 
 ## Context overflow
 
@@ -187,7 +191,7 @@ Requires `gh auth login`.
 ```bash
 bun install                    # install deps
 git submodule update --init    # fetch tests/sample-project
-bun test                       # run tests (70 tests)
+bun test                       # run tests (92 tests)
 bun run build        # compile binary to dist/barf
 bun run format       # format with oxfmt
 bun run lint         # lint with oxlint

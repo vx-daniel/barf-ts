@@ -1,4 +1,7 @@
 import type { IssueProvider } from '@/core/issue-providers/base'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('status')
 
 export async function statusCommand(
   provider: IssueProvider,
@@ -6,19 +9,19 @@ export async function statusCommand(
 ): Promise<void> {
   const result = await provider.listIssues()
   if (result.isErr()) {
-    console.error(`Error: ${result.error.message}`)
+    logger.error({ err: result.error }, result.error.message)
     process.exit(1)
   }
   const issues = result.value
   if (opts.format === 'json') {
-    console.info(JSON.stringify(issues, null, 2))
+    logger.info({ issues }, 'Issues')
     return
   }
   if (issues.length === 0) {
-    console.info('No issues found.')
+    logger.info('No issues found.')
     return
   }
   for (const issue of issues) {
-    console.info(`[${issue.state.padEnd(11)}] ${issue.id} — ${issue.title}`)
+    logger.info({ state: issue.state, id: issue.id, title: issue.title }, 'Issue')
   }
 }

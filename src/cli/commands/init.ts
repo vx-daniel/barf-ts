@@ -1,7 +1,10 @@
 import type { IssueProvider } from '@/core/issue-providers/base'
 import type { Config } from '@/types/index'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
+import { createLogger } from '@/utils/logger'
 import { mkdirSync, writeFileSync, existsSync } from 'fs'
+
+const logger = createLogger('init')
 
 const BARF_LABELS = [
   { name: 'barf:new', color: 'e4e669', description: 'Issue not yet planned' },
@@ -17,11 +20,11 @@ export async function initCommand(_provider: IssueProvider, config: Config): Pro
   if (config.issueProvider === 'local') {
     mkdirSync(config.issuesDir, { recursive: true })
     mkdirSync(config.planDir, { recursive: true })
-    console.info(`Created ${config.issuesDir}/ and ${config.planDir}/`)
+    logger.info({ issuesDir: config.issuesDir, planDir: config.planDir }, 'Directories created')
   }
 
   if (config.issueProvider === 'github') {
-    console.info(`Creating barf:* labels in ${config.githubRepo}...`)
+    logger.info({ repo: config.githubRepo }, 'Creating barf:* labels')
     for (const label of BARF_LABELS) {
       const result = await execFileNoThrow('gh', [
         'api',
@@ -38,9 +41,9 @@ export async function initCommand(_provider: IssueProvider, config: Config): Pro
       const alreadyExists =
         result.stderr.includes('already_exists') || result.stdout.includes('already_exists')
       if (result.status !== 0 && !alreadyExists) {
-        console.error(`  ✗ ${label.name}: ${result.stderr.trim()}`)
+        logger.error({ label: label.name, stderr: result.stderr.trim() }, 'Label creation failed')
       } else {
-        console.info(`  ✓ ${label.name}`)
+        logger.info({ label: label.name }, 'Label created')
       }
     }
   }
@@ -55,8 +58,8 @@ export async function initCommand(_provider: IssueProvider, config: Config): Pro
       'CONTEXT_USAGE_PERCENT=75'
     ].filter(Boolean)
     writeFileSync('.barfrc', lines.join('\n') + '\n')
-    console.info('Created .barfrc')
+    logger.info('Created .barfrc')
   }
 
-  console.info('\nDone. Next: barf plan --issue=001')
+  logger.info('Done. Next: barf plan --issue=001')
 }
