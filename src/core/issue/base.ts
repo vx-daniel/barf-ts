@@ -1,5 +1,5 @@
 import { ResultAsync, errAsync } from 'neverthrow'
-import type { Issue, IssueState, LockMode } from '@/types/index'
+import type { Issue, IssueState, LockMode } from '@/types'
 import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 
 /** Selects which priority queue to use when auto-picking an issue. */

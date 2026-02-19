@@ -1,4 +1,4 @@
-import type { IssueProvider } from '@/core/issue-providers/base'
+import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types/index'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'

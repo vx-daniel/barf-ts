@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createWriteStream, type WriteStream } from 'fs'
-import type { ClaudeEvent } from '@/types/index'
+import type { ClaudeEvent } from '@/types'
 
 export class ContextOverflowError extends Error {
   constructor(public readonly tokens: number) {

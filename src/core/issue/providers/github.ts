@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { ResultAsync, errAsync } from 'neverthrow'
-import { IssueProvider } from '@/core/issue-providers/base'
-import type { Issue, IssueState, LockMode } from '@/types/index'
+import { IssueProvider } from '@/core/issue/base'
+import type { Issue, IssueState, LockMode } from '@/types'
 import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 
 /**

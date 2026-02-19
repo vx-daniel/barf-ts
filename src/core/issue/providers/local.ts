@@ -1,5 +1,5 @@
 import { ResultAsync } from 'neverthrow'
-import { IssueProvider } from '@/core/issue-providers/base'
+import { IssueProvider } from '@/core/issue/base'
 import {
   LockInfo,
   LockInfoSchema,
@@ -7,7 +7,7 @@ import {
   type LockMode,
   type Issue,
   type IssueState
-} from '@/types/index'
+} from '@/types'
 import { parseIssue, serializeIssue } from '@/core/issue'
 import {
   readFileSync,

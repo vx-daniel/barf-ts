@@ -1,4 +1,4 @@
-import type { IssueProvider } from '@/core/issue-providers/base'
+import type { IssueProvider } from '@/core/issue/base'
 import type { Config, IssueState } from '@/types'
 import { runLoop } from '@/core/batch'
 import { createLogger } from '@/utils/logger'

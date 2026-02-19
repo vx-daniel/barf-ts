@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { Result, ok, err } from 'neverthrow'
-import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from '@/types/index'
+import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from '@/types'
 
 /**
  * The allowed state transitions in the barf issue lifecycle.

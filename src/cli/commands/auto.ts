@@ -1,5 +1,5 @@
 import type { Config, IssueState } from '@/types'
-import type { IssueProvider } from '@/core/issue-providers/base'
+import type { IssueProvider } from '@/core/issue/base'
 import { runLoop } from '@/core/batch'
 import { createLogger } from '@/utils/logger'
 
@@ -31,13 +31,17 @@ export async function autoCommand(
 ): Promise<void> {
   while (true) {
     const listResult = await provider.listIssues()
-    if (listResult.isErr()) break
+    if (listResult.isErr()) {
+      break
+    }
 
     const issues = listResult.value
     const toPlan = issues.filter(i => PLAN_STATES.has(i.state))
     const toBuild = issues.filter(i => BUILD_STATES.has(i.state)).slice(0, opts.batch)
 
-    if (toPlan.length === 0 && toBuild.length === 0) break
+    if (toPlan.length === 0 && toBuild.length === 0) {
+      break
+    }
 
     for (const issue of toPlan) {
       const result = await runLoop(issue.id, 'plan', config, provider)

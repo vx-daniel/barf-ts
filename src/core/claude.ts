@@ -2,7 +2,7 @@ import { spawn } from 'bun'
 import { join } from 'path'
 import { mkdirSync } from 'fs'
 import { ResultAsync } from 'neverthrow'
-import type { Config } from '@/types/index'
+import type { Config } from '@/types'
 import { parseClaudeStream, ContextOverflowError, RateLimitError } from '@/core/context'
 import { createLogger } from '@/utils/logger'
 
@@ -124,7 +124,9 @@ export function runClaudeIteration(
             logger.debug({ tool: event.name }, 'tool call')
           }
         }
-        if (isTTY) process.stderr.write('\r\x1b[K')
+        if (isTTY) {
+          process.stderr.write('\r\x1b[K')
+      }
         await proc.exited
         if (timedOut) {
           logger.warn({ model, timeout: config.claudeTimeout }, 'claude timed out')

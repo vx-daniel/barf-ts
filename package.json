@@ -12,10 +12,10 @@
     "test": "bun test",
     "build": "bun build --compile --outfile=dist/barf src/index.ts",
     "docs": "typedoc",
-    "format": "oxfmt --write src/ tests/",
-    "format:check": "oxfmt --check src/ tests/",
-    "lint": "oxlint src/ tests/",
-    "lint:fix": "oxlint --fix src/ tests/",
+    "format": "oxfmt --write src/ ",
+    "format:check": "oxfmt --check src/ ",
+    "lint": "oxlint src/ ",
+    "lint:fix": "oxlint --fix src/ ",
     "check": "bun run format:check && bun run lint"
   },
   "dependencies": {

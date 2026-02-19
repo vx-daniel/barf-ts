@@ -1,13 +1,9 @@
 import { resolve } from 'path'
 import { Command } from 'commander'
 import { loadConfig } from '@/core/config'
-import { createIssueProvider } from '@/core/issue-providers/factory'
+import { createIssueProvider } from '@/core/issue/factory'
 import { logger } from '@/utils/logger'
-import { initCommand } from '@/cli/commands/init'
-import { statusCommand } from '@/cli/commands/status'
-import { planCommand } from '@/cli/commands/plan'
-import { buildCommand } from '@/cli/commands/build'
-import { autoCommand } from '@/cli/commands/auto'
+import { initCommand, statusCommand, planCommand, buildCommand, autoCommand } from '@/cli/commands'
 
 /**
  * Creates the issue provider for `config`.
@@ -39,8 +35,12 @@ program
     const opts = program.opts()
     // Resolve --config to absolute before chdir so it isn't re-interpreted
     // relative to the new working directory
-    if (opts.config) program.setOptionValue('config', resolve(opts.config))
-    if (opts.cwd) process.chdir(resolve(opts.cwd))
+    if (opts.config) {
+      program.setOptionValue('config', resolve(opts.config))
+    }
+    if (opts.cwd) { 
+      process.chdir(resolve(opts.cwd))
+    }
   })
 
 program

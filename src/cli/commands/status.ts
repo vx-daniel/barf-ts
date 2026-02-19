@@ -1,4 +1,4 @@
-import type { IssueProvider } from '@/core/issue-providers/base'
+import type { IssueProvider } from '@/core/issue/base'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('status')
