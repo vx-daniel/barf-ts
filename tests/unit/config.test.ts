@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'bun:test'
-import { parseBarfrc } from '@/core/config'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { mkdtempSync, writeFileSync, rmSync } from 'fs'
+import { join } from 'path'
+import { tmpdir } from 'os'
+import { parseBarfrc, loadConfig } from '@/core/config'
 
 describe('parseBarfrc', () => {
   it('returns defaults when content is empty', () => {
@@ -33,5 +36,34 @@ describe('parseBarfrc', () => {
   it('returns Err on invalid ISSUE_PROVIDER value', () => {
     const result = parseBarfrc('ISSUE_PROVIDER=linear\n')
     expect(result.isErr()).toBe(true)
+  })
+})
+
+describe('loadConfig', () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'barf-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true })
+  })
+
+  it('reads config from explicit file path', () => {
+    const rcPath = join(tmpDir, 'custom.rc')
+    writeFileSync(rcPath, 'ISSUES_DIR=custom-issues\n')
+    const config = loadConfig(rcPath)
+    expect(config.issuesDir).toBe('custom-issues')
+  })
+
+  it('falls back to defaults when explicit file does not exist', () => {
+    const config = loadConfig(join(tmpDir, 'nonexistent.rc'))
+    expect(config.issuesDir).toBe('issues')
+  })
+
+  it('falls back to defaults when called with no args', () => {
+    const config = loadConfig()
+    expect(config.issuesDir).toBe('issues')
   })
 })

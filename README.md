@@ -78,12 +78,17 @@ The frontmatter block uses `KEY=VALUE` syntax. The body is free-form markdown. A
 
 ## Issue states
 
-```
-NEW ──► PLANNED ──► IN_PROGRESS ──► COMPLETED
-              ↘          ↘
-               STUCK ◄────┘
-               ↓
-              SPLIT
+```mermaid
+stateDiagram-v2
+    [*] --> NEW
+    NEW --> PLANNED
+    PLANNED --> IN_PROGRESS
+    IN_PROGRESS --> COMPLETED
+    PLANNED --> STUCK
+    IN_PROGRESS --> STUCK
+    STUCK --> SPLIT
+    COMPLETED --> [*]
+    SPLIT --> [*]
 ```
 
 | State | Meaning |
@@ -180,14 +185,17 @@ Requires `gh auth login`.
 ## Development
 
 ```bash
-bun install          # install deps
-bun test             # run tests (70 tests)
+bun install                    # install deps
+git submodule update --init    # fetch tests/sample-project
+bun test                       # run tests (70 tests)
 bun run build        # compile binary to dist/barf
 bun run format       # format with oxfmt
 bun run lint         # lint with oxlint
 bun run check        # format:check + lint (CI gate)
 bun run docs         # generate API docs to docs/api/
 ```
+
+`tests/sample-project` is a git submodule used for manual end-to-end testing via `barf --cwd tests/sample-project`. Initialize it once after cloning with `git submodule update --init`.
 
 ### Logging
 

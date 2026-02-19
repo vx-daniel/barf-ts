@@ -59,19 +59,33 @@ tests/
 
 ## Planning Requirements
 
-**All implementation plans must be saved to `docs/plans/`** with the following naming convention:
+**BEFORE writing any plan file**, run:
 
-- **Pattern:** `NN-descriptive-name.md` where `NN` is a sequential number (zero-padded to 2 digits)
-- **Example:** `11-realtime-context-overflow-interruption.md`
+```bash
+ls docs/plans/
+```
+
+to determine the next sequential number. **Do not skip this step.**
+
+All plan files **must** follow this exact naming pattern:
+
+```
+docs/plans/NN-descriptive-name.md
+```
+
+- `NN` — zero-padded two-digit sequence number (e.g. `06`, `07`)
+- `descriptive-name` — lowercase, hyphenated, clearly describes the plan
+- **Wrong:** `staged-drifting-cosmos.md`, `plan.md`, `my-plan.md`
+- **Right:** `06-add-submodule-setup-to-readme.md`
 
 **Process:**
 
-1. When creating a plan, determine the next sequential number by checking existing files in `docs/plans/`
-2. Use a descriptive, hyphenated name that clearly indicates the plan's purpose
-3. Save the final plan to `docs/plans/NN-descriptive-name.md`
-4. This keeps all AI-generated plans organized and separate from source materials
+1. `ls docs/plans/` — find the highest existing `NN`
+2. Increment by 1 and zero-pad to 2 digits
+3. Choose a descriptive hyphenated name
+4. Save to `docs/plans/NN-descriptive-name.md`
 
-**Rationale:** Maintaining plans in a numbered sequence creates a clear audit trail of project evolution and prevents plans from mixing with source code or input materials.
+Plans saved with the wrong name must be renamed before the task is considered complete.
 
 
 ## Reference

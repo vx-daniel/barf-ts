@@ -1,0 +1,3 @@
+[submodule "tests/sample-project"]
+	path = tests/sample-project
+	url = git@github.com:vx-daniel/barf-test-project.git

@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { Result, ok, err } from 'neverthrow'
 import { ConfigSchema, type Config } from '@/types/index'
 import { readFileSync } from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 
 // Zod schema that coerces string values (all .barfrc values are strings)
 const RawConfigSchema = ConfigSchema.extend({
@@ -52,17 +52,17 @@ export function parseBarfrc(content: string): Result<Config, z.ZodError> {
 }
 
 /**
- * Loads barf configuration from `<projectDir>/.barfrc`.
+ * Loads barf configuration from a `.barfrc` file.
  *
  * Falls back to schema defaults if the file is missing or cannot be parsed.
  * Never throws — invalid config is silently replaced with defaults.
  *
- * @param projectDir - Directory containing `.barfrc`. Defaults to `process.cwd()`.
+ * @param rcPath - Path to the `.barfrc` file. Defaults to `<cwd>/.barfrc`.
  */
-export function loadConfig(projectDir: string = process.cwd()): Config {
-  const rcPath = join(projectDir, '.barfrc')
+export function loadConfig(rcPath?: string): Config {
+  const filePath = rcPath ? resolve(rcPath) : join(process.cwd(), '.barfrc')
   try {
-    const content = readFileSync(rcPath, 'utf8')
+    const content = readFileSync(filePath, 'utf8')
     return parseBarfrc(content).match(
       config => config,
       () => RawConfigSchema.parse({})
