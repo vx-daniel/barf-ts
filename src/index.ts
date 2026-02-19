@@ -9,6 +9,15 @@ import { planCommand } from '@/cli/commands/plan'
 import { buildCommand } from '@/cli/commands/build'
 import { autoCommand } from '@/cli/commands/auto'
 
+/**
+ * Creates the issue provider for `config`.
+ *
+ * Calls {@link createIssueProvider} and unwraps the result.
+ * Logs the error and exits with code 1 if the provider type is
+ * unrecognised or misconfigured.
+ *
+ * @param config - Loaded barf configuration.
+ */
 function getProvider(config: ReturnType<typeof loadConfig>) {
   return createIssueProvider(config).match(
     p => p,

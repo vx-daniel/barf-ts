@@ -6,6 +6,7 @@ import { mkdirSync, writeFileSync, existsSync } from 'fs'
 
 const logger = createLogger('init')
 
+/** GitHub label definitions that map barf issue states to `barf:*` labels. Applied by `barf init --provider=github`. */
 const BARF_LABELS = [
   { name: 'barf:new', color: 'e4e669', description: 'Issue not yet planned' },
   { name: 'barf:planned', color: 'bfd4f2', description: 'Issue planned, ready for build' },
@@ -16,6 +17,20 @@ const BARF_LABELS = [
   { name: 'barf:locked', color: 'd93f0b', description: 'Issue currently being processed' }
 ]
 
+/**
+ * Initialises barf in the current project directory.
+ *
+ * **local provider:** Creates `issuesDir` and `planDir` directories.
+ *
+ * **github provider:** Creates `barf:*` labels on the configured repo via the
+ * `gh` CLI. Label creation is idempotent — `already_exists` responses are
+ * silently ignored.
+ *
+ * Writes a default `.barfrc` if one does not already exist.
+ *
+ * @param _provider - Issue provider (unused; provider type is read from `config`).
+ * @param config - Loaded barf configuration.
+ */
 export async function initCommand(_provider: IssueProvider, config: Config): Promise<void> {
   if (config.issueProvider === 'local') {
     mkdirSync(config.issuesDir, { recursive: true })

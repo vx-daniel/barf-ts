@@ -96,11 +96,18 @@ async function planSplitChildren(
 }
 
 /**
- * Core orchestration loop. Runs Claude iterations until done.
+ * Core orchestration loop. Runs Claude iterations until the issue reaches a
+ * terminal state or `config.maxIterations` is exhausted.
  *
- * No globals — all state passed as arguments.
- * Handles: state transitions, overflow (split/escalate), plan/build completion,
- * max iterations, test validation.
+ * No globals — all state passed as arguments. Handles state transitions,
+ * context overflow (split/escalate), plan file detection, acceptance criteria,
+ * and optional test validation.
+ *
+ * @param issueId - ID of the issue to process.
+ * @param mode - `'plan'` runs one iteration then checks for a plan file; `'build'` loops until COMPLETED.
+ * @param config - Loaded barf configuration.
+ * @param provider - Issue provider used to lock, read, and write the issue.
+ * @returns `ok(void)` when the loop exits cleanly, `err(Error)` if locking or a Claude iteration fails.
  */
 export function runLoop(
   issueId: string,

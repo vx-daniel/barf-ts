@@ -5,7 +5,7 @@ import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from
 /**
  * The allowed state transitions in the barf issue lifecycle.
  *
- * Used by `validateTransition` to reject illegal moves.
+ * Used by {@link validateTransition} to reject illegal moves.
  * Terminal states (`SPLIT`, `COMPLETED`) have empty arrays — no further transitions allowed.
  */
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {

@@ -22,18 +22,36 @@ const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
 export abstract class IssueProvider {
   // ── Abstract I/O — implemented per provider ───────────────────────────────
 
-  /** Retrieves a single issue by ID. Returns `err` if the issue does not exist. */
+  /**
+   * Retrieves a single issue by ID.
+   *
+   * @param id - Issue identifier (e.g. `'001'` for local, GitHub issue number for github).
+   * @returns `ok(Issue)` on success, `err(Error)` if the issue does not exist or cannot be read.
+   * @example
+   * const result = await provider.fetchIssue('001');
+   * if (result.isErr()) logger.error({ err: result.error }, 'fetch failed');
+   */
   abstract fetchIssue(id: string): ResultAsync<Issue, Error>
 
   /**
    * Lists all issues, optionally filtered by state.
-   * @param filter - Optional filter; if `state` is set, only matching issues are returned.
+   *
+   * @param filter - If `filter.state` is set, only issues in that state are returned.
+   * @returns `ok(Issue[])` on success, `err(Error)` on I/O or API failure.
+   * @example
+   * const result = await provider.listIssues({ state: 'NEW' });
+   * if (result.isOk()) result.value.forEach(i => logger.info({ id: i.id }, 'found'));
    */
   abstract listIssues(filter?: { state?: IssueState }): ResultAsync<Issue[], Error>
 
   /**
    * Creates a new issue with state `NEW`.
-   * @param input - Title is required; body and parent are optional.
+   *
+   * @param input - `title` is required; `body` and `parent` are optional.
+   * @returns `ok(Issue)` with the persisted issue (including assigned id), `err(Error)` on I/O or API failure.
+   * @example
+   * const result = await provider.createIssue({ title: 'Fix login bug', body: '...' });
+   * if (result.isErr()) logger.error({ err: result.error }, 'create failed');
    */
   abstract createIssue(input: {
     title: string
@@ -42,31 +60,63 @@ export abstract class IssueProvider {
   }): ResultAsync<Issue, Error>
 
   /**
-   * Patches an issue's fields. Implementations should write atomically.
+   * Patches an issue's fields. Implementations must write atomically.
    * The `id` field cannot be patched — it is excluded from `fields`.
+   *
+   * @param id - Issue to update.
+   * @param fields - Subset of {@link Issue} fields to overwrite; `id` is excluded.
+   * @returns `ok(Issue)` with the full updated issue, `err(Error)` on I/O or API failure.
+   * @example
+   * const result = await provider.writeIssue('001', { title: 'Updated title' });
+   * if (result.isErr()) logger.error({ err: result.error }, 'write failed');
    */
   abstract writeIssue(id: string, fields: Partial<Omit<Issue, 'id'>>): ResultAsync<Issue, Error>
 
   /**
    * Permanently deletes an issue.
-   * GitHub provider returns `err` instead — use `transition(id, 'COMPLETED')` there.
+   * GitHub provider always returns `err` — use `transition(id, 'COMPLETED')` there.
+   *
+   * @param id - Issue to delete.
+   * @returns `ok(void)` on success, `err(Error)` on I/O failure or if deletion is unsupported.
+   * @example
+   * const result = await provider.deleteIssue('001');
+   * if (result.isErr()) logger.warn({ err: result.error }, 'delete unsupported, transition instead');
    */
   abstract deleteIssue(id: string): ResultAsync<void, Error>
 
   /**
    * Acquires an exclusive lock on the issue.
    *
-   * - LocalIssueProvider: uses `mkdir` atomicity + renames `.md` → `.md.working`
-   * - GitHubIssueProvider: adds the `barf:locked` label
+   * - `LocalIssueProvider`: `mkdir` atomicity + renames `.md` → `.md.working`
+   * - `GitHubIssueProvider`: adds the `barf:locked` label
    *
-   * Returns `err` if the issue is already locked.
+   * @param id - Issue to lock.
+   * @returns `ok(void)` on success, `err(Error)` if the issue is already locked.
+   * @example
+   * const result = await provider.lockIssue('001');
+   * if (result.isErr()) throw new Error('Already locked by another process');
    */
   abstract lockIssue(id: string): ResultAsync<void, Error>
 
-  /** Releases the lock acquired by {@link lockIssue}. Safe to call if not locked. */
+  /**
+   * Releases the lock acquired by {@link lockIssue}. Safe to call if not locked.
+   *
+   * @param id - Issue to unlock.
+   * @returns `ok(void)` always — implementations must not return `err` for a no-op unlock.
+   * @example
+   * await provider.unlockIssue('001'); // safe even if not currently locked
+   */
   abstract unlockIssue(id: string): ResultAsync<void, Error>
 
-  /** Returns `true` if the issue is currently locked by any process. */
+  /**
+   * Checks whether the issue is currently locked by any process.
+   *
+   * @param id - Issue to check.
+   * @returns `ok(true)` if locked, `ok(false)` if not, `err(Error)` on I/O or API failure.
+   * @example
+   * const result = await provider.isLocked('001');
+   * if (result.isOk() && result.value) logger.warn({ id: '001' }, 'issue is locked, skipping');
+   */
   abstract isLocked(id: string): ResultAsync<boolean, Error>
 
   // ── Shared logic — one implementation for all providers ───────────────────
@@ -75,7 +125,12 @@ export abstract class IssueProvider {
    * Validates and applies a state transition.
    *
    * Delegates validation to {@link validateTransition}; writes the new state via
-   * {@link writeIssue}. Returns `err(InvalidTransitionError)` for illegal moves.
+   * {@link writeIssue}. Call this instead of patching `state` directly to preserve invariants.
+   *
+   * @param id - Issue whose state will change.
+   * @param to - Target state; must be reachable from the current state per `VALID_TRANSITIONS`.
+   * @returns `ok(Issue)` with the updated issue, `err(InvalidTransitionError)` if the move is illegal,
+   *   or `err(Error)` on I/O failure.
    */
   transition(id: string, to: IssueState): ResultAsync<Issue, Error> {
     return this.fetchIssue(id).andThen(issue => {
@@ -90,11 +145,13 @@ export abstract class IssueProvider {
   /**
    * Selects the highest-priority available (unlocked) issue for the given mode.
    *
-   * Priority order:
+   * Priority order per {@link AutoSelectMode}:
    * - `plan`: NEW
    * - `build`: IN_PROGRESS → PLANNED → NEW
    *
-   * Returns `null` if no eligible (matching state + unlocked) issue exists.
+   * @param mode - Determines which states are considered and their priority order.
+   * @returns `ok(Issue)` for the best candidate, `ok(null)` if no eligible unlocked issue exists,
+   *   or `err(Error)` on I/O failure.
    */
   autoSelect(mode: AutoSelectMode): ResultAsync<Issue | null, Error> {
     return this.listIssues().andThen(issues => {
@@ -115,8 +172,12 @@ export abstract class IssueProvider {
   }
 
   /**
-   * Returns `true` if all acceptance criteria checkboxes in the issue body are ticked.
-   * Delegates to {@link parseAcceptanceCriteria}.
+   * Checks whether all acceptance criteria checkboxes in the issue body are ticked.
+   * Delegates parsing to {@link parseAcceptanceCriteria}.
+   *
+   * @param id - Issue to inspect.
+   * @returns `ok(true)` if all criteria are checked (or the section is absent),
+   *   `ok(false)` if any `- [ ]` item remains, or `err(Error)` if the issue cannot be fetched.
    */
   checkAcceptanceCriteria(id: string): ResultAsync<boolean, Error> {
     return this.fetchIssue(id).map(issue => parseAcceptanceCriteria(issue.body))

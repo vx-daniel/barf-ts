@@ -34,11 +34,16 @@ export function getThreshold(model: string, contextUsagePercent: number): number
 
 /**
  * Spawns the `claude` CLI and runs a single agent iteration.
- * Prompt is passed via stdin. Returns ResultAsync — never throws.
+ * Prompt is passed via stdin. Never throws — all errors are captured in the result.
  *
- * Key env override:
- *   CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=100  disables Claude Code auto-compact so
- *   barf can track context and interrupt at the configured threshold itself.
+ * Key env override: `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=100` disables Claude Code
+ * auto-compact so barf can track context and interrupt at the configured threshold itself.
+ *
+ * @param prompt - Full prompt text; sent to the claude process via stdin.
+ * @param model - Claude model identifier (e.g. `'claude-sonnet-4-6'`).
+ * @param config - Loaded barf configuration (timeout, context percent, stream log dir).
+ * @param issueId - When set, stream output is appended to `config.streamLogDir/<issueId>.jsonl`.
+ * @returns `ok(IterationResult)` on success, `err(Error)` if the process spawn fails unexpectedly.
  */
 export function runClaudeIteration(
   prompt: string,

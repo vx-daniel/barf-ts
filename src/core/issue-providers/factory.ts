@@ -7,7 +7,9 @@ import { GitHubIssueProvider } from '@/core/issue-providers/github'
 /**
  * Instantiates the issue provider selected in `config.issueProvider`.
  *
- * @returns `err` if `issueProvider` is `'github'` and `githubRepo` is not set.
+ * @param config - Loaded barf configuration; `issueProvider` and `githubRepo` are read here.
+ * @returns `ok(IssueProvider)` on success, `err(Error)` if `issueProvider` is `'github'`
+ *   and `githubRepo` is not set.
  */
 export function createIssueProvider(config: Config): Result<IssueProvider, Error> {
   switch (config.issueProvider) {

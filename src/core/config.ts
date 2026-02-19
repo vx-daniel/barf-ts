@@ -13,7 +13,14 @@ const RawConfigSchema = ConfigSchema.extend({
   streamLogDir: z.coerce.string().default('')
 })
 
-/** Parse a .barfrc KEY=VALUE string into a validated Config. */
+/**
+ * Parses a `.barfrc` KEY=VALUE string into a validated {@link Config}.
+ *
+ * Only recognises keys listed in the internal KEY_MAP; unknown keys are silently ignored.
+ *
+ * @param content - Raw `.barfrc` file contents.
+ * @returns `ok(Config)` on success, `err(ZodError)` if a required field fails validation.
+ */
 export function parseBarfrc(content: string): Result<Config, z.ZodError> {
   const raw: Record<string, string> = {}
   for (const line of content.split('\n')) {

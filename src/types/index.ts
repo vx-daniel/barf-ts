@@ -80,7 +80,7 @@ export type Config = z.infer<typeof ConfigSchema>
  * - `usage`: cumulative token count from the main conversation context
  * - `tool`: a tool invocation name from an assistant message
  *
- * @see parseClaudeStream
+ * Emitted by `parseClaudeStream` in `core/context`.
  */
 export const ClaudeEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('usage'), tokens: z.number() }),

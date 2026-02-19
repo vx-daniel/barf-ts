@@ -5,6 +5,19 @@ import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('build')
 
+/**
+ * Builds one or more issues (PLANNED/IN_PROGRESS → COMPLETED) using Claude AI.
+ *
+ * **Single-issue mode (`opts.issue` set):** Builds the named issue and returns.
+ *
+ * **Batch mode (`opts.issue` omitted):** Lists all issues, filters to `BUILDABLE`
+ * states, picks up to `opts.batch`, and runs them concurrently via
+ * `Promise.allSettled`. Exits with code 1 if any build fails.
+ *
+ * @param provider - Issue provider supplying and persisting issues.
+ * @param opts - `issue`: explicit issue ID; `batch`: concurrency limit; `max`: iteration cap (0 = use `config`).
+ * @param config - Loaded barf configuration.
+ */
 export async function buildCommand(
   provider: IssueProvider,
   opts: { issue?: string; batch: number; max: number },
@@ -31,6 +44,7 @@ export async function buildCommand(
     process.exit(1)
   }
 
+  /** Issue states eligible for the build loop. */
   const BUILDABLE = new Set<string>(['IN_PROGRESS', 'PLANNED', 'NEW'])
   const candidates = listResult.value.filter(i => BUILDABLE.has(i.state)).slice(0, opts.batch)
 
