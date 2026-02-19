@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run src/index.ts",
+    "dev:sample": "bun run src/index.ts --cwd tests/sample-project",
     "test": "bun test",
     "build": "bun build --compile --outfile=dist/barf src/index.ts",
     "docs": "typedoc",

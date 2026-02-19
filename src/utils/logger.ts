@@ -1,29 +1,50 @@
 import pino from 'pino'
 
 /**
- * Create a named child logger. Pass the module name so log lines are
- * attributable: createLogger('LocalIssueProvider').
- *
- * Always writes structured JSON to stderr.
- * For human-readable output: LOG_PRETTY=1 barf <command>
- * (pipes internally through pino-pretty transport)
+ * Returns the log file path, resolved at call time (not import time).
+ * Override with BARF_LOG_FILE. Default: barf.log in the current working directory.
  */
-export function createLogger(name: string): pino.Logger {
+function resolveLogFile(): string {
+  return process.env.BARF_LOG_FILE ?? 'barf.log'
+}
+
+function buildLogger(name: string): pino.Logger {
   const level = process.env.LOG_LEVEL ?? 'info'
-  const dest = pino.destination(2) // stderr
 
   if (process.env.LOG_PRETTY === '1') {
     try {
       return pino(
         { name, level },
-        pino.transport({ target: 'pino-pretty', options: { colorize: true, destination: 2 } })
+        pino.transport({ target: 'pino-pretty', options: { colorize: true, destination: 2 } }),
       )
     } catch {
-      // pino-pretty not available (e.g. compiled binary without it bundled) — fall through
+      // pino-pretty not available in compiled binary — fall through
     }
   }
 
-  return pino({ name, level }, dest)
+  const streams = pino.multistream([
+    { stream: pino.destination(2) },
+    { stream: pino.destination(resolveLogFile()) },
+  ])
+  return pino({ name, level }, streams)
+}
+
+/**
+ * Create a named child logger. The underlying pino instance is built lazily
+ * on first use so that the log file path resolves after --cwd / process.chdir().
+ *
+ * Writes JSON to both stderr and `barf.log` in the project directory.
+ * Overrides: LOG_LEVEL, LOG_PRETTY=1, BARF_LOG_FILE=/abs/path
+ */
+export function createLogger(name: string): pino.Logger {
+  let instance: pino.Logger | null = null
+  const get = () => (instance ??= buildLogger(name))
+  return new Proxy({} as pino.Logger, {
+    get: (_t, prop) => {
+      const val = get()[prop as keyof pino.Logger]
+      return typeof val === 'function' ? (val as Function).bind(get()) : val
+    },
+  })
 }
 
 /** Root logger for src/index.ts and top-level use. */

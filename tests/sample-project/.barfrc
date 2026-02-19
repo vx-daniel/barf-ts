@@ -1,6 +1,0 @@
-ISSUES_DIR=issues
-PLAN_DIR=plans
-PLAN_MODEL=claude-opus-4-6
-BUILD_MODEL=claude-sonnet-4-6
-CONTEXT_USAGE_PERCENT=75
-TEST_COMMAND=bun test

@@ -1,3 +1,4 @@
+import { resolve } from 'path'
 import { Command } from 'commander'
 import { loadConfig } from '@/core/config'
 import { createIssueProvider } from '@/core/issue-providers/factory'
@@ -17,7 +18,15 @@ function getProvider(config: ReturnType<typeof loadConfig>) {
 }
 
 const program = new Command()
-program.name('barf').description('AI issue orchestration CLI').version('2.0.0')
+program
+  .name('barf')
+  .description('AI issue orchestration CLI')
+  .version('2.0.0')
+  .option('--cwd <path>', 'Project directory (default: current directory)')
+  .hook('preAction', () => {
+    const cwd = program.opts().cwd
+    if (cwd) process.chdir(resolve(cwd))
+  })
 
 program
   .command('init')

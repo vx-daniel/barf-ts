@@ -5,6 +5,7 @@ AI issue orchestration CLI. Feeds issues to Claude one at a time, tracks state, 
 ```
 barf plan        # NEW → PLANNED  (Claude writes an implementation plan)
 barf build       # PLANNED → COMPLETED  (Claude implements the plan)
+barf --cwd /path/to/project status   # target a specific project directory
 ```
 
 ## How it works
@@ -40,6 +41,15 @@ barf init --provider github --repo owner/repo   # GitHub Issues
 ```
 
 `barf init` creates the issues and plans directories, writes a `.barfrc` config file, and (for GitHub) creates the `barf:*` label set.
+
+You can also target a project without changing directory using the global `--cwd` flag:
+
+```bash
+barf --cwd ~/projects/myapp status
+barf --cwd ~/projects/myapp plan --issue 003
+```
+
+`--cwd` is accepted by all commands and is equivalent to running barf from inside that directory.
 
 ## Issue format
 
@@ -86,6 +96,8 @@ NEW ──► PLANNED ──► IN_PROGRESS ──► COMPLETED
 | `COMPLETED` | All acceptance criteria met |
 
 ## Commands
+
+All commands accept a global `--cwd <path>` option to target a project directory without `cd`-ing into it.
 
 ### `barf init`
 
@@ -169,7 +181,7 @@ Requires `gh auth login`.
 
 ```bash
 bun install          # install deps
-bun test             # run tests (64 tests)
+bun test             # run tests (70 tests)
 bun run build        # compile binary to dist/barf
 bun run format       # format with oxfmt
 bun run lint         # lint with oxlint
@@ -213,6 +225,7 @@ src/
     PROMPT_split.md           split prompt template
 tests/
   unit/                       64 tests across all modules
+  sample-project/             sample project for manual testing (barf --cwd tests/sample-project)
 docs/
   plans/                      implementation plans (numbered)
 ```
