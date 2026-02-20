@@ -21,7 +21,7 @@
   },
     "env": {
     "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
-    "PROJECT_PLANS_DIR": "docs/plans"
+    "PROJECT_PLANS_DIR": "resources/plans"
   },
   "hooks": {
     "PostToolUse": [
