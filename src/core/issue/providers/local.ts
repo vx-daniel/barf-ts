@@ -1,4 +1,4 @@
-import { ResultAsync } from 'neverthrow'
+import type { ResultAsync } from 'neverthrow'
 import { IssueProvider } from '@/core/issue/base'
 import {
   LockInfo,
@@ -9,6 +9,7 @@ import {
   type IssueState
 } from '@/types'
 import { parseIssue, serializeIssue } from '@/core/issue'
+import { syncToResultAsync } from '@/utils/syncToResultAsync'
 import {
   readFileSync,
   writeFileSync,
@@ -62,17 +63,7 @@ export class LocalIssueProvider extends IssueProvider {
       if (!entry.endsWith('.lock')) {
         continue
       }
-      const lockFile = join(this.barfDir, entry)
-      try {
-        const info = LockInfoSchema.parse(JSON.parse(readFileSync(lockFile, 'utf8')))
-        try {
-          process.kill(info.pid, 0)
-        } catch {
-          rmSync(lockFile, { force: true }) // dead PID — stale
-        }
-      } catch {
-        rmSync(lockFile, { force: true }) // corrupt or unreadable — treat as stale
-      }
+      this.readLockIfAlive(join(this.barfDir, entry))
     }
   }
 
@@ -84,51 +75,66 @@ export class LocalIssueProvider extends IssueProvider {
     return join(this.barfDir, `${id}.lock`)
   }
 
+  /**
+   * Reads a lock file and returns its parsed contents if the recorded PID is still alive.
+   * If the file is corrupt, unreadable, or its PID is dead, deletes the lock and returns `null`.
+   */
+  private readLockIfAlive(lockFile: string): LockInfo | null {
+    let info: LockInfo
+    try {
+      info = LockInfoSchema.parse(JSON.parse(readFileSync(lockFile, 'utf8')))
+    } catch {
+      rmSync(lockFile, { force: true })
+      return null
+    }
+    try {
+      process.kill(info.pid, 0)
+      return info
+    } catch {
+      rmSync(lockFile, { force: true })
+      return null
+    }
+  }
+
   fetchIssue(id: string): ResultAsync<Issue, Error> {
-    return ResultAsync.fromPromise(
-      Promise.resolve().then(() => {
-        const content = readFileSync(this.issuePath(id), 'utf8')
-        return parseIssue(content).match(
-          issue => issue,
-          e => {
-            throw e
-          }
-        )
-      }),
-      e => (e instanceof Error ? e : new Error(String(e)))
-    )
+    return syncToResultAsync(() => {
+      const content = readFileSync(this.issuePath(id), 'utf8')
+      return parseIssue(content).match(
+        issue => issue,
+        e => {
+          throw e
+        }
+      )
+    })
   }
 
   listIssues(filter?: { state?: IssueState }): ResultAsync<Issue[], Error> {
-    return ResultAsync.fromPromise(
-      Promise.resolve().then(() => {
-        const entries = readdirSync(this.issuesDir)
-        const issues: Issue[] = []
-        for (const entry of entries) {
-          if (entry.startsWith('.')) {
-            continue
-          }
-          if (!entry.endsWith('.md')) {
-            continue
-          }
-          const id = entry.replace(/\.md$/, '')
-          try {
-            const content = readFileSync(this.issuePath(id), 'utf8')
-            const result = parseIssue(content)
-            if (result.isOk()) {
-              const issue = result.value
-              if (!filter?.state || issue.state === filter.state) {
-                issues.push(issue)
-              }
-            }
-          } catch {
-            /* skip unreadable files */
-          }
+    return syncToResultAsync(() => {
+      const entries = readdirSync(this.issuesDir)
+      const issues: Issue[] = []
+      for (const entry of entries) {
+        if (entry.startsWith('.')) {
+          continue
         }
-        return issues
-      }),
-      e => (e instanceof Error ? e : new Error(String(e)))
-    )
+        if (!entry.endsWith('.md')) {
+          continue
+        }
+        const id = entry.replace(/\.md$/, '')
+        try {
+          const content = readFileSync(this.issuePath(id), 'utf8')
+          const result = parseIssue(content)
+          if (result.isOk()) {
+            const issue = result.value
+            if (!filter?.state || issue.state === filter.state) {
+              issues.push(issue)
+            }
+          }
+        } catch {
+          /* skip unreadable files */
+        }
+      }
+      return issues
+    })
   }
 
   createIssue(input: { title: string; body?: string; parent?: string }): ResultAsync<Issue, Error> {
@@ -150,134 +156,86 @@ export class LocalIssueProvider extends IssueProvider {
         force_split: false,
         body: input.body ?? ''
       }
-      return ResultAsync.fromPromise(
-        Promise.resolve().then(() => {
-          writeFileSync(join(this.issuesDir, `${id}.md`), serializeIssue(issue))
-          return issue
-        }),
-        e => (e instanceof Error ? e : new Error(String(e)))
-      )
+      return syncToResultAsync(() => {
+        writeFileSync(join(this.issuesDir, `${id}.md`), serializeIssue(issue))
+        return issue
+      })
     })
   }
 
   writeIssue(id: string, fields: Partial<Omit<Issue, 'id'>>): ResultAsync<Issue, Error> {
     return this.fetchIssue(id).andThen(current =>
-      ResultAsync.fromPromise(
-        Promise.resolve().then(() => {
-          const updated = { ...current, ...fields }
-          const target = this.issuePath(id)
-          const tmp = `${target}.tmp`
-          writeFileSync(tmp, serializeIssue(updated))
-          renameSync(tmp, target)
-          return updated
-        }),
-        e => (e instanceof Error ? e : new Error(String(e)))
-      )
+      syncToResultAsync(() => {
+        const updated = { ...current, ...fields }
+        const target = this.issuePath(id)
+        const tmp = `${target}.tmp`
+        writeFileSync(tmp, serializeIssue(updated))
+        renameSync(tmp, target)
+        return updated
+      })
     )
   }
 
   deleteIssue(id: string): ResultAsync<void, Error> {
-    return ResultAsync.fromPromise(
-      Promise.resolve().then(() => {
-        rmSync(this.issuePath(id), { force: true })
-      }),
-      e => (e instanceof Error ? e : new Error(String(e)))
-    )
+    return syncToResultAsync(() => {
+      rmSync(this.issuePath(id), { force: true })
+    })
   }
 
   lockIssue(id: string, meta?: { mode?: LockMode }): ResultAsync<void, Error> {
-    return ResultAsync.fromPromise(
-      Promise.resolve().then(() => {
-        const content = readFileSync(this.issuePath(id), 'utf8')
-        const stateMatch = content.match(/^state=(.+)$/m)
-        const state = IssueStateSchema.catch('NEW').parse(stateMatch?.[1]?.trim())
+    return syncToResultAsync(() => {
+      const content = readFileSync(this.issuePath(id), 'utf8')
+      const stateMatch = content.match(/^state=(.+)$/m)
+      const state = IssueStateSchema.catch('NEW').parse(stateMatch?.[1]?.trim())
 
-        const lockData: LockInfo = {
-          pid: process.pid,
-          acquiredAt: new Date().toISOString(),
-          state,
-          mode: meta?.mode ?? 'build'
-        }
+      const lockData: LockInfo = {
+        pid: process.pid,
+        acquiredAt: new Date().toISOString(),
+        state,
+        mode: meta?.mode ?? 'build'
+      }
 
-        const writelock = () => {
-          // O_CREAT | O_EXCL: atomic, throws EEXIST if another process holds the lock
-          const fd = openSync(
-            this.lockPath(id),
-            constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
-          )
-          try {
-            writeSync(fd, JSON.stringify(lockData))
-          } finally {
-            closeSync(fd)
-          }
-        }
-
+      const writelock = () => {
+        // O_CREAT | O_EXCL: atomic, throws EEXIST if another process holds the lock
+        const fd = openSync(
+          this.lockPath(id),
+          constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
+        )
         try {
-          writelock()
-        } catch (e) {
-          // On EEXIST, check if the existing lock belongs to a dead process
-          if (e instanceof Error && (e as NodeJS.ErrnoException).code === 'EEXIST') {
-            const lockFile = this.lockPath(id)
-            let stale = false
-            try {
-              const existing = LockInfoSchema.parse(JSON.parse(readFileSync(lockFile, 'utf8')))
-              try {
-                process.kill(existing.pid, 0)
-              } catch {
-                stale = true // ESRCH — process dead
-              }
-            } catch {
-              stale = true // corrupt/unreadable lock file
-            }
-            if (stale) {
-              rmSync(lockFile, { force: true })
-              writelock() // retry once with the stale lock cleared
-              return
-            }
-          }
-          throw e
+          writeSync(fd, JSON.stringify(lockData))
+        } finally {
+          closeSync(fd)
         }
-      }),
-      e => (e instanceof Error ? e : new Error(String(e)))
-    )
+      }
+
+      try {
+        writelock()
+      } catch (e) {
+        // On EEXIST, check if the existing lock belongs to a dead process
+        if (e instanceof Error && (e as NodeJS.ErrnoException).code === 'EEXIST') {
+          if (this.readLockIfAlive(this.lockPath(id)) === null) {
+            writelock() // stale lock cleared — retry once
+            return
+          }
+        }
+        throw e
+      }
+    })
   }
 
   unlockIssue(id: string): ResultAsync<void, Error> {
-    return ResultAsync.fromPromise(
-      Promise.resolve().then(() => {
-        rmSync(this.lockPath(id), { force: true })
-      }),
-      e => (e instanceof Error ? e : new Error(String(e)))
-    )
+    return syncToResultAsync(() => {
+      rmSync(this.lockPath(id), { force: true })
+    })
   }
 
   isLocked(id: string): ResultAsync<boolean, Error> {
-    return ResultAsync.fromPromise(
-      Promise.resolve().then(() => {
-        const lockFile = this.lockPath(id)
-        if (!existsSync(lockFile)) {
-          return false
-        }
-
-        let info: LockInfo
-        try {
-          info = LockInfoSchema.parse(JSON.parse(readFileSync(lockFile, 'utf8')))
-        } catch {
-          // Corrupt/unreadable lock file — treat as stale
-          rmSync(lockFile, { force: true })
-          return false
-        }
-
-        try {
-          process.kill(info.pid, 0) // signal 0: check existence only
-          return true // process alive → lock is valid
-        } catch {
-          // ESRCH: process dead → stale lock, auto-clean
-          rmSync(lockFile, { force: true })
-          return false
-        }
-      }),
-      e => (e instanceof Error ? e : new Error(String(e)))
-    )
+    return syncToResultAsync(() => {
+      const lockFile = this.lockPath(id)
+      if (!existsSync(lockFile)) {
+        return false
+      }
+      return this.readLockIfAlive(lockFile) !== null
+    })
   }
 }

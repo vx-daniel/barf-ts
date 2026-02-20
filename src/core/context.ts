@@ -159,30 +159,24 @@ export async function* parseClaudeStream(
 }
 
 /**
- * Injects barf template variables into a prompt string.
+ * Injects template variables into a prompt string.
  * Simple string replacement — no eval, no shell, injection-safe.
  *
- * @param template - Raw prompt template containing `${BARF_*}` or `$BARF_*` placeholders.
- * @param vars - Substitution values for each supported placeholder.
+ * Each key in `vars` is matched against `$KEY` and `${KEY}` patterns in the template.
+ * Values are stringified via `String()`.
+ *
+ * @param template - Raw prompt template containing `$KEY` or `${KEY}` placeholders.
+ * @param vars - Key-value pairs to substitute. Keys should match the placeholder names exactly.
  * @returns The template string with all recognized placeholders replaced by their string values.
  * @category Claude Stream
  */
-export function injectPromptVars(
+export function injectTemplateVars(
   template: string,
-  vars: {
-    issueId: string
-    issueFile: string
-    mode: string
-    iteration: number
-    issuesDir: string
-    planDir: string
-  }
+  vars: Record<string, string | number>
 ): string {
-  return template
-    .replace(/\$\{?BARF_ISSUE_ID\}?/g, vars.issueId)
-    .replace(/\$\{?BARF_ISSUE_FILE\}?/g, vars.issueFile)
-    .replace(/\$\{?BARF_MODE\}?/g, vars.mode)
-    .replace(/\$\{?BARF_ITERATION\}?/g, String(vars.iteration))
-    .replace(/\$\{?ISSUES_DIR\}?/g, vars.issuesDir)
-    .replace(/\$\{?PLAN_DIR\}?/g, vars.planDir)
+  let result = template
+  for (const [key, value] of Object.entries(vars)) {
+    result = result.replace(new RegExp(`\\$\\{?${key}\\}?`, 'g'), String(value))
+  }
+  return result
 }

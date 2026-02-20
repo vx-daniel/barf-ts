@@ -1,6 +1,7 @@
 import { join } from 'path'
 import { existsSync, readFileSync, unlinkSync } from 'fs'
 import { resolveIssueFile } from '@/core/batch'
+import { injectTemplateVars } from '@/core/context'
 import { createInterface } from 'readline'
 import { ResultAsync } from 'neverthrow'
 import { z } from 'zod'
@@ -8,6 +9,7 @@ import type { Config } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { runClaudeIteration } from '@/core/claude'
 import { createLogger } from '@/utils/logger'
+import { toError } from '@/utils/toError'
 
 // Embedded at compile time via Bun import attribute
 import interviewPromptTemplate from '@/prompts/PROMPT_interview.md' with { type: 'text' }
@@ -75,29 +77,6 @@ async function askQuestion(question: string, options?: string[]): Promise<string
 }
 
 /**
- * Injects interview-specific template variables into a prompt string.
- *
- * @param template - Raw prompt template with `$BARF_*` placeholders.
- * @param vars - Values to substitute.
- * @returns Prompt with all placeholders replaced.
- */
-function injectInterviewVars(
-  template: string,
-  vars: {
-    issueId: string
-    issueFile: string
-    priorQA: string
-    questionsFile: string
-  }
-): string {
-  return template
-    .replace(/\$\{?BARF_ISSUE_ID\}?/g, vars.issueId)
-    .replace(/\$\{?BARF_ISSUE_FILE\}?/g, vars.issueFile)
-    .replace(/\$\{?PRIOR_QA\}?/g, vars.priorQA || '(none yet)')
-    .replace(/\$\{?BARF_QUESTIONS_FILE\}?/g, vars.questionsFile)
-}
-
-/**
  * Formats accumulated Q&A pairs as a markdown section for appending to the issue body.
  *
  * @param pairs - List of question/answer pairs from the interview.
@@ -151,11 +130,11 @@ export function interviewLoop(
           unlinkSync(questionsFile)
         }
 
-        const prompt = injectInterviewVars(interviewPromptTemplate, {
-          issueId,
-          issueFile,
-          priorQA: priorQAText,
-          questionsFile
+        const prompt = injectTemplateVars(interviewPromptTemplate, {
+          BARF_ISSUE_ID: issueId,
+          BARF_ISSUE_FILE: issueFile,
+          PRIOR_QA: priorQAText || '(none yet)',
+          BARF_QUESTIONS_FILE: questionsFile
         })
 
         logger.info({ issueId, turn }, 'running interview turn')
@@ -225,6 +204,30 @@ export function interviewLoop(
         }
       }
     })(),
-    e => (e instanceof Error ? e : new Error(String(e)))
+    toError
   )
+}
+
+/**
+ * Full interview workflow: transition to INTERVIEWING, run the interview loop,
+ * then transition to PLANNED.
+ *
+ * Callers get a single `ResultAsync` — error handling (exit vs. warn+continue)
+ * is left to the caller.
+ *
+ * @param issueId - ID of the issue to interview.
+ * @param config - Loaded barf configuration.
+ * @param provider - Issue provider for transitions and persistence.
+ * @returns `ok(void)` on successful completion, `err(Error)` if any step fails.
+ */
+export function runInterview(
+  issueId: string,
+  config: Config,
+  provider: IssueProvider
+): ResultAsync<void, Error> {
+  return provider
+    .transition(issueId, 'INTERVIEWING')
+    .andThen(() => interviewLoop(issueId, config, provider))
+    .andThen(() => provider.transition(issueId, 'PLANNED'))
+    .map(() => undefined)
 }

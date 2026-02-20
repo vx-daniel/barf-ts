@@ -1,43 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { errAsync, okAsync } from 'neverthrow'
 import { auditCommand } from '@/cli/commands/audit'
-import type { IssueProvider } from '@/core/issue/base'
-import type { Issue, Config } from '@/types'
-import { ConfigSchema } from '@/types'
-
-const defaultConfig = (): Config => ConfigSchema.parse({})
-
-function makeIssue(overrides: Partial<Issue> = {}): Issue {
-  return {
-    id: '001',
-    title: 'Test issue',
-    state: 'COMPLETED',
-    parent: '',
-    children: [],
-    split_count: 0,
-    force_split: false,
-    body: '## Acceptance Criteria\n- [x] Feature works\n',
-    ...overrides
-  }
-}
-
-/** Minimal stub provider for auditCommand tests. */
-function makeProvider(overrides: Partial<IssueProvider> = {}): IssueProvider {
-  return {
-    listIssues: () => errAsync(new Error('not implemented')),
-    fetchIssue: () => errAsync(new Error('not implemented')),
-    createIssue: () => errAsync(new Error('not implemented')),
-    writeIssue: () => errAsync(new Error('not implemented')),
-    deleteIssue: () => errAsync(new Error('not implemented')),
-    lockIssue: () => errAsync(new Error('not implemented')),
-    unlockIssue: () => errAsync(new Error('not implemented')),
-    isLocked: () => errAsync(new Error('not implemented')),
-    transition: () => errAsync(new Error('not implemented')),
-    autoSelect: () => errAsync(new Error('not implemented')),
-    checkAcceptanceCriteria: () => errAsync(new Error('not implemented')),
-    ...overrides
-  } as unknown as IssueProvider
-}
+import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
 
 describe('auditCommand', () => {
   beforeEach(() => {

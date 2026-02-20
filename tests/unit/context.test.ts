@@ -1,7 +1,7 @@
 import { describe, it, expect, mock } from 'bun:test'
 import {
   parseClaudeStream,
-  injectPromptVars,
+  injectTemplateVars,
   ContextOverflowError,
   RateLimitError
 } from '@/core/context'
@@ -127,32 +127,32 @@ describe('parseClaudeStream', () => {
   })
 })
 
-describe('injectPromptVars', () => {
+describe('injectTemplateVars', () => {
   const vars = {
-    issueId: '001',
-    issueFile: 'issues/001.md.working',
-    mode: 'build',
-    iteration: 2,
-    issuesDir: 'issues',
-    planDir: 'plans'
+    BARF_ISSUE_ID: '001',
+    BARF_ISSUE_FILE: 'issues/001.md.working',
+    BARF_MODE: 'build',
+    BARF_ITERATION: 2,
+    ISSUES_DIR: 'issues',
+    PLAN_DIR: 'plans'
   }
 
   it('replaces $BARF_ISSUE_ID', () => {
-    expect(injectPromptVars('id: $BARF_ISSUE_ID', vars)).toBe('id: 001')
+    expect(injectTemplateVars('id: $BARF_ISSUE_ID', vars)).toBe('id: 001')
   })
 
   // eslint-disable-next-line no-template-curly-in-string
   it('replaces ${BARF_ISSUE_ID} (braced form)', () => {
     // eslint-disable-next-line no-template-curly-in-string
-    expect(injectPromptVars('id: ${BARF_ISSUE_ID}', vars)).toBe('id: 001')
+    expect(injectTemplateVars('id: ${BARF_ISSUE_ID}', vars)).toBe('id: 001')
   })
 
   it('replaces all six variables', () => {
     const t = '$BARF_ISSUE_ID $BARF_ISSUE_FILE $BARF_MODE $BARF_ITERATION $ISSUES_DIR $PLAN_DIR'
-    expect(injectPromptVars(t, vars)).toBe('001 issues/001.md.working build 2 issues plans')
+    expect(injectTemplateVars(t, vars)).toBe('001 issues/001.md.working build 2 issues plans')
   })
 
   it('replaces multiple occurrences of the same variable', () => {
-    expect(injectPromptVars('$BARF_ISSUE_ID $BARF_ISSUE_ID', vars)).toBe('001 001')
+    expect(injectTemplateVars('$BARF_ISSUE_ID $BARF_ISSUE_ID', vars)).toBe('001 001')
   })
 })

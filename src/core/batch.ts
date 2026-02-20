@@ -4,9 +4,10 @@ import { join } from 'path'
 import type { Config } from '@/types/index'
 import type { IssueProvider } from '@/core/issue/base'
 import { runClaudeIteration } from '@/core/claude'
-import { injectPromptVars } from '@/core/context'
+import { injectTemplateVars } from '@/core/context'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
+import { toError } from '@/utils/toError'
 
 // Prompt templates — embedded into binary at compile time via Bun import attributes
 import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
@@ -180,13 +181,13 @@ export function runLoop(
           const currentMode: LoopMode = splitPending ? 'split' : mode
           logger.info({ issueId, mode: currentMode, model, iteration }, 'starting iteration')
 
-          const prompt = injectPromptVars(PROMPT_TEMPLATES[currentMode], {
-            issueId,
-            issueFile: resolveIssueFile(issueId, config),
-            mode: currentMode,
-            iteration,
-            issuesDir: config.issuesDir,
-            planDir: config.planDir
+          const prompt = injectTemplateVars(PROMPT_TEMPLATES[currentMode], {
+            BARF_ISSUE_ID: issueId,
+            BARF_ISSUE_FILE: resolveIssueFile(issueId, config),
+            BARF_MODE: currentMode,
+            BARF_ITERATION: iteration,
+            ISSUES_DIR: config.issuesDir,
+            PLAN_DIR: config.planDir
           })
 
           const iterResult = await runClaudeIteration(prompt, model, config, issueId)
@@ -288,6 +289,6 @@ export function runLoop(
         await provider.unlockIssue(issueId)
       }
     })(),
-    e => (e instanceof Error ? e : new Error(String(e)))
+    toError
   )
 }

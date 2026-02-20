@@ -10,43 +10,8 @@ mock.module('@/core/claude', () => ({
 }))
 
 import { interviewCommand } from '@/cli/commands/interview'
-import type { IssueProvider } from '@/core/issue/base'
-import type { Issue, Config } from '@/types'
 import { ConfigSchema } from '@/types'
-
-const defaultConfig = (): Config => ConfigSchema.parse({})
-
-function makeIssue(overrides: Partial<Issue> = {}): Issue {
-  return {
-    id: '001',
-    title: 'Test issue',
-    state: 'NEW',
-    parent: '',
-    children: [],
-    split_count: 0,
-    force_split: false,
-    body: '## Description\nBuild a widget.',
-    ...overrides
-  }
-}
-
-/** Minimal stub provider for interviewCommand tests. */
-function makeProvider(overrides: Partial<IssueProvider> = {}): IssueProvider {
-  return {
-    listIssues: () => errAsync(new Error('not implemented')),
-    fetchIssue: () => errAsync(new Error('not implemented')),
-    createIssue: () => errAsync(new Error('not implemented')),
-    writeIssue: () => errAsync(new Error('not implemented')),
-    deleteIssue: () => errAsync(new Error('not implemented')),
-    lockIssue: () => errAsync(new Error('not implemented')),
-    unlockIssue: () => errAsync(new Error('not implemented')),
-    isLocked: () => errAsync(new Error('not implemented')),
-    transition: () => errAsync(new Error('not implemented')),
-    autoSelect: () => errAsync(new Error('not implemented')),
-    checkAcceptanceCriteria: () => errAsync(new Error('not implemented')),
-    ...overrides
-  } as unknown as IssueProvider
-}
+import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
 
 describe('interviewCommand', () => {
   beforeEach(() => {
@@ -148,8 +113,8 @@ describe('ConfigSchema interviewModel and auditModel', () => {
     expect(defaultConfig().interviewModel).toBe('claude-sonnet-4-6')
   })
 
-  it('defaults auditModel to claude-opus-4-6', () => {
-    expect(defaultConfig().auditModel).toBe('claude-opus-4-6')
+  it('defaults auditModel to gpt-4o', () => {
+    expect(defaultConfig().auditModel).toBe('gpt-4o')
   })
 
   it('accepts custom interviewModel', () => {

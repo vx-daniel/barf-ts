@@ -3,6 +3,7 @@ import { ResultAsync, errAsync } from 'neverthrow'
 import { IssueProvider } from '@/core/issue/base'
 import type { Issue, IssueState, LockMode } from '@/types'
 import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
+import { toError } from '@/utils/toError'
 
 /**
  * Injectable subprocess function matching the {@link execFileNoThrow} signature.
@@ -86,22 +87,20 @@ export class GitHubIssueProvider extends IssueProvider {
     if (this.token) {
       return ResultAsync.fromSafePromise(Promise.resolve(this.token))
     }
-    return ResultAsync.fromPromise(this.spawnFile('gh', ['auth', 'token']), e =>
-      e instanceof Error ? e : new Error(String(e))
-    ).andThen(result => {
-      if (result.status !== 0) {
-        return errAsync(new Error(`gh auth failed — run: gh auth login\n${result.stderr}`))
+    return ResultAsync.fromPromise(this.spawnFile('gh', ['auth', 'token']), toError).andThen(
+      result => {
+        if (result.status !== 0) {
+          return errAsync(new Error(`gh auth failed — run: gh auth login\n${result.stderr}`))
+        }
+        this.token = result.stdout.trim()
+        return ResultAsync.fromSafePromise(Promise.resolve(this.token))
       }
-      this.token = result.stdout.trim()
-      return ResultAsync.fromSafePromise(Promise.resolve(this.token))
-    })
+    )
   }
 
   private ghApi<T>(schema: z.ZodType<T>, args: string[]): ResultAsync<T, Error> {
     return this.ensureAuth().andThen(() =>
-      ResultAsync.fromPromise(this.spawnFile('gh', ['api', ...args]), e =>
-        e instanceof Error ? e : new Error(String(e))
-      ).andThen(result => {
+      ResultAsync.fromPromise(this.spawnFile('gh', ['api', ...args]), toError).andThen(result => {
         if (result.status !== 0) {
           return errAsync(new Error(`gh api error: ${result.stderr}`))
         }
@@ -141,7 +140,7 @@ export class GitHubIssueProvider extends IssueProvider {
           '-f',
           'labels[]=barf:new'
         ]),
-        e => (e instanceof Error ? e : new Error(String(e)))
+        toError
       ).andThen(result => {
         if (result.status !== 0) {
           return errAsync(new Error(`Failed to create issue: ${result.stderr}`))
@@ -168,7 +167,7 @@ export class GitHubIssueProvider extends IssueProvider {
               'DELETE',
               `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent(oldLabel)}`
             ]),
-            e => (e instanceof Error ? e : new Error(String(e)))
+            toError
           ).andThen(() =>
             ResultAsync.fromPromise(
               this.spawnFile('gh', [
@@ -179,7 +178,7 @@ export class GitHubIssueProvider extends IssueProvider {
                 '-f',
                 `labels[]=${newLabel}`
               ]),
-              e => (e instanceof Error ? e : new Error(String(e)))
+              toError
             )
           )
         )
@@ -217,7 +216,7 @@ export class GitHubIssueProvider extends IssueProvider {
           '-f',
           'labels[]=barf:locked'
         ]),
-        e => (e instanceof Error ? e : new Error(String(e)))
+        toError
       ).map(() => undefined)
     )
   }
@@ -231,7 +230,7 @@ export class GitHubIssueProvider extends IssueProvider {
           'DELETE',
           `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent('barf:locked')}`
         ]),
-        e => (e instanceof Error ? e : new Error(String(e)))
+        toError
       ).map(() => undefined)
     )
   }

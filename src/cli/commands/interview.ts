@@ -1,6 +1,6 @@
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types'
-import { interviewLoop } from '@/core/interview'
+import { runInterview } from '@/core/interview'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('interview')
@@ -39,26 +39,9 @@ export async function interviewCommand(
 
   logger.info({ issueId }, 'starting interview')
 
-  // NEW → INTERVIEWING
-  const startTransition = await provider.transition(issueId, 'INTERVIEWING')
-  if (startTransition.isErr()) {
-    logger.error({ issueId, err: startTransition.error.message }, 'failed to start interview')
-    process.exitCode = 1
-    return
-  }
-
-  // Run the interactive interview loop
-  const loopResult = await interviewLoop(issueId, config, provider)
-  if (loopResult.isErr()) {
-    logger.error({ issueId, err: loopResult.error.message }, 'interview loop failed')
-    process.exitCode = 1
-    return
-  }
-
-  // INTERVIEWING → PLANNED
-  const endTransition = await provider.transition(issueId, 'PLANNED')
-  if (endTransition.isErr()) {
-    logger.error({ issueId, err: endTransition.error.message }, 'failed to complete interview')
+  const result = await runInterview(issueId, config, provider)
+  if (result.isErr()) {
+    logger.error({ issueId, err: result.error.message }, 'interview failed')
     process.exitCode = 1
     return
   }

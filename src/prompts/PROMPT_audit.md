@@ -32,10 +32,32 @@ $RULES_CONTEXT
 
 ## Output
 
-If you find issues: create a new issue file at $ISSUES_DIR/audit-$BARF_ISSUE_ID.md with:
-  - Frontmatter: state=NEW, parent=$BARF_ISSUE_ID, title=Audit findings: <original title>
-  - Body: detailed findings organized by category (failing checks, unmet criteria, rule violations)
+Respond with a single JSON object matching one of these shapes:
 
-If everything passes: output exactly this line with no surrounding text:
+If everything passes:
+```json
+{ "pass": true }
+```
 
-AUDIT_PASS
+If you find issues:
+```json
+{
+  "pass": false,
+  "findings": [
+    {
+      "category": "failing_check | unmet_criteria | rule_violation | production_readiness",
+      "severity": "error | warning",
+      "title": "Short description of the finding",
+      "detail": "Detailed explanation of the issue and how to fix it"
+    }
+  ]
+}
+```
+
+Categories:
+- `failing_check` — a deterministic check (test, lint, format) is failing
+- `unmet_criteria` — an acceptance criterion is not fulfilled
+- `rule_violation` — code violates a project rule listed above
+- `production_readiness` — error handling, security, or correctness concern
+
+Respond ONLY with the JSON object. No markdown fences, no explanation outside the JSON.

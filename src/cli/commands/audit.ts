@@ -2,7 +2,9 @@ import { join } from 'path'
 import { existsSync, readFileSync, readdirSync } from 'fs'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types'
-import { runClaudeIteration } from '@/core/claude'
+import { runOpenAIChat } from '@/core/openai'
+import { AuditResponseSchema, type AuditFinding } from '@/core/audit-schema'
+import { injectTemplateVars } from '@/core/context'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 
@@ -10,37 +12,6 @@ import { createLogger } from '@/utils/logger'
 import auditPromptTemplate from '@/prompts/PROMPT_audit.md' with { type: 'text' }
 
 const logger = createLogger('audit')
-
-/**
- * Injects audit-specific template variables into a prompt string.
- *
- * @param template - Raw audit prompt template with `$BARF_*` placeholders.
- * @param vars - Values to substitute.
- * @returns Prompt with all placeholders replaced.
- */
-function injectAuditVars(
-  template: string,
-  vars: {
-    issueId: string
-    issueFile: string
-    planFile: string
-    issuesDir: string
-    testResults: string
-    lintResults: string
-    formatResults: string
-    rulesContext: string
-  }
-): string {
-  return template
-    .replace(/\$\{?BARF_ISSUE_ID\}?/g, vars.issueId)
-    .replace(/\$\{?BARF_ISSUE_FILE\}?/g, vars.issueFile)
-    .replace(/\$\{?PLAN_FILE\}?/g, vars.planFile)
-    .replace(/\$\{?ISSUES_DIR\}?/g, vars.issuesDir)
-    .replace(/\$\{?TEST_RESULTS\}?/g, vars.testResults)
-    .replace(/\$\{?LINT_RESULTS\}?/g, vars.lintResults)
-    .replace(/\$\{?FORMAT_RESULTS\}?/g, vars.formatResults)
-    .replace(/\$\{?RULES_CONTEXT\}?/g, vars.rulesContext)
-}
 
 /**
  * Loads project rules from CLAUDE.md and `.claude/rules/` for inclusion in the audit prompt.
@@ -81,17 +52,50 @@ function formatCheckResult(
 }
 
 /**
+ * Formats audit findings as a markdown body for the findings issue.
+ *
+ * Groups findings by category and formats each with severity and detail.
+ *
+ * @param findings - Array of validated audit findings.
+ * @returns Markdown-formatted string suitable for an issue body.
+ */
+function formatFindings(findings: AuditFinding[]): string {
+  const grouped = new Map<string, AuditFinding[]>()
+  for (const f of findings) {
+    const list = grouped.get(f.category) ?? []
+    list.push(f)
+    grouped.set(f.category, list)
+  }
+
+  const categoryLabels: Record<string, string> = {
+    failing_check: 'Failing Checks',
+    unmet_criteria: 'Unmet Criteria',
+    rule_violation: 'Rule Violations',
+    production_readiness: 'Production Readiness'
+  }
+
+  const sections: string[] = []
+  for (const [category, items] of grouped) {
+    const label = categoryLabels[category] ?? category
+    const lines = items.map(f => `- **[${f.severity.toUpperCase()}]** ${f.title}\n  ${f.detail}`)
+    sections.push(`### ${label}\n\n${lines.join('\n\n')}`)
+  }
+
+  return sections.join('\n\n')
+}
+
+/**
  * Audits a single COMPLETED issue by running deterministic checks and an AI review.
  *
  * Phase 1: runs tests, lint, and format check via `execFileNoThrow`.
- * Phase 2: runs Claude with the audit prompt, including check results and project rules.
+ * Phase 2: sends prompt to OpenAI and parses structured JSON response.
  *
- * If Claude finds issues, it creates a new issue file in `config.issuesDir` with findings.
+ * If findings are returned, creates a new issue via `provider.createIssue()`.
  * If everything passes, logs a success message.
  *
  * @param issueId - ID of the completed issue to audit.
  * @param config - Loaded barf configuration.
- * @param provider - Issue provider for reading issues.
+ * @param provider - Issue provider for reading/creating issues.
  */
 async function auditIssue(issueId: string, config: Config, provider: IssueProvider): Promise<void> {
   const issueResult = await provider.fetchIssue(issueId)
@@ -107,6 +111,12 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
     return
   }
 
+  if (!config.openaiApiKey) {
+    logger.error({ issueId }, 'OPENAI_API_KEY not set in .barfrc — cannot run AI audit')
+    process.exitCode = 1
+    return
+  }
+
   logger.info({ issueId }, 'auditing issue')
 
   // ── Phase 1: deterministic checks ─────────────────────────────────────────
@@ -117,7 +127,7 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
     execFileNoThrow('bun', ['run', 'format:check'])
   ])
 
-  // ── Phase 2: AI audit ──────────────────────────────────────────────────────
+  // ── Phase 2: AI audit via OpenAI ──────────────────────────────────────────
 
   const issueFile = join(config.issuesDir, `${issueId}.md`)
   const planFilePath = join(config.planDir, `${issueId}.md`)
@@ -127,59 +137,75 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
 
   const rulesContext = loadRulesContext()
 
-  // Record existing issue IDs so we can detect new files created by Claude
-  const existingIds = new Set(
-    existsSync(config.issuesDir)
-      ? readdirSync(config.issuesDir)
-          .filter(f => f.endsWith('.md'))
-          .map(f => f.replace(/\.md$/, ''))
-      : []
-  )
-
-  const prompt = injectAuditVars(auditPromptTemplate, {
-    issueId,
-    issueFile,
-    planFile,
-    issuesDir: config.issuesDir,
-    testResults: formatCheckResult(testResult),
-    lintResults: formatCheckResult(lintResult),
-    formatResults: formatCheckResult(fmtResult),
-    rulesContext
+  const prompt = injectTemplateVars(auditPromptTemplate, {
+    BARF_ISSUE_ID: issueId,
+    BARF_ISSUE_FILE: issueFile,
+    PLAN_FILE: planFile,
+    TEST_RESULTS: formatCheckResult(testResult),
+    LINT_RESULTS: formatCheckResult(lintResult),
+    FORMAT_RESULTS: formatCheckResult(fmtResult),
+    RULES_CONTEXT: rulesContext
   })
 
-  const iterResult = await runClaudeIteration(prompt, config.auditModel, config, issueId)
-  if (iterResult.isErr()) {
-    logger.error({ issueId, err: iterResult.error.message }, 'audit Claude run failed')
+  const chatResult = await runOpenAIChat(prompt, config.auditModel, config.openaiApiKey, {
+    responseFormat: { type: 'json_object' }
+  })
+
+  if (chatResult.isErr()) {
+    logger.error({ issueId, err: chatResult.error.message }, 'audit OpenAI call failed')
     process.exitCode = 1
     return
   }
 
-  if (iterResult.value.outcome === 'rate_limited') {
-    const resetsAt = iterResult.value.rateLimitResetsAt
-    const timeStr = resetsAt ? new Date(resetsAt * 1000).toLocaleTimeString() : 'soon'
-    logger.error({ issueId }, `rate limited until ${timeStr}`)
+  const { content, totalTokens } = chatResult.value
+  logger.debug({ issueId, totalTokens }, 'OpenAI response received')
+
+  // Parse the JSON response
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    logger.error({ issueId, content: content.slice(0, 200) }, 'audit response is not valid JSON')
     process.exitCode = 1
     return
   }
 
-  // Check whether Claude created a new issue file (audit findings)
-  const newIds = existsSync(config.issuesDir)
-    ? readdirSync(config.issuesDir)
-        .filter(f => f.endsWith('.md'))
-        .map(f => f.replace(/\.md$/, ''))
-        .filter(id => !existingIds.has(id))
-    : []
-
-  if (newIds.length > 0) {
-    logger.warn({ issueId, findingsIssues: newIds }, 'audit found issues — new issue(s) created')
-    for (const id of newIds) {
-      process.stdout.write(`✗ Issue #${issueId}: findings written to #${id}\n`)
-    }
+  const validation = AuditResponseSchema.safeParse(parsed)
+  if (!validation.success) {
+    logger.error(
+      { issueId, errors: validation.error.issues },
+      'audit response failed schema validation'
+    )
     process.exitCode = 1
-  } else {
-    process.stdout.write(`✓ Issue #${issueId} passes audit\n`)
+    return
+  }
+
+  const auditResponse = validation.data
+
+  if (auditResponse.pass) {
+    process.stdout.write(`\u2713 Issue #${issueId} passes audit\n`)
     logger.info({ issueId }, 'audit passed')
+    return
   }
+
+  // Create a findings issue via the provider
+  const findingsBody = formatFindings(auditResponse.findings)
+  const createResult = await provider.createIssue({
+    title: `Audit findings: ${issue.title}`,
+    body: findingsBody,
+    parent: issueId
+  })
+
+  if (createResult.isErr()) {
+    logger.error({ issueId, err: createResult.error.message }, 'failed to create findings issue')
+    process.exitCode = 1
+    return
+  }
+
+  const findingsIssue = createResult.value
+  logger.warn({ issueId, findingsIssueId: findingsIssue.id }, 'audit found issues')
+  process.stdout.write(`\u2717 Issue #${issueId}: findings written to #${findingsIssue.id}\n`)
+  process.exitCode = 1
 }
 
 /**

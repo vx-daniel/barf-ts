@@ -1,7 +1,7 @@
 import type { Config, IssueState } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { runLoop } from '@/core/batch'
-import { interviewLoop } from '@/core/interview'
+import { runInterview } from '@/core/interview'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('auto')
@@ -57,27 +57,10 @@ export async function autoCommand(
     for (const issue of toInterview) {
       logger.info({ issueId: issue.id }, 'interviewing new issue')
 
-      const startTransition = await provider.transition(issue.id, 'INTERVIEWING')
-      if (startTransition.isErr()) {
-        logger.warn(
-          { issueId: issue.id, err: startTransition.error.message },
-          'interview start failed'
-        )
+      const result = await runInterview(issue.id, config, provider)
+      if (result.isErr()) {
+        logger.warn({ issueId: issue.id, err: result.error.message }, 'interview failed')
         continue
-      }
-
-      const loopResult = await interviewLoop(issue.id, config, provider)
-      if (loopResult.isErr()) {
-        logger.warn({ issueId: issue.id, err: loopResult.error.message }, 'interview loop failed')
-        continue
-      }
-
-      const endTransition = await provider.transition(issue.id, 'PLANNED')
-      if (endTransition.isErr()) {
-        logger.warn(
-          { issueId: issue.id, err: endTransition.error.message },
-          'interview completion failed'
-        )
       }
     }
 

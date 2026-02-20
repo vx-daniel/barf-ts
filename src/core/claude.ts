@@ -5,6 +5,7 @@ import { ResultAsync } from 'neverthrow'
 import type { Config } from '@/types'
 import { parseClaudeStream, ContextOverflowError, RateLimitError } from '@/core/context'
 import { createLogger } from '@/utils/logger'
+import { toError } from '@/utils/toError'
 
 const logger = createLogger('claude')
 
@@ -159,6 +160,6 @@ export function runClaudeIteration(
         }
       }
     })(),
-    e => (e instanceof Error ? e : new Error(String(e)))
+    toError
   )
 }

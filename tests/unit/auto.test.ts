@@ -10,43 +10,7 @@ mock.module('@/core/claude', () => ({
 }))
 
 import { autoCommand } from '@/cli/commands/auto'
-import type { IssueProvider } from '@/core/issue/base'
-import type { Issue, Config } from '@/types'
-import { ConfigSchema } from '@/types'
-
-const defaultConfig = (): Config => ConfigSchema.parse({})
-
-function makeIssue(overrides: Partial<Issue> = {}): Issue {
-  return {
-    id: '001',
-    title: 'Test',
-    state: 'NEW',
-    body: '',
-    parent: '',
-    children: [],
-    split_count: 0,
-    force_split: false,
-    ...overrides
-  }
-}
-
-/** Stub provider that allows overriding individual methods. */
-function makeProvider(overrides: Partial<IssueProvider> = {}): IssueProvider {
-  return {
-    listIssues: () => okAsync([]),
-    fetchIssue: () => errAsync(new Error('not implemented')),
-    createIssue: () => errAsync(new Error('not implemented')),
-    writeIssue: () => errAsync(new Error('not implemented')),
-    deleteIssue: () => errAsync(new Error('not implemented')),
-    lockIssue: () => errAsync(new Error('not implemented')),
-    unlockIssue: () => errAsync(new Error('not implemented')),
-    isLocked: () => errAsync(new Error('not implemented')),
-    transition: () => errAsync(new Error('not implemented')),
-    autoSelect: () => errAsync(new Error('not implemented')),
-    checkAcceptanceCriteria: () => errAsync(new Error('not implemented')),
-    ...overrides
-  } as unknown as IssueProvider
-}
+import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
 
 describe('autoCommand', () => {
   beforeEach(() => {
