@@ -3,14 +3,23 @@
 AI issue orchestration CLI. Feeds issues to Claude one at a time, tracks state, and handles context overflow automatically.
 
 ```
-barf plan        # NEW → PLANNED  (Claude writes an implementation plan)
-barf build       # PLANNED → COMPLETED  (Claude implements the plan)
-barf --cwd /path/to/project status   # target a specific project directory
+barf interview   # clarify requirements interactively
+barf plan        # Claude writes an implementation plan
+barf build       # Claude implements the plan
+barf audit       # audit completed work with OpenAI
+barf auto        # orchestrate all stages automatically
 ```
 
 ## How it works
 
-Each issue is a markdown file with frontmatter. `barf plan` runs Claude with your issue as context and saves a plan file. `barf build` runs Claude again to implement the plan, checking acceptance criteria between iterations.
+Each issue is a markdown file with frontmatter. The full lifecycle:
+
+1. **Interview** — Claude asks clarifying questions, refines requirements (`NEW → INTERVIEWING → PLANNED`)
+2. **Plan** — Claude reads the issue, explores the codebase, writes a plan file (`INTERVIEWING → PLANNED`)
+3. **Build** — Claude implements the plan, checking acceptance criteria between iterations (`PLANNED → COMPLETED`)
+4. **Audit** — OpenAI reviews the completed work for quality and rule compliance
+
+`barf auto` runs all stages in sequence — interview NEW issues, plan INTERVIEWING issues, build PLANNED issues.
 
 When Claude's context fills up, barf either escalates to a larger model or splits the issue into sub-issues automatically.
 
@@ -53,7 +62,7 @@ barf --cwd ~/projects/myapp plan --issue 003
 
 ## Issue format
 
-Issues are markdown files in `.barf/issues/` (or whichever `ISSUES_DIR` you configure):
+Issues are markdown files in `issues/` (or whichever `ISSUES_DIR` you configure):
 
 ```markdown
 ---
@@ -81,11 +90,15 @@ The frontmatter block uses `KEY=VALUE` syntax. The body is free-form markdown. A
 ```mermaid
 stateDiagram-v2
     [*] --> NEW
-    NEW --> PLANNED
+    NEW --> INTERVIEWING
+    INTERVIEWING --> PLANNED
     PLANNED --> IN_PROGRESS
-    IN_PROGRESS --> COMPLETED
     PLANNED --> STUCK
+    PLANNED --> SPLIT
+    IN_PROGRESS --> COMPLETED
     IN_PROGRESS --> STUCK
+    IN_PROGRESS --> SPLIT
+    STUCK --> PLANNED
     STUCK --> SPLIT
     COMPLETED --> [*]
     SPLIT --> [*]
@@ -93,16 +106,17 @@ stateDiagram-v2
 
 | State | Meaning |
 |-------|---------|
-| `NEW` | Created, not yet planned |
+| `NEW` | Created, not yet interviewed |
+| `INTERVIEWING` | Claude is clarifying requirements |
 | `PLANNED` | Plan file exists, ready to build |
 | `IN_PROGRESS` | Claude is actively working on it |
-| `STUCK` | Blocked, needs human intervention |
+| `STUCK` | Blocked, needs human intervention or re-planning |
 | `SPLIT` | Split into sub-issues (terminal) |
 | `COMPLETED` | All acceptance criteria met |
 
 ## Commands
 
-All commands accept a global `--cwd <path>` option to target a project directory without `cd`-ing into it.
+All commands accept global `--cwd <path>` and `--config <path>` options.
 
 ### `barf init`
 
@@ -120,13 +134,21 @@ barf status [--format text|json]
 
 Lists all issues and their current state.
 
+### `barf interview`
+
+```
+barf interview [--issue <id>]
+```
+
+Runs Claude to clarify requirements interactively (`NEW → INTERVIEWING → PLANNED`). Auto-selects the first `NEW` issue if `--issue` is omitted. Claude asks questions, refines the issue body, and transitions through INTERVIEWING to PLANNED.
+
 ### `barf plan`
 
 ```
 barf plan [--issue <id>]
 ```
 
-Runs Claude to plan an issue (`NEW → PLANNED`). Auto-selects the first `NEW` issue if `--issue` is omitted. Claude reads the issue, explores the codebase, and writes a plan file to `PLAN_DIR/<id>.md`.
+Runs Claude to plan an issue (`INTERVIEWING → PLANNED`). Auto-selects the first `INTERVIEWING` issue if `--issue` is omitted. Claude reads the issue, explores the codebase, and writes a plan file to `PLAN_DIR/<id>.md`.
 
 ### `barf build`
 
@@ -139,6 +161,25 @@ Runs Claude to implement an issue (`PLANNED → COMPLETED`). Auto-selects the hi
 - `--batch <n>` — build up to `n` issues concurrently (default: 1)
 - `--max <n>` — override max iterations for this run (0 = unlimited)
 
+### `barf auto`
+
+```
+barf auto [--batch <n>] [--max <n>]
+```
+
+Auto-orchestrate all stages: interview `NEW` issues, plan `INTERVIEWING` issues, build `PLANNED`/`IN_PROGRESS` issues. Runs the full lifecycle without manual intervention.
+
+- `--batch <n>` — max concurrent builds (default: 1)
+- `--max <n>` — max iterations per issue (0 = unlimited)
+
+### `barf audit`
+
+```
+barf audit [--issue <id>] [--all]
+```
+
+Audits completed issues for quality and rule compliance using OpenAI. Requires `OPENAI_API_KEY` in `.barfrc`. Defaults to auditing all `COMPLETED` issues.
+
 ## Configuration
 
 `.barfrc` in your project root uses `KEY=VALUE` format:
@@ -147,13 +188,17 @@ Runs Claude to implement an issue (`PLANNED → COMPLETED`). Auto-selects the hi
 ISSUE_PROVIDER=local        # local | github
 GITHUB_REPO=owner/repo      # required when ISSUE_PROVIDER=github
 
-ISSUES_DIR=.barf/issues     # where issue files live
-PLAN_DIR=.barf/plans        # where plan files are saved
+BARF_DIR=.barf              # directory for locks and internal state
+ISSUES_DIR=issues           # where issue files live
+PLAN_DIR=plans              # where plan files are saved
 
+INTERVIEW_MODEL=claude-sonnet-4-6   # model used for barf interview
 PLAN_MODEL=claude-opus-4-6          # model used for barf plan
 BUILD_MODEL=claude-sonnet-4-6       # model used for barf build
 SPLIT_MODEL=claude-sonnet-4-6       # model used when splitting
 EXTENDED_CONTEXT_MODEL=claude-opus-4-6  # model used when escalating
+AUDIT_MODEL=gpt-4o                  # model used for barf audit
+OPENAI_API_KEY=                     # required for barf audit
 
 CONTEXT_USAGE_PERCENT=75    # interrupt Claude at this % of context window
 MAX_AUTO_SPLITS=3           # max splits before escalating to larger model
@@ -191,12 +236,12 @@ Requires `gh auth login`.
 ```bash
 bun install                    # install deps
 git submodule update --init    # fetch tests/sample-project
-bun test                       # run tests (92 tests)
-bun run build        # compile binary to dist/barf
-bun run format       # format with oxfmt
-bun run lint         # lint with oxlint
-bun run check        # format:check + lint (CI gate)
-bun run docs         # generate API docs to docs/api/
+bun test                       # run tests (227 tests)
+bun run build                  # compile binary to dist/barf
+bun run format                 # format with oxfmt
+bun run lint                   # lint with oxlint
+bun run check                  # format:check + lint (CI gate)
+bun run docs                   # generate API docs to docs/api/
 ```
 
 `tests/sample-project` is a git submodule used for manual end-to-end testing via `barf --cwd tests/sample-project`. Initialize it once after cloning with `git submodule update --init`.
@@ -215,29 +260,38 @@ LOG_LEVEL=debug barf plan --issue 001
 ```
 src/
   index.ts                    CLI entry (commander)
-  cli/commands/               init  plan  build  status
+  cli/commands/               init  status  interview  plan  build  auto  audit
   core/
-    issue.ts                  frontmatter parser, state machine
+    issue/
+      index.ts                frontmatter parser, state machine
+      base.ts                 abstract IssueProvider
+      factory.ts              provider factory
+      providers/
+        local.ts              file-system provider (POSIX mkdir locking)
+        github.ts             GitHub Issues provider (gh CLI)
     config.ts                 .barfrc parser
     context.ts                Claude stream parser, prompt injection
     claude.ts                 Claude subprocess wrapper
     batch.ts                  orchestration loop (plan/build/split)
-    issue-providers/
-      base.ts                 abstract IssueProvider
-      local.ts                file-system provider
-      github.ts               GitHub Issues provider
-      factory.ts              provider factory
-  types/index.ts              Zod schemas + inferred types
+    interview.ts              interview loop logic
+    openai.ts                 OpenAI API client
+    audit-schema.ts           audit result Zod schemas
+  types/
+    index.ts                  Zod schemas + inferred types
+    assets.d.ts               .md text import declaration for Bun
   utils/
     execFileNoThrow.ts        shell-injection-safe subprocess
     logger.ts                 pino logger
+    toError.ts                unknown → Error coercion
+    syncToResultAsync.ts      sync Result → ResultAsync bridge
   prompts/
+    PROMPT_interview.md       interview prompt template
     PROMPT_plan.md            planning prompt template
     PROMPT_build.md           build prompt template
     PROMPT_split.md           split prompt template
+    PROMPT_audit.md           audit prompt template
 tests/
-  unit/                       64 tests across all modules
+  unit/                       227 tests across 24 files
+  fixtures/                   test helpers (mock provider, etc.)
   sample-project/             sample project for manual testing (barf --cwd tests/sample-project)
-docs/
-  plans/                      implementation plans (numbered)
 ```

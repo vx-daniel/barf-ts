@@ -2205,3 +2205,263 @@
 {"level":30,"time":1771621531736,"pid":1457318,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
 {"level":30,"time":1771621531735,"pid":1457318,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
 {"level":30,"time":1771621531736,"pid":1457318,"hostname":"dark","name":"batch","issueId":"003","iteration":0,"outcome":"success","tokens":0,"msg":"iteration complete"}
+{"level":40,"time":1771624649422,"pid":1548349,"hostname":"dark","name":"claude","model":"claude-sonnet-4-6","timeout":0.05,"msg":"claude timed out"}
+{"level":30,"time":1771624649428,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649428,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649428,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":1,"msg":"starting iteration"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":1,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649429,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649431,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649432,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":40,"time":1771624649433,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"msg":"tests failed — continuing"}
+{"level":30,"time":1771624649433,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649433,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"error","tokens":50,"msg":"iteration complete"}
+{"level":40,"time":1771624649433,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"msg":"claude returned error — stopping loop"}
+{"level":30,"time":1771624649433,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649433,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"rate_limited","tokens":50,"msg":"iteration complete"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"overflow","tokens":150000,"msg":"iteration complete"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"split","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"overflow","tokens":150000,"msg":"iteration complete"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","newModel":"claude-opus-4-6","msg":"escalating to extended context model"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"error","tokens":100,"msg":"iteration complete"}
+{"level":40,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"msg":"claude returned error — stopping loop"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","msg":"force_split detected — skipping build"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"split","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649434,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","msg":"force_split detected — skipping build"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","msg":"force_split detected — skipping build"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"split","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","childId":"002","msg":"auto-planning split child"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"002","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"002","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","childId":"003","msg":"auto-planning split child"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"003","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"003","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771624649435,"pid":1548349,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":50,"time":1771624649490,"pid":1548349,"hostname":"dark","name":"audit","err":{"type":"Error","message":"provider error","stack":"Error: provider error\n    at listIssues (/home/daniel/Projects/barf/barf-ts/tests/unit/audit.test.ts:17:38)\n    at auditCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/audit.ts:232:37)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/audit.test.ts:20:11)"},"msg":"provider error"}
+{"level":30,"time":1771624649491,"pid":1548349,"hostname":"dark","name":"audit","msg":"No COMPLETED issues to audit."}
+{"level":50,"time":1771624649491,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","err":"not found","msg":"could not fetch issue"}
+{"level":40,"time":1771624649491,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":30,"time":1771624649491,"pid":1548349,"hostname":"dark","name":"audit","count":2,"msg":"auditing COMPLETED issues"}
+{"level":40,"time":1771624649491,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":40,"time":1771624649491,"pid":1548349,"hostname":"dark","name":"audit","issueId":"002","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":40,"time":1771624649491,"pid":1548349,"hostname":"dark","name":"audit","issueId":"005","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":30,"time":1771624649496,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649496,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649497,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649497,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":40,"time":1771624649497,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"claude returned error during interview — stopping"}
+{"level":30,"time":1771624649497,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649497,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649497,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649498,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"interview_complete signal received"}
+{"level":30,"time":1771624649498,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":40,"time":1771624649498,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"questions file has unexpected shape — stopping"}
+{"level":30,"time":1771624649498,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":40,"time":1771624649499,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"could not parse questions file — stopping"}
+{"level":30,"time":1771624649499,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649499,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649499,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649500,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771624649500,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649500,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649500,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771624649500,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":40,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","err":"write failed","msg":"failed to write Q&A to issue"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649501,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649502,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649502,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649502,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","issueId":"005","turn":0,"msg":"running interview turn"}
+{"level":50,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","err":{"type":"Error","message":"provider error","stack":"Error: provider error\n    at autoSelect (/home/daniel/Projects/barf/barf-ts/tests/unit/interview.test.ts:27:38)\n    at interviewCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/interview.ts:27:35)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/interview.test.ts:30:11)"},"msg":"provider error"}
+{"level":30,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","msg":"No NEW issues available for interview."}
+{"level":30,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","msg":"starting interview"}
+{"level":50,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","err":"transition failed","msg":"interview failed"}
+{"level":30,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","issueId":"005","msg":"starting interview"}
+{"level":30,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","issueId":"005","msg":"interview complete — issue is now PLANNED"}
+{"level":30,"time":1771624649509,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","msg":"starting interview"}
+{"level":50,"time":1771624649509,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","err":"PLANNED transition","msg":"interview failed"}
+{"level":30,"time":1771624649508,"pid":1548349,"hostname":"dark","name":"interview","issueId":"005","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649509,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624649509,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624649514,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":30,"time":1771624649681,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","msg":"audit passed"}
+{"level":30,"time":1771624649681,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":50,"time":1771624649847,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","err":"API failure","msg":"audit OpenAI call failed"}
+{"level":30,"time":1771624649847,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":40,"time":1771624650011,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","findingsIssueId":"002","msg":"audit found issues"}
+{"level":50,"time":1771624650011,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","msg":"OPENAI_API_KEY not set in .barfrc — cannot run AI audit"}
+{"level":30,"time":1771624650011,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":50,"time":1771624650193,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","content":"not json at all","msg":"audit response is not valid JSON"}
+{"level":30,"time":1771624650193,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":50,"time":1771624650365,"pid":1548349,"hostname":"dark","name":"audit","issueId":"001","errors":[{"expected":"array","code":"invalid_type","path":["findings"],"message":"Invalid input: expected array, received undefined"}],"msg":"audit response failed schema validation"}
+{"level":30,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"batch","issueId":"003","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":50,"time":1771624650367,"pid":1548349,"hostname":"dark","name":"auto","err":{"type":"Error","message":"gh: not authenticated","stack":"Error: gh: not authenticated\n    at listIssues (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:26:38)\n    at autoCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/auto.ts:36:39)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:29:11)"},"msg":"gh: not authenticated"}
+{"level":30,"time":1771624650367,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"auto","issueId":"001","msg":"interviewing new issue"}
+{"level":30,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":40,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"auto","issueId":"002","msg":"issue is stuck in INTERVIEWING — run `barf interview --issue <id>` to resume"}
+{"level":40,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"auto","issueId":"002","err":"not implemented","msg":"plan loop failed"}
+{"level":30,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":40,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"auto","issueId":"003","msg":"issue is stuck in INTERVIEWING — run `barf interview --issue <id>` to resume"}
+{"level":30,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"auto","issueId":"006","msg":"interviewing new issue"}
+{"level":40,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"auto","issueId":"006","err":"locked","msg":"interview failed"}
+{"level":30,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771624650368,"pid":1548349,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771624650369,"pid":1548349,"hostname":"dark","name":"batch","issueId":"003","iteration":0,"outcome":"success","tokens":0,"msg":"iteration complete"}
+{"level":40,"time":1771626409875,"pid":1589605,"hostname":"dark","name":"claude","model":"claude-sonnet-4-6","timeout":0.05,"msg":"claude timed out"}
+{"level":30,"time":1771626409881,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409881,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409882,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409882,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409882,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409882,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409883,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409883,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409883,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":1,"msg":"starting iteration"}
+{"level":30,"time":1771626409883,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":1,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409883,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409883,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409886,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409886,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":40,"time":1771626409887,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"msg":"tests failed — continuing"}
+{"level":30,"time":1771626409887,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409887,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"error","tokens":50,"msg":"iteration complete"}
+{"level":40,"time":1771626409887,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"msg":"claude returned error — stopping loop"}
+{"level":30,"time":1771626409888,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409888,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"rate_limited","tokens":50,"msg":"iteration complete"}
+{"level":30,"time":1771626409888,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409888,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"overflow","tokens":150000,"msg":"iteration complete"}
+{"level":30,"time":1771626409888,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"split","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409888,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"overflow","tokens":150000,"msg":"iteration complete"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","newModel":"claude-opus-4-6","msg":"escalating to extended context model"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"error","tokens":100,"msg":"iteration complete"}
+{"level":40,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"msg":"claude returned error — stopping loop"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","msg":"force_split detected — skipping build"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"split","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","msg":"force_split detected — skipping build"}
+{"level":30,"time":1771626409889,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","msg":"force_split detected — skipping build"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"split","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","childId":"002","msg":"auto-planning split child"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"002","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"002","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","childId":"003","msg":"auto-planning split child"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"003","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"003","iteration":0,"outcome":"success","tokens":100,"msg":"iteration complete"}
+{"level":30,"time":1771626409890,"pid":1589605,"hostname":"dark","name":"batch","issueId":"001","mode":"build","model":"claude-sonnet-4-6","iteration":0,"msg":"starting iteration"}
+{"level":50,"time":1771626409942,"pid":1589605,"hostname":"dark","name":"audit","err":{"type":"Error","message":"provider error","stack":"Error: provider error\n    at listIssues (/home/daniel/Projects/barf/barf-ts/tests/unit/audit.test.ts:17:38)\n    at auditCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/audit.ts:232:37)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/audit.test.ts:20:11)"},"msg":"provider error"}
+{"level":30,"time":1771626409943,"pid":1589605,"hostname":"dark","name":"audit","msg":"No COMPLETED issues to audit."}
+{"level":50,"time":1771626409943,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","err":"not found","msg":"could not fetch issue"}
+{"level":40,"time":1771626409943,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":30,"time":1771626409943,"pid":1589605,"hostname":"dark","name":"audit","count":2,"msg":"auditing COMPLETED issues"}
+{"level":40,"time":1771626409943,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":40,"time":1771626409943,"pid":1589605,"hostname":"dark","name":"audit","issueId":"002","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":40,"time":1771626409943,"pid":1589605,"hostname":"dark","name":"audit","issueId":"005","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":30,"time":1771626409949,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409949,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409950,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409950,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":40,"time":1771626409950,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"claude returned error during interview — stopping"}
+{"level":30,"time":1771626409950,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409950,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409950,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409951,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"interview_complete signal received"}
+{"level":30,"time":1771626409951,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":40,"time":1771626409951,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"questions file has unexpected shape — stopping"}
+{"level":30,"time":1771626409952,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":40,"time":1771626409952,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"could not parse questions file — stopping"}
+{"level":30,"time":1771626409952,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409952,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409952,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409953,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771626409953,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409954,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409954,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771626409954,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409954,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409954,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771626409954,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409955,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409955,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"running interview turn"}
+{"level":30,"time":1771626409955,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":1,"msg":"no questions file written — interview complete"}
+{"level":40,"time":1771626409955,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","err":"write failed","msg":"failed to write Q&A to issue"}
+{"level":30,"time":1771626409955,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409955,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409956,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409956,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409956,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","issueId":"005","turn":0,"msg":"running interview turn"}
+{"level":50,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","err":{"type":"Error","message":"provider error","stack":"Error: provider error\n    at autoSelect (/home/daniel/Projects/barf/barf-ts/tests/unit/interview.test.ts:27:38)\n    at interviewCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/interview.ts:27:35)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/interview.test.ts:30:11)"},"msg":"provider error"}
+{"level":30,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","msg":"No NEW issues available for interview."}
+{"level":30,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","msg":"starting interview"}
+{"level":50,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","err":"transition failed","msg":"interview failed"}
+{"level":30,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","issueId":"005","msg":"starting interview"}
+{"level":30,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","issueId":"005","msg":"interview complete — issue is now PLANNED"}
+{"level":30,"time":1771626409963,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","msg":"starting interview"}
+{"level":50,"time":1771626409963,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","err":"PLANNED transition","msg":"interview failed"}
+{"level":30,"time":1771626409962,"pid":1589605,"hostname":"dark","name":"interview","issueId":"005","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409963,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626409963,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626409969,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":30,"time":1771626410141,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","msg":"audit passed"}
+{"level":30,"time":1771626410141,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":50,"time":1771626410305,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","err":"API failure","msg":"audit OpenAI call failed"}
+{"level":30,"time":1771626410305,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":40,"time":1771626410463,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","findingsIssueId":"002","msg":"audit found issues"}
+{"level":50,"time":1771626410463,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","msg":"OPENAI_API_KEY not set in .barfrc — cannot run AI audit"}
+{"level":30,"time":1771626410463,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":50,"time":1771626410641,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","content":"not json at all","msg":"audit response is not valid JSON"}
+{"level":30,"time":1771626410641,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","msg":"auditing issue"}
+{"level":50,"time":1771626410817,"pid":1589605,"hostname":"dark","name":"audit","issueId":"001","errors":[{"expected":"array","code":"invalid_type","path":["findings"],"message":"Invalid input: expected array, received undefined"}],"msg":"audit response failed schema validation"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"batch","issueId":"003","mode":"plan","model":"claude-opus-4-6","iteration":0,"msg":"starting iteration"}
+{"level":50,"time":1771626410820,"pid":1589605,"hostname":"dark","name":"auto","err":{"type":"Error","message":"gh: not authenticated","stack":"Error: gh: not authenticated\n    at listIssues (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:26:38)\n    at autoCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/auto.ts:36:39)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:29:11)"},"msg":"gh: not authenticated"}
+{"level":30,"time":1771626410820,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771626410820,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771626410820,"pid":1589605,"hostname":"dark","name":"auto","issueId":"001","msg":"interviewing new issue"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":40,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","issueId":"002","msg":"issue is stuck in INTERVIEWING — run `barf interview --issue <id>` to resume"}
+{"level":40,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","issueId":"002","err":"not implemented","msg":"plan loop failed"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":40,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","issueId":"003","msg":"issue is stuck in INTERVIEWING — run `barf interview --issue <id>` to resume"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","issueId":"006","msg":"interviewing new issue"}
+{"level":40,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","issueId":"006","err":"locked","msg":"interview failed"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":30,"time":1771626410821,"pid":1589605,"hostname":"dark","name":"batch","issueId":"003","iteration":0,"outcome":"success","tokens":0,"msg":"iteration complete"}
