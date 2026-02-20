@@ -51,6 +51,24 @@ export function getThreshold(model: string, contextUsagePercent: number): number
 }
 
 /**
+ * Options for {@link runClaudeIteration}.
+ *
+ * @category Claude Agent
+ */
+export interface ClaudeIterationOptions {
+  /**
+   * Called for each {@link ClaudeEvent} emitted by the stream parser.
+   * Useful for forwarding events to a TUI activity feed.
+   */
+  onEvent?: (event: ClaudeEvent) => void
+  /**
+   * When aborted, sends SIGTERM to the Claude subprocess.
+   * The iteration returns `{ outcome: 'error' }` after the kill.
+   */
+  signal?: AbortSignal
+}
+
+/**
  * Spawns the `claude` CLI and runs a single agent iteration.
  * Prompt is passed via stdin. Never throws — all errors are captured in the result.
  *
@@ -61,6 +79,7 @@ export function getThreshold(model: string, contextUsagePercent: number): number
  * @param model - Claude model identifier (e.g. `'claude-sonnet-4-6'`).
  * @param config - Loaded barf configuration (timeout, context percent, stream log dir).
  * @param issueId - When set, stream output is appended to `config.streamLogDir/<issueId>.jsonl`.
+ * @param options - Optional event callback and abort signal; see {@link ClaudeIterationOptions}.
  * @returns `ok(IterationResult)` on success, `err(Error)` if the process spawn fails unexpectedly.
  * @category Claude Agent
  */
@@ -68,7 +87,8 @@ export function runClaudeIteration(
   prompt: string,
   model: string,
   config: Config,
-  issueId?: string
+  issueId?: string,
+  options?: ClaudeIterationOptions
 ): ResultAsync<IterationResult, Error> {
   return ResultAsync.fromPromise(
     (async (): Promise<IterationResult> => {
@@ -94,11 +114,16 @@ export function runClaudeIteration(
         env: { ...process.env, CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '100' }
       })
 
+      const killProc = () => proc.kill('SIGTERM' as Parameters<typeof proc.kill>[0])
+
+      // Wire AbortSignal: kill subprocess when signal fires
+      options?.signal?.addEventListener('abort', killProc, { once: true })
+
       const timeoutHandle =
         config.claudeTimeout > 0
           ? setTimeout(() => {
               timedOut = true
-              proc.kill('SIGTERM' as Parameters<typeof proc.kill>[0])
+              killProc()
             }, config.claudeTimeout * 1000)
           : null
 
@@ -117,6 +142,7 @@ export function runClaudeIteration(
       let lastTokens = 0
       try {
         for await (const event of parseClaudeStream(procAdapter, threshold, streamLogFile)) {
+          options?.onEvent?.(event)
           if (event.type === 'usage') {
             lastTokens = event.tokens
             logger.debug({ tokens: event.tokens, threshold }, 'context update')
@@ -154,6 +180,7 @@ export function runClaudeIteration(
         }
         throw e
       } finally {
+        options?.signal?.removeEventListener('abort', killProc)
         if (timeoutHandle) {
           clearTimeout(timeoutHandle)
         }

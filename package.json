@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "dev:sample": "bun run src/index.ts --cwd tests/sample-project",
+    "dev:tui": "bun --watch src/tui/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project",
     "dev:demo": "bun --watch src/tui/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project auto",
     "run:local": "bun run src/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project auto",
     "run:gh": "bun run src/index.ts --config tests/sample-project/.barfrc.github --cwd tests/sample-project auto",

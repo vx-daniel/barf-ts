@@ -1,7 +1,7 @@
 import { ResultAsync } from 'neverthrow'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import type { Config } from '@/types/index'
+import type { Config, ClaudeEvent } from '@/types/index'
 import type { IssueProvider } from '@/core/issue/base'
 import { runClaudeIteration } from '@/core/claude'
 import { injectPromptVars } from '@/core/context'
@@ -21,6 +21,24 @@ const logger = createLogger('batch')
  * @category Orchestration
  */
 export type LoopMode = 'plan' | 'build' | 'split'
+
+/**
+ * Optional runtime hooks for {@link runLoop}.
+ *
+ * @category Orchestration
+ */
+export interface RunLoopOptions {
+  /**
+   * Called for each {@link ClaudeEvent} emitted during any Claude iteration.
+   * Used by the TUI to stream events into the activity feed.
+   */
+  onEvent?: (event: ClaudeEvent) => void
+  /**
+   * When aborted, kills the active Claude subprocess via SIGTERM.
+   * The loop exits cleanly after the kill.
+   */
+  signal?: AbortSignal
+}
 
 const PROMPT_TEMPLATES: Record<LoopMode, string> = {
   plan: planPromptTemplate,
@@ -114,6 +132,7 @@ async function planSplitChildren(
  * @param mode - `'plan'` runs one iteration then checks for a plan file; `'build'` loops until COMPLETED.
  * @param config - Loaded barf configuration.
  * @param provider - Issue provider used to lock, read, and write the issue.
+ * @param options - Optional event callback and abort signal; see {@link RunLoopOptions}.
  * @returns `ok(void)` when the loop exits cleanly, `err(Error)` if locking or a Claude iteration fails.
  * @category Orchestration
  */
@@ -121,7 +140,8 @@ export function runLoop(
   issueId: string,
   mode: LoopMode,
   config: Config,
-  provider: IssueProvider
+  provider: IssueProvider,
+  options?: RunLoopOptions
 ): ResultAsync<void, Error> {
   return ResultAsync.fromPromise(
     (async (): Promise<void> => {
@@ -170,7 +190,10 @@ export function runLoop(
             planDir: config.planDir
           })
 
-          const iterResult = await runClaudeIteration(prompt, model, config, issueId)
+          const iterResult = await runClaudeIteration(prompt, model, config, issueId, {
+            onEvent: options?.onEvent,
+            signal: options?.signal
+          })
           if (iterResult.isErr()) {
             throw iterResult.error
           }

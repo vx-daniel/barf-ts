@@ -1,71 +1,105 @@
-import { BoxRenderable, createCliRenderer, Text } from "@opentui/core"
-import { tokyoNight } from "@/utils/themes";
+import { createCliRenderer } from '@opentui/core'
+import { appendFileSync } from 'node:fs'
+import { tokyoNight } from '@/utils/themes'
+import { loadConfig } from '@/core/config'
+import { createIssueProvider } from '@/core/issue/factory'
+import { App } from './app'
 
-export const theme = tokyoNight
+// ── Global error watcher ──────────────────────────────────────────────────────
 
+const TUI_LOG = '/tmp/barf-tui.log'
+
+/**
+ * Writes a timestamped error entry to {@link TUI_LOG} and exits.
+ *
+ * Called before the process dies so that TUI crashes leave a readable
+ * artifact even when the terminal is in raw/alternate-screen mode.
+ */
+function handleFatalError(label: string, err: unknown): void {
+  const ts = new Date().toISOString()
+  const message = err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err)
+  try {
+    appendFileSync(TUI_LOG, `[${ts}] ${label}: ${message}\n`)
+  } catch {
+    // If we can't write to the log, nothing more we can do.
+  }
+  process.exit(1)
+}
+
+process.on('uncaughtException', err => handleFatalError('uncaughtException', err))
+process.on('unhandledRejection', reason => handleFatalError('unhandledRejection', reason))
+
+// ── Theme colours ─────────────────────────────────────────────────────────────
+
+const theme = tokyoNight
+
+/**
+ * Application-wide colour palette derived from the Tokyo Night theme.
+ *
+ * Exported so components can import it without circular deps — they import
+ * from `@/tui/index` (this file) which has no runtime side-effects beyond
+ * defining this object before App mounts.
+ */
 export const _APP_COLORS = {
-    title: theme.color_14,
-    subtitle: theme.color_13,
-    dim: theme.color_08,
-    border: theme.color_06,
-    header: theme.color_01,
-    headerAlt: theme.color_09,
-    background: theme.background,
-    sidebar: theme.color_01,
-    red: theme.color_02,
-    yellow: theme.color_04,
-    green: theme.color_03,
-    dev: 'lime',
-    white: theme.foreground,
-    orange: theme.color_12,
-} as const;
+  title: theme.color_14,
+  subtitle: theme.color_13,
+  dim: theme.color_08,
+  border: theme.color_06,
+  header: theme.color_01,
+  headerAlt: theme.color_09,
+  background: theme.background,
+  sidebar: theme.color_01,
+  red: theme.color_02,
+  yellow: theme.color_04,
+  green: theme.color_03,
+  white: theme.foreground,
+  orange: theme.color_12
+} as const
+
+// ── CLI arg parsing ───────────────────────────────────────────────────────────
+
+function parseArgs(): { config?: string; cwd?: string } {
+  const args = process.argv.slice(2)
+  const result: { config?: string; cwd?: string } = {}
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--config' && i + 1 < args.length) {
+      result.config = args[++i]
+    } else if (args[i] === '--cwd' && i + 1 < args.length) {
+      result.cwd = args[++i]
+    }
+  }
+
+  return result
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+
+const { config: configPath, cwd } = parseArgs()
+
+if (cwd) {
+  process.chdir(cwd)
+}
+
+const config = loadConfig(configPath)
+
+const providerResult = createIssueProvider(config)
+if (providerResult.isErr()) {
+  process.stderr.write(`barf TUI: ${providerResult.error.message}\n`)
+  process.exit(1)
+}
+const provider = providerResult.value
 
 const renderer = await createCliRenderer({
-    exitOnCtrlC: true,
-    targetFps: 30,
+  exitOnCtrlC: true,
+  targetFps: 30,
+  onDestroy: () => {
+    // Allow the process to exit naturally after cleanup
+  }
 })
 
-const container = new BoxRenderable(renderer, {
-  id: "container",
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  width: "100%",
-  height: "100%"
-})
+const app = new App(renderer, config, provider)
+app.mount()
 
-
-const leftPanel = new BoxRenderable(renderer, {
-  id: "left",
-  width: "25%",
-  height: "100%",
-  backgroundColor: _APP_COLORS.sidebar,
-})
-
-const mainPanel = new BoxRenderable(renderer, {
-  id: "main",
-  height: "100%",
-  flexGrow: 1,
-  backgroundColor: _APP_COLORS.background,
-})
-
-// Add to main panel
-const headerPanel = new BoxRenderable(renderer, {
-  id: "header",
-  width: "100%",
-  height: 10,
-  // flexGrow: 1,
-  backgroundColor: tokyoNight.color_02,
-})
-
-container.add(leftPanel)
-container.add(mainPanel)
-renderer.root.add(container)
-
-
-// renderer.root.add(
-//   Text({
-//     content: "Hello, OpenTUI!",
-//     fg: "#00FF00",
-//   })
-// )
+// Initial data load
+await app.refresh()
