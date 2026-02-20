@@ -16,9 +16,14 @@
     "typedoc-theme-hierarchy",
     "typedoc-plugin-zod",
     "typedoc-plugin-mdn-links",
-    "typedoc-plugin-markdown",
+    "typedoc-github-theme",
+    // "typedoc-plugin-missing-exports",
+    // "typedoc-rhineai-theme",
     "typedoc-plugin-coverage"
+
+    // "typedoc-plugin-markdown",
   ],
-  "theme": "hierarchy",
+  "theme": "typedoc-github-theme",
+
   "resolveUtilityTypes": true
 }
