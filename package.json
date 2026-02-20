@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "dev:sample": "bun run src/index.ts --cwd tests/sample-project",
+    "dev:demo": "bun --watch src/tui/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project auto",
     "run:local": "bun run src/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project auto",
     "run:gh": "bun run src/index.ts --config tests/sample-project/.barfrc.github --cwd tests/sample-project auto",
     "reset:local": "cd tests/sample-project && npm run reset-local",
@@ -19,10 +20,13 @@
     "check": "bun run format:check && bun run lint"
   },
   "dependencies": {
+    "@opentui-ui/dialog": "^0.1.2",
+    "@opentui-ui/toast": "^0.0.5",
     "@opentui/core": "^0.1.80",
     "chalk": "^5.3.0",
     "commander": "^12.0.0",
     "neverthrow": "^8.0.0",
+    "opentui-spinner": "^0.0.6",
     "ora": "^8.0.0",
     "pino": "^9.0.0",
     "zod": "^4.0.0"
