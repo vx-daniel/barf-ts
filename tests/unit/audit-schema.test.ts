@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { AuditResponseSchema } from '@/core/audit-schema'
+import { AuditResponseSchema } from '@/types/schema/audit-schema'
 
 describe('AuditResponseSchema', () => {
   it('parses a passing audit response', () => {

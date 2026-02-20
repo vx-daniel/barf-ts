@@ -1,13 +1,9 @@
 import { ResultAsync, errAsync } from 'neverthrow'
 import type { Issue, IssueState, LockMode } from '@/types'
+import type { AutoSelectMode } from '@/types/schema/mode-schema'
 import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 
-/**
- * Selects which priority queue to use when auto-picking an issue.
- *
- * @category Issue Providers
- */
-export type AutoSelectMode = 'plan' | 'build' | 'interview'
+export type { AutoSelectMode } from '@/types/schema/mode-schema'
 
 const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
   plan: ['INTERVIEWING'],

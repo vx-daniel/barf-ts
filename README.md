@@ -72,6 +72,7 @@ state=NEW
 parent=
 children=
 split_count=0
+context_usage_percent=90
 ---
 
 Implement JWT-based authentication for the API.
@@ -84,6 +85,8 @@ Implement JWT-based authentication for the API.
 ```
 
 The frontmatter block uses `KEY=VALUE` syntax. The body is free-form markdown. Acceptance criteria are detected by the `## Acceptance Criteria` section — barf considers the issue done when all `- [ ]` checkboxes become `- [x]`.
+
+The optional `context_usage_percent` field overrides the global `CONTEXT_USAGE_PERCENT` for this issue only. Useful for large refactors that need more context before triggering overflow/split. Valid range: 1–100. When absent, the global config value is used.
 
 ## Issue states
 
@@ -208,8 +211,11 @@ CLAUDE_TIMEOUT=3600         # seconds before killing a Claude process
 TEST_COMMAND=               # run after each iteration (e.g. "bun test")
 PUSH_STRATEGY=iteration     # iteration | on_complete | manual
 
+PROMPT_DIR=                 # directory for custom prompt templates (empty = use built-in)
 STREAM_LOG_DIR=             # directory for raw Claude stream logs (empty = disabled)
 ```
+
+When `PROMPT_DIR` is set, barf checks for `PROMPT_DIR/PROMPT_<mode>.md` before using the compiled-in template. Missing files fall back to built-in. This lets you customise prompts per-project without modifying barf source. Files are re-read each iteration, so you can edit them during long runs.
 
 When `STREAM_LOG_DIR` is set, each issue's raw Claude output is appended to `{STREAM_LOG_DIR}/{issueId}.jsonl` as JSONL — exactly as emitted by `--output-format stream-json`. Multiple iterations of the same issue append to the same file. Useful for debugging and auditing Claude's raw output.
 
@@ -236,7 +242,7 @@ Requires `gh auth login`.
 ```bash
 bun install                    # install deps
 git submodule update --init    # fetch tests/sample-project
-bun test                       # run tests (227 tests)
+bun test                       # run tests (242 tests)
 bun run build                  # compile binary to dist/barf
 bun run format                 # format with oxfmt
 bun run lint                   # lint with oxlint
@@ -272,6 +278,7 @@ src/
     config.ts                 .barfrc parser
     context.ts                Claude stream parser, prompt injection
     claude.ts                 Claude subprocess wrapper
+    prompts.ts                runtime prompt template resolution
     batch.ts                  orchestration loop (plan/build/split)
     interview.ts              interview loop logic
     openai.ts                 OpenAI API client
@@ -291,7 +298,7 @@ src/
     PROMPT_split.md           split prompt template
     PROMPT_audit.md           audit prompt template
 tests/
-  unit/                       227 tests across 24 files
+  unit/                       242 tests across 25 files
   fixtures/                   test helpers (mock provider, etc.)
   sample-project/             sample project for manual testing (barf --cwd tests/sample-project)
 ```

@@ -1,32 +1,12 @@
 import OpenAI from 'openai'
 import { ResultAsync } from 'neverthrow'
+import type { OpenAIChatResult, OpenAIChatOptions } from '@/types/schema/openai-schema'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 
+export type { OpenAIChatResult, OpenAIChatOptions } from '@/types/schema/openai-schema'
+
 const logger = createLogger('openai')
-
-/**
- * Token usage and content returned by a single OpenAI chat completion.
- *
- * @category OpenAI
- */
-export interface OpenAIChatResult {
-  content: string
-  promptTokens: number
-  completionTokens: number
-  totalTokens: number
-}
-
-/**
- * Optional parameters for {@link runOpenAIChat}.
- *
- * @category OpenAI
- */
-export interface OpenAIChatOptions {
-  temperature?: number
-  maxTokens?: number
-  responseFormat?: { type: 'json_object' | 'text' }
-}
 
 /**
  * Sends a single-turn chat completion to the OpenAI API and returns the response.

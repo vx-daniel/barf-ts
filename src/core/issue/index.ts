@@ -60,6 +60,11 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
       fields[key] = parseInt(val, 10)
     } else if (key === 'force_split') {
       fields[key] = val === 'true'
+    } else if (key === 'context_usage_percent') {
+      const parsed = parseInt(val, 10)
+      if (!isNaN(parsed)) {
+        fields[key] = parsed
+      }
     } else {
       fields[key] = val
     }
@@ -83,7 +88,10 @@ export function serializeIssue(issue: Issue): string {
     `parent=${issue.parent}`,
     `children=${issue.children.join(',')}`,
     `split_count=${issue.split_count}`,
-    `force_split=${issue.force_split}`
+    `force_split=${issue.force_split}`,
+    ...(issue.context_usage_percent !== undefined
+      ? [`context_usage_percent=${issue.context_usage_percent}`]
+      : [])
   ].join('\n')
   return `---\n${fm}\n---\n\n${issue.body}\n`
 }

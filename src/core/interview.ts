@@ -8,11 +8,9 @@ import { z } from 'zod'
 import type { Config } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { runClaudeIteration } from '@/core/claude'
+import { resolvePromptTemplate } from '@/core/prompts'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
-
-// Embedded at compile time via Bun import attribute
-import interviewPromptTemplate from '@/prompts/PROMPT_interview.md' with { type: 'text' }
 
 const logger = createLogger('interview')
 
@@ -34,10 +32,8 @@ const QuestionsFileSchema = z.union([
 
 type QuestionsFile = z.infer<typeof QuestionsFileSchema>
 
-interface QAPair {
-  question: string
-  answer: string
-}
+const QAPairSchema = z.object({ question: z.string(), answer: z.string() })
+type QAPair = z.infer<typeof QAPairSchema>
 
 /**
  * Reads a single line from stdin with a prompt prefix.
@@ -119,6 +115,13 @@ export function interviewLoop(
       const issueFile = resolveIssueFile(issueId, config)
       const priorQA: QAPair[] = []
 
+      // Fetch once to get per-issue context override
+      const issueResult = await provider.fetchIssue(issueId)
+      const effectiveConfig =
+        issueResult.isOk() && issueResult.value.context_usage_percent !== undefined
+          ? { ...config, contextUsagePercent: issueResult.value.context_usage_percent }
+          : config
+
       for (let turn = 0; turn < MAX_TURNS; turn++) {
         const priorQAText =
           priorQA.length > 0
@@ -130,7 +133,7 @@ export function interviewLoop(
           unlinkSync(questionsFile)
         }
 
-        const prompt = injectTemplateVars(interviewPromptTemplate, {
+        const prompt = injectTemplateVars(resolvePromptTemplate('interview', effectiveConfig), {
           BARF_ISSUE_ID: issueId,
           BARF_ISSUE_FILE: issueFile,
           PRIOR_QA: priorQAText || '(none yet)',
@@ -139,7 +142,12 @@ export function interviewLoop(
 
         logger.info({ issueId, turn }, 'running interview turn')
 
-        const iterResult = await runClaudeIteration(prompt, config.interviewModel, config, issueId)
+        const iterResult = await runClaudeIteration(
+          prompt,
+          effectiveConfig.interviewModel,
+          effectiveConfig,
+          issueId
+        )
         if (iterResult.isErr()) {
           throw iterResult.error
         }

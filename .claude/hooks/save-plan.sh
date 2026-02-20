@@ -11,7 +11,7 @@ if [[ "${PROJECT_PLANS_DIR:-}" == ./* ]]; then
 elif [[ -n "${PROJECT_PLANS_DIR:-}" ]]; then
   plans_dir="$PROJECT_PLANS_DIR"
 else
-  plans_dir="${CLAUDE_PROJECT_DIR}/docs/plans"
+  plans_dir="${CLAUDE_PROJECT_DIR}/memory/plans"
 fi
 
 # Find the current plan file (most recently modified .md in ~/.claude/plans/)

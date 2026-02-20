@@ -72,6 +72,59 @@ describe('parseIssue', () => {
   })
 })
 
+describe('context_usage_percent', () => {
+  it('parses context_usage_percent=80 correctly', () => {
+    const withPercent = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=80\n')
+    const result = parseIssue(withPercent)
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().context_usage_percent).toBe(80)
+  })
+
+  it('returns undefined when field absent', () => {
+    const result = parseIssue(SAMPLE)
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().context_usage_percent).toBeUndefined()
+  })
+
+  it('returns undefined when field is empty string', () => {
+    const withEmpty = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=\n')
+    const result = parseIssue(withEmpty)
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().context_usage_percent).toBeUndefined()
+  })
+
+  it('serializes when present', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    issue.context_usage_percent = 90
+    const serialized = serializeIssue(issue)
+    expect(serialized).toContain('context_usage_percent=90')
+  })
+
+  it('omits when undefined', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(issue.context_usage_percent).toBeUndefined()
+    const serialized = serializeIssue(issue)
+    expect(serialized).not.toContain('context_usage_percent')
+  })
+
+  it('round-trips with value preserved', () => {
+    const withPercent = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=85\n')
+    const original = parseIssue(withPercent)._unsafeUnwrap()
+    const reparsed = parseIssue(serializeIssue(original))._unsafeUnwrap()
+    expect(reparsed.context_usage_percent).toBe(85)
+  })
+
+  it('rejects 0 via Zod min(1)', () => {
+    const withZero = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=0\n')
+    expect(parseIssue(withZero).isErr()).toBe(true)
+  })
+
+  it('rejects 101 via Zod max(100)', () => {
+    const withOver = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=101\n')
+    expect(parseIssue(withOver).isErr()).toBe(true)
+  })
+})
+
 describe('serializeIssue / parseIssue round-trip', () => {
   it('round-trips without data loss', () => {
     const original = parseIssue(SAMPLE)._unsafeUnwrap()

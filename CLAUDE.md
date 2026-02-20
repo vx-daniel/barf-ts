@@ -7,7 +7,7 @@ TypeScript/Bun rewrite of the bash `barf` CLI — an issue/work management syste
 ```bash
 bun install              # install deps
 bun run dev <cmd>        # run from source (no compile step)
-bun test                 # run tests (227 tests across 24 files)
+bun test                 # run tests (242 tests across 25 files)
 bun run build            # compile binary to dist/barf
 bun run format           # format with oxfmt (in-place)
 bun run format:check     # check formatting (CI)
@@ -35,6 +35,7 @@ src/
     config.ts           # .barfrc KEY=VALUE parser
     context.ts          # Async stream parser, SIGTERM on context overflow
     claude.ts           # Claude subprocess wrapper
+    prompts.ts          # Runtime prompt template resolution
     batch.ts            # Orchestration loop (plan/build/split)
     interview.ts        # Interview loop logic
     openai.ts           # OpenAI API client (for audit)
@@ -54,10 +55,42 @@ src/
     PROMPT_split.md     # Split prompt template
     PROMPT_audit.md     # Audit prompt template
 tests/
-  unit/                 # 227 tests across 24 files
+  unit/                 # 242 tests across 25 files
   fixtures/             # Test helpers (mock provider, etc.)
   sample-project/       # Sample project for manual testing (barf --cwd tests/sample-project)
 ```
+
+
+## Planning Requirements
+
+**BEFORE writing any plan file**, run:
+
+```bash
+ls ${PROJECT_PLANS_DIR}/
+```
+
+to determine the next sequential number. **Do not skip this step.**
+
+All plan files **must** follow this exact naming pattern:
+
+```
+${PROJECT_PLANS_DIR}/NNN-descriptive-name.md
+```
+
+- `NNN` — zero-padded three-digit sequence number (e.g. `006`, `007`)
+- `descriptive-name` — lowercase, hyphenated, clearly describes the plan
+- **Wrong:** `staged-drifting-cosmos.md`, `plan.md`, `my-plan.md`
+- **Right:** `006-add-submodule-setup-to-readme.md`
+
+**Process:**
+
+1. `ls ${PROJECT_PLANS_DIR}` — find the highest existing `NNN`
+2. Increment by 1 and zero-pad to 3 digits
+3. Choose a descriptive hyphenated name
+4. Save to `${PROJECT_PLANS_DIR}/NNN-descriptive-name.md`
+
+Plans saved with the wrong name must be renamed before the task is considered complete.
+
 
 ## Key Conventions
 

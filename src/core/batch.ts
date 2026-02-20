@@ -3,43 +3,19 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import type { Config } from '@/types/index'
 import type { IssueProvider } from '@/core/issue/base'
+import type { LoopMode } from '@/types/schema/mode-schema'
+import type { OverflowDecision } from '@/types/schema/batch-schema'
 import { runClaudeIteration } from '@/core/claude'
 import { injectTemplateVars } from '@/core/context'
+import { resolvePromptTemplate } from '@/core/prompts'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 
-// Prompt templates — embedded into binary at compile time via Bun import attributes
-import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
-import buildPromptTemplate from '@/prompts/PROMPT_build.md' with { type: 'text' }
-import splitPromptTemplate from '@/prompts/PROMPT_split.md' with { type: 'text' }
+export type { LoopMode } from '@/types/schema/mode-schema'
+export type { OverflowDecision } from '@/types/schema/batch-schema'
 
 const logger = createLogger('batch')
-
-/**
- * The mode passed to `runLoop`. `'split'` is used internally after an overflow decision.
- *
- * @category Orchestration
- */
-export type LoopMode = 'plan' | 'build' | 'split'
-
-const PROMPT_TEMPLATES: Record<LoopMode, string> = {
-  plan: planPromptTemplate,
-  build: buildPromptTemplate,
-  split: splitPromptTemplate
-}
-
-/**
- * The decision taken by `handleOverflow` when Claude's context fills up.
- * - `split`: decompose the issue into sub-issues using `splitModel`
- * - `escalate`: retry with `extendedContextModel` (larger context window)
- *
- * @category Orchestration
- */
-export interface OverflowDecision {
-  action: 'split' | 'escalate'
-  nextModel: string
-}
 
 /**
  * Pure: should the loop run another iteration?
@@ -181,7 +157,7 @@ export function runLoop(
           const currentMode: LoopMode = splitPending ? 'split' : mode
           logger.info({ issueId, mode: currentMode, model, iteration }, 'starting iteration')
 
-          const prompt = injectTemplateVars(PROMPT_TEMPLATES[currentMode], {
+          const prompt = injectTemplateVars(resolvePromptTemplate(currentMode, config), {
             BARF_ISSUE_ID: issueId,
             BARF_ISSUE_FILE: resolveIssueFile(issueId, config),
             BARF_MODE: currentMode,
@@ -190,7 +166,12 @@ export function runLoop(
             PLAN_DIR: config.planDir
           })
 
-          const iterResult = await runClaudeIteration(prompt, model, config, issueId)
+          const effectiveConfig =
+            issueResult.value.context_usage_percent !== undefined
+              ? { ...config, contextUsagePercent: issueResult.value.context_usage_percent }
+              : config
+
+          const iterResult = await runClaudeIteration(prompt, model, effectiveConfig, issueId)
           if (iterResult.isErr()) {
             throw iterResult.error
           }

@@ -1,0 +1,43 @@
+import { z } from 'zod'
+
+/**
+ * Superset of all barf operational modes.
+ *
+ * Narrower subsets are derived via `.extract()` for type-safe context-specific usage.
+ *
+ * @category Modes
+ */
+export const BarfModeSchema = z.enum(['plan', 'build', 'split', 'interview'])
+/** A barf operational mode. Derived from {@link BarfModeSchema}. */
+export type BarfMode = z.infer<typeof BarfModeSchema>
+
+/**
+ * Modes used by the batch orchestration loop ({@link runLoop}) and POSIX locking.
+ *
+ * `'split'` is used internally after an overflow decision.
+ *
+ * @category Modes
+ */
+export const LoopModeSchema = BarfModeSchema.extract(['plan', 'build', 'split'])
+/** A loop/lock mode. Derived from {@link LoopModeSchema}. */
+export type LoopMode = z.infer<typeof LoopModeSchema>
+
+/**
+ * Modes accepted by {@link resolvePromptTemplate} — all four barf modes.
+ *
+ * @category Modes
+ */
+export const PromptModeSchema = BarfModeSchema
+/** A prompt resolution mode. Derived from {@link PromptModeSchema}. */
+export type PromptMode = z.infer<typeof PromptModeSchema>
+
+/**
+ * Modes used by {@link IssueProvider.autoSelect} to pick the next issue.
+ *
+ * `'split'` is excluded because split issues are handled internally by the loop.
+ *
+ * @category Modes
+ */
+export const AutoSelectModeSchema = BarfModeSchema.extract(['plan', 'build', 'interview'])
+/** An auto-select mode. Derived from {@link AutoSelectModeSchema}. */
+export type AutoSelectMode = z.infer<typeof AutoSelectModeSchema>

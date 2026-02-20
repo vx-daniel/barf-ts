@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LoopModeSchema } from '@/types/schema/mode-schema'
 
 // ── Issue ─────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ export const IssueSchema = z.object({
   children: z.array(z.string()),
   split_count: z.number().int().nonnegative(),
   force_split: z.boolean().default(false),
+  context_usage_percent: z.number().int().min(1).max(100).optional(),
   body: z.string()
 })
 /**
@@ -64,12 +66,12 @@ export type Issue = z.infer<typeof IssueSchema>
 // ── Lock ──────────────────────────────────────────────────────────────────────
 
 /**
- * Runtime mode that acquired the lock.
+ * Runtime mode that acquired the lock. Alias for {@link LoopModeSchema}.
  *
  * @category Locking
  * @group Locking
  */
-export const LockModeSchema = z.enum(['plan', 'build', 'split'])
+export const LockModeSchema = LoopModeSchema
 /**
  * A barf lock mode. Derived from {@link LockModeSchema}.
  *
@@ -129,7 +131,8 @@ export const ConfigSchema = z.object({
   issueProvider: z.enum(['local', 'github']).default('local'),
   githubRepo: z.string().default(''),
   streamLogDir: z.string().default(''),
-  barfDir: z.string().default('.barf')
+  barfDir: z.string().default('.barf'),
+  promptDir: z.string().default('')
 })
 /**
  * Validated barf runtime configuration. Derived from {@link ConfigSchema}.

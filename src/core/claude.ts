@@ -3,35 +3,14 @@ import { join } from 'path'
 import { mkdirSync } from 'fs'
 import { ResultAsync } from 'neverthrow'
 import type { Config } from '@/types'
+import type { IterationResult } from '@/types/schema/claude-schema'
 import { parseClaudeStream, ContextOverflowError, RateLimitError } from '@/core/context'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 
+export type { IterationOutcome, IterationResult } from '@/types/schema/claude-schema'
+
 const logger = createLogger('claude')
-
-/**
- * Outcome of a single Claude agent iteration.
- * - `success`: iteration completed normally
- * - `overflow`: context threshold exceeded (see {@link ContextOverflowError})
- * - `error`: Claude exited with a non-success status or timed out
- * - `rate_limited`: API rate limit hit; see `rateLimitResetsAt` for retry time
- *
- * @category Claude Agent
- */
-export type IterationOutcome = 'success' | 'overflow' | 'error' | 'rate_limited'
-
-/**
- * Result of a single Claude agent iteration, returned by {@link runClaudeIteration}.
- *
- * `tokens` is always populated. `rateLimitResetsAt` is set only when `outcome === 'rate_limited'`.
- *
- * @category Claude Agent
- */
-export interface IterationResult {
-  outcome: IterationOutcome
-  tokens: number
-  rateLimitResetsAt?: number
-}
 
 // Context window limits per model (tokens)
 const MODEL_CONTEXT_LIMITS: Record<string, number> = {
@@ -49,6 +28,100 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
 export function getThreshold(model: string, contextUsagePercent: number): number {
   const limit = MODEL_CONTEXT_LIMITS[model] ?? 200_000
   return Math.floor((contextUsagePercent / 100) * limit)
+}
+
+/** Proc-like interface matching Bun.spawn() shape — enables testing without mocking Bun. */
+export interface ClaudeProc {
+  stdout: ReadableStream<Uint8Array>
+  kill: (signal?: string) => void
+  exited: Promise<number>
+}
+
+/** Options for stream consumption, injected by caller. */
+export interface ConsumeStreamOptions {
+  threshold: number
+  contextLimit: number
+  streamLogFile?: string
+  isTTY?: boolean
+  stderrWrite?: (data: string) => void
+}
+
+/**
+ * Consumes a Claude process's stdout stream, tracking token usage and tool calls.
+ * Returns an {@link IterationResult} based on how the stream terminates.
+ *
+ * Extracted from {@link runClaudeIteration} to allow testing without mocking
+ * `bun` or `parseClaudeStream` — callers inject a {@link ClaudeProc} and
+ * {@link ConsumeStreamOptions} directly.
+ *
+ * @param proc - Process-like object with stdout stream, kill method, and exit promise.
+ * @param opts - Stream consumption options (threshold, context limit, TTY config).
+ * @param signal - When aborted, treated as a timeout — the result is `{ outcome: 'error' }`.
+ * @returns `IterationResult` with outcome and token count.
+ * @category Claude Agent
+ */
+export async function consumeClaudeStream(
+  proc: ClaudeProc,
+  opts: ConsumeStreamOptions,
+  signal?: AbortSignal
+): Promise<IterationResult> {
+  const { threshold, contextLimit, streamLogFile, isTTY = false, stderrWrite } = opts
+  const write = stderrWrite ?? ((data: string) => process.stderr.write(data))
+  let lastTokens = 0
+  let lastTool = ''
+
+  const onAbort = () => proc.kill('SIGTERM')
+  if (signal) {
+    if (signal.aborted) {
+      onAbort()
+    } else {
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+  }
+
+  try {
+    for await (const event of parseClaudeStream(proc, threshold, streamLogFile)) {
+      if (event.type === 'usage') {
+        lastTokens = event.tokens
+        logger.debug({ tokens: event.tokens, threshold }, 'context update')
+        if (isTTY) {
+          const pct = Math.round((event.tokens / contextLimit) * 100)
+          const toolPart = lastTool ? `  |  ${lastTool}` : ''
+          write(
+            `\r\x1b[K  context: ${event.tokens.toLocaleString()} / ${contextLimit.toLocaleString()} (${pct}%)${toolPart}`
+          )
+        }
+      } else if (event.type === 'tool') {
+        lastTool = event.name
+        logger.debug({ tool: event.name }, 'tool call')
+      }
+    }
+    if (isTTY) {
+      write('\r\x1b[K')
+    }
+    await proc.exited
+    if (signal?.aborted) {
+      logger.warn({ threshold }, 'claude timed out')
+      return { outcome: 'error', tokens: lastTokens }
+    }
+    return { outcome: 'success', tokens: lastTokens }
+  } catch (e) {
+    if (e instanceof ContextOverflowError) {
+      return { outcome: 'overflow', tokens: e.tokens }
+    }
+    if (e instanceof RateLimitError) {
+      return {
+        outcome: 'rate_limited',
+        tokens: lastTokens,
+        rateLimitResetsAt: e.resetsAt
+      }
+    }
+    throw e
+  } finally {
+    if (signal) {
+      signal.removeEventListener('abort', onAbort)
+    }
+  }
 }
 
 /**
@@ -75,9 +148,6 @@ export function runClaudeIteration(
     (async (): Promise<IterationResult> => {
       const threshold = getThreshold(model, config.contextUsagePercent)
       const contextLimit = MODEL_CONTEXT_LIMITS[model] ?? 200_000
-      const isTTY = process.stderr.isTTY ?? false
-      let timedOut = false
-      let lastTool = ''
 
       const proc = spawn({
         cmd: [
@@ -95,19 +165,11 @@ export function runClaudeIteration(
         env: { ...process.env, CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '100' }
       })
 
+      const controller = new AbortController()
       const timeoutHandle =
         config.claudeTimeout > 0
-          ? setTimeout(() => {
-              timedOut = true
-              proc.kill('SIGTERM' as Parameters<typeof proc.kill>[0])
-            }, config.claudeTimeout * 1000)
+          ? setTimeout(() => controller.abort(), config.claudeTimeout * 1000)
           : null
-
-      // Wrap proc to match parseClaudeStream's kill signature (string → Bun Signals)
-      const procAdapter = {
-        stdout: proc.stdout as ReadableStream<Uint8Array>,
-        kill: (signal?: string) => proc.kill(signal as Parameters<typeof proc.kill>[0])
-      }
 
       let streamLogFile: string | undefined
       if (config.streamLogDir && issueId) {
@@ -115,45 +177,21 @@ export function runClaudeIteration(
         streamLogFile = join(config.streamLogDir, `${issueId}.jsonl`)
       }
 
-      let lastTokens = 0
       try {
-        for await (const event of parseClaudeStream(procAdapter, threshold, streamLogFile)) {
-          if (event.type === 'usage') {
-            lastTokens = event.tokens
-            logger.debug({ tokens: event.tokens, threshold }, 'context update')
-            if (isTTY) {
-              const pct = Math.round((event.tokens / contextLimit) * 100)
-              const toolPart = lastTool ? `  |  ${lastTool}` : ''
-              process.stderr.write(
-                `\r\x1b[K  context: ${event.tokens.toLocaleString()} / ${contextLimit.toLocaleString()} (${pct}%)${toolPart}`
-              )
-            }
-          } else if (event.type === 'tool') {
-            lastTool = event.name
-            logger.debug({ tool: event.name }, 'tool call')
-          }
-        }
-        if (isTTY) {
-          process.stderr.write('\r\x1b[K')
-        }
-        await proc.exited
-        if (timedOut) {
-          logger.warn({ model, timeout: config.claudeTimeout }, 'claude timed out')
-          return { outcome: 'error', tokens: lastTokens }
-        }
-        return { outcome: 'success', tokens: lastTokens }
-      } catch (e) {
-        if (e instanceof ContextOverflowError) {
-          return { outcome: 'overflow', tokens: e.tokens }
-        }
-        if (e instanceof RateLimitError) {
-          return {
-            outcome: 'rate_limited',
-            tokens: lastTokens,
-            rateLimitResetsAt: e.resetsAt
-          }
-        }
-        throw e
+        return await consumeClaudeStream(
+          {
+            stdout: proc.stdout as ReadableStream<Uint8Array>,
+            kill: (signal?: string) => proc.kill(signal as Parameters<typeof proc.kill>[0]),
+            exited: proc.exited
+          },
+          {
+            threshold,
+            contextLimit,
+            streamLogFile,
+            isTTY: process.stderr.isTTY ?? false
+          },
+          controller.signal
+        )
       } finally {
         if (timeoutHandle) {
           clearTimeout(timeoutHandle)

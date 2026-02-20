@@ -1,182 +1,144 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
-import { mkdtempSync, existsSync } from 'fs'
-import { join } from 'path'
-import { tmpdir } from 'os'
-import { ConfigSchema } from '@/types'
-import type { Config } from '@/types'
+import { describe, it, expect, mock } from 'bun:test'
+import { consumeClaudeStream } from '@/core/claude'
+import type { ClaudeProc, ConsumeStreamOptions } from '@/core/claude'
 
-const defaultConfig = (): Config => ConfigSchema.parse({})
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-// We need to mock bun's spawn and parseClaudeStream. Since runClaudeIteration
-// uses `spawn` from 'bun' and `parseClaudeStream` from '@/core/context',
-// we mock both modules before importing the module under test.
-
-// Controllable state for each test
-let mockStreamEvents: Array<{ type: string; tokens?: number; name?: string }> = []
-let mockStreamThrow: Error | null = null
-let mockStreamDelayMs = 0
-let mockExitCode = 0
-let mockKillCalled = false
-
-// Mock parseClaudeStream as an async generator
-mock.module('@/core/context', () => {
-  const { ContextOverflowError, RateLimitError } = require('@/core/context')
-
+/** Creates a ClaudeProc backed by real ReadableStream JSONL lines. */
+function makeProc(opts: { lines?: string[]; exitCode?: number } = {}): ClaudeProc {
+  const encoder = new TextEncoder()
   return {
-    ContextOverflowError,
-    RateLimitError,
-    parseClaudeStream: async function* () {
-      if (mockStreamDelayMs > 0) {
-        await new Promise(resolve => setTimeout(resolve, mockStreamDelayMs))
+    stdout: new ReadableStream({
+      start(controller) {
+        for (const line of opts.lines ?? []) {
+          controller.enqueue(encoder.encode(line + '\n'))
+        }
+        controller.close()
       }
-      for (const event of mockStreamEvents) {
-        yield event
-      }
-      if (mockStreamThrow) {
-        throw mockStreamThrow
-      }
-    }
+    }),
+    kill: mock(() => {}),
+    exited: new Promise(resolve => queueMicrotask(() => resolve(opts.exitCode ?? 0)))
   }
+}
+
+function defaultOpts(overrides: Partial<ConsumeStreamOptions> = {}): ConsumeStreamOptions {
+  return {
+    threshold: 200_000,
+    contextLimit: 200_000,
+    ...overrides
+  }
+}
+
+// ── JSONL fixtures (same format as context.test.ts) ──────────────────────────
+
+const USAGE_1000 = JSON.stringify({
+  parent_tool_use_id: null,
+  message: { usage: { cache_creation_input_tokens: 800, cache_read_input_tokens: 200 } }
 })
 
-// Mock bun's spawn to avoid actually running 'claude'.
-// IMPORTANT: Do NOT require('bun') inside this factory — it creates a circular
-// reference that causes non-deterministic hangs. claude.ts only imports `spawn`,
-// so that's all we need to provide.
-mock.module('bun', () => ({
-  spawn: () => ({
-    stdout: new ReadableStream({
-      start(controller: ReadableStreamDefaultController) {
-        controller.close()
-      }
-    }),
-    stderr: new ReadableStream({
-      start(controller: ReadableStreamDefaultController) {
-        controller.close()
-      }
-    }),
-    kill: () => {
-      mockKillCalled = true
-    },
-    exited: new Promise(resolve => queueMicrotask(() => resolve(mockExitCode)))
-  })
-}))
+const USAGE_2000 = JSON.stringify({
+  parent_tool_use_id: null,
+  message: { usage: { cache_creation_input_tokens: 1500, cache_read_input_tokens: 500 } }
+})
 
-import { runClaudeIteration, getThreshold } from '@/core/claude'
-import { ContextOverflowError, RateLimitError } from '@/core/context'
+const USAGE_500 = JSON.stringify({
+  parent_tool_use_id: null,
+  message: { usage: { cache_creation_input_tokens: 300, cache_read_input_tokens: 200 } }
+})
 
-describe('runClaudeIteration', () => {
-  beforeEach(() => {
-    mockStreamEvents = []
-    mockStreamThrow = null
-    mockStreamDelayMs = 0
-    mockExitCode = 0
-    mockKillCalled = false
-  })
+const TOOL_READ = JSON.stringify({
+  type: 'assistant',
+  message: { content: [{ type: 'tool_use', name: 'Read' }] }
+})
 
+const RATE_LIMIT = JSON.stringify({
+  type: 'rate_limit_event',
+  rate_limit_info: { status: 'rejected', resetsAt: 1_700_000_000 }
+})
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+describe('consumeClaudeStream', () => {
   it('returns success when stream completes normally', async () => {
-    mockStreamEvents = [{ type: 'usage', tokens: 1000 }]
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', defaultConfig())
+    const proc = makeProc({ lines: [USAGE_1000] })
+    const result = await consumeClaudeStream(proc, defaultOpts())
 
-    expect(result.isOk()).toBe(true)
-    expect(result._unsafeUnwrap().outcome).toBe('success')
-    expect(result._unsafeUnwrap().tokens).toBe(1000)
+    expect(result.outcome).toBe('success')
+    expect(result.tokens).toBe(1000)
   })
 
-  it('returns overflow when ContextOverflowError is thrown', async () => {
-    mockStreamThrow = new ContextOverflowError(150_000)
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', defaultConfig())
+  it('returns overflow when context threshold is exceeded', async () => {
+    const proc = makeProc({ lines: [USAGE_1000] })
+    const result = await consumeClaudeStream(proc, defaultOpts({ threshold: 500 }))
 
-    expect(result.isOk()).toBe(true)
-    expect(result._unsafeUnwrap().outcome).toBe('overflow')
-    expect(result._unsafeUnwrap().tokens).toBe(150_000)
+    expect(result.outcome).toBe('overflow')
+    expect(result.tokens).toBe(1000)
+    expect(proc.kill).toHaveBeenCalled()
   })
 
-  it('returns rate_limited when RateLimitError is thrown', async () => {
-    mockStreamThrow = new RateLimitError(1_700_000_000)
-    mockStreamEvents = [{ type: 'usage', tokens: 500 }]
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', defaultConfig())
+  it('returns rate_limited when rate limit event is received', async () => {
+    const proc = makeProc({ lines: [USAGE_500, RATE_LIMIT] })
+    const result = await consumeClaudeStream(proc, defaultOpts())
 
-    expect(result.isOk()).toBe(true)
-    expect(result._unsafeUnwrap().outcome).toBe('rate_limited')
-    expect(result._unsafeUnwrap().rateLimitResetsAt).toBe(1_700_000_000)
+    expect(result.outcome).toBe('rate_limited')
+    expect(result.tokens).toBe(500)
+    expect(result.rateLimitResetsAt).toBe(1_700_000_000)
   })
 
-  it('propagates unknown errors', async () => {
-    mockStreamThrow = new Error('unexpected failure')
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', defaultConfig())
+  it('propagates unknown errors from the stream', async () => {
+    const proc: ClaudeProc = {
+      stdout: new ReadableStream({
+        start(controller) {
+          controller.error(new Error('unexpected failure'))
+        }
+      }),
+      kill: mock(() => {}),
+      exited: new Promise(resolve => queueMicrotask(() => resolve(1)))
+    }
 
-    expect(result.isErr()).toBe(true)
-    expect(result._unsafeUnwrapErr().message).toBe('unexpected failure')
+    await expect(consumeClaudeStream(proc, defaultOpts())).rejects.toThrow('unexpected failure')
   })
 
-  it('tracks tool events', async () => {
-    mockStreamEvents = [
-      { type: 'usage', tokens: 500 },
-      { type: 'tool', name: 'Read' },
-      { type: 'usage', tokens: 1000 }
-    ]
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', defaultConfig())
+  it('tracks tool events and reports last token count', async () => {
+    const proc = makeProc({ lines: [USAGE_500, TOOL_READ, USAGE_1000] })
+    const result = await consumeClaudeStream(proc, defaultOpts())
 
-    expect(result.isOk()).toBe(true)
-    expect(result._unsafeUnwrap().tokens).toBe(1000)
+    expect(result.outcome).toBe('success')
+    expect(result.tokens).toBe(1000)
   })
 
   it('returns zero tokens when no usage events', async () => {
-    mockStreamEvents = []
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', defaultConfig())
+    const proc = makeProc({ lines: [] })
+    const result = await consumeClaudeStream(proc, defaultOpts())
 
-    expect(result.isOk()).toBe(true)
-    expect(result._unsafeUnwrap().tokens).toBe(0)
+    expect(result.outcome).toBe('success')
+    expect(result.tokens).toBe(0)
   })
 
-  it('creates stream log directory when streamLogDir is configured', async () => {
-    const tmpDir = mkdtempSync(join(tmpdir(), 'barf-claude-log-'))
-    const streamLogDir = join(tmpDir, 'streams')
-    const config = { ...defaultConfig(), streamLogDir }
-    mockStreamEvents = [{ type: 'usage', tokens: 500 }]
-
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', config, 'issue-001')
-
-    expect(result.isOk()).toBe(true)
-    expect(existsSync(streamLogDir)).toBe(true)
-  })
-
-  it('writes TTY progress when stderr is a TTY', async () => {
-    const origIsTTY = process.stderr.isTTY
-    const origWrite = process.stderr.write
+  it('writes TTY progress when isTTY is set', async () => {
     let stderrOutput = ''
-    process.stderr.isTTY = true as any
-    process.stderr.write = ((data: any) => {
-      stderrOutput += String(data)
-      return true
-    }) as any
+    const proc = makeProc({ lines: [USAGE_1000, TOOL_READ, USAGE_2000] })
+    const result = await consumeClaudeStream(
+      proc,
+      defaultOpts({
+        isTTY: true,
+        stderrWrite: (data: string) => {
+          stderrOutput += data
+        }
+      })
+    )
 
-    mockStreamEvents = [
-      { type: 'usage', tokens: 1000 },
-      { type: 'tool', name: 'Read' },
-      { type: 'usage', tokens: 2000 }
-    ]
-
-    try {
-      const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', defaultConfig())
-      expect(result.isOk()).toBe(true)
-      expect(stderrOutput).toContain('context:')
-      expect(stderrOutput).toContain('Read')
-    } finally {
-      process.stderr.isTTY = origIsTTY as any
-      process.stderr.write = origWrite
-    }
+    expect(result.outcome).toBe('success')
+    expect(stderrOutput).toContain('context:')
+    expect(stderrOutput).toContain('Read')
   })
 
-  it('returns error outcome when timed out', async () => {
-    mockStreamDelayMs = 200
-    mockStreamEvents = [{ type: 'usage', tokens: 300 }]
-    const config = { ...defaultConfig(), claudeTimeout: 0.05 } // 50ms
+  it('returns error outcome when signal is aborted (timeout)', async () => {
+    const proc = makeProc({ lines: [USAGE_500] })
+    const result = await consumeClaudeStream(proc, defaultOpts(), AbortSignal.abort())
 
-    const result = await runClaudeIteration('prompt', 'claude-sonnet-4-6', config)
-
-    expect(result.isOk()).toBe(true)
-    expect(result._unsafeUnwrap().outcome).toBe('error')
+    expect(result.outcome).toBe('error')
+    expect(result.tokens).toBe(500)
+    expect(proc.kill).toHaveBeenCalled()
   })
 })

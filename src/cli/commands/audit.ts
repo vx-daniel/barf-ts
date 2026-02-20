@@ -2,8 +2,9 @@ import { join } from 'path'
 import { existsSync, readFileSync, readdirSync } from 'fs'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types'
+import type { ExecResult } from '@/types/schema/exec-schema'
 import { runOpenAIChat } from '@/core/openai'
-import { AuditResponseSchema, type AuditFinding } from '@/core/audit-schema'
+import { AuditResponseSchema, type AuditFinding } from '@/types/schema/audit-schema'
 import { injectTemplateVars } from '@/core/context'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
@@ -40,9 +41,7 @@ function loadRulesContext(): string {
  * @param result - Result from `execFileNoThrow`, or `null` if the check was skipped.
  * @returns A string describing pass/fail status and captured output.
  */
-function formatCheckResult(
-  result: { stdout: string; stderr: string; status: number } | null
-): string {
+function formatCheckResult(result: ExecResult | null): string {
   if (result === null) {
     return '(skipped — not configured)'
   }

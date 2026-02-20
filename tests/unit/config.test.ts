@@ -37,6 +37,16 @@ describe('parseBarfrc', () => {
     const result = parseBarfrc('ISSUE_PROVIDER=linear\n')
     expect(result.isErr()).toBe(true)
   })
+
+  it('parses PROMPT_DIR into config.promptDir', () => {
+    const result = parseBarfrc('PROMPT_DIR=./my-prompts\n')
+    expect(result._unsafeUnwrap().promptDir).toBe('./my-prompts')
+  })
+
+  it('defaults promptDir to empty string when missing', () => {
+    const result = parseBarfrc('')
+    expect(result._unsafeUnwrap().promptDir).toBe('')
+  })
 })
 
 describe('loadConfig', () => {

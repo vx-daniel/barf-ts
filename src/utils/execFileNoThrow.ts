@@ -1,16 +1,7 @@
 import { spawn } from 'bun'
+import type { ExecResult } from '@/types/schema/exec-schema'
 
-/**
- * Output captured from a subprocess spawned by {@link execFileNoThrow}.
- * `status` is the process exit code (0 = success). Errors appear in `stderr`; the function never throws.
- *
- * @category Utilities
- */
-export interface ExecResult {
-  stdout: string
-  stderr: string
-  status: number
-}
+export type { ExecResult } from '@/types/schema/exec-schema'
 
 /**
  * Runs a subprocess without a shell — args are passed as an array, preventing
