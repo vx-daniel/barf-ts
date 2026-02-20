@@ -8,8 +8,27 @@
       "Bash(bun run:*)"
     ]
   },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "CLAUDE_CODE_LOG_LEVEL": "info",
+    "PROJECT_PLANS_DIR": "./docs/plans"
+  },
   "enabledPlugins": {
     "everything-claude-code@everything-claude-code": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/save-plan.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
   },
   "extraKnownMarketplaces": {
     "everything-claude-code": {

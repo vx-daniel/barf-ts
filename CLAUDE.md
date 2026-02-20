@@ -72,20 +72,20 @@ to determine the next sequential number. **Do not skip this step.**
 All plan files **must** follow this exact naming pattern:
 
 ```
-docs/plans/NN-descriptive-name.md
+docs/plans/NNN-descriptive-name.md
 ```
 
-- `NN` — zero-padded two-digit sequence number (e.g. `06`, `07`)
+- `NNN` — zero-padded three-digit sequence number (e.g. `006`, `007`)
 - `descriptive-name` — lowercase, hyphenated, clearly describes the plan
 - **Wrong:** `staged-drifting-cosmos.md`, `plan.md`, `my-plan.md`
-- **Right:** `06-add-submodule-setup-to-readme.md`
+- **Right:** `006-add-submodule-setup-to-readme.md`
 
 **Process:**
 
 1. `ls docs/plans/` — find the highest existing `NN`
-2. Increment by 1 and zero-pad to 2 digits
+2. Increment by 1 and zero-pad to 3 digits
 3. Choose a descriptive hyphenated name
-4. Save to `docs/plans/NN-descriptive-name.md`
+4. Save to `docs/plans/NNN-descriptive-name.md`
 
 Plans saved with the wrong name must be renamed before the task is considered complete.
 

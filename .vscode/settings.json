@@ -4,7 +4,8 @@
     "source.fixAll.oxc": "explicit"
   },
   "[typescript]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.tabSize": 2
   },
   "oxc.enable.oxlint": true,
   "oxc.path.oxfmt": "node_modules",
@@ -12,5 +13,4 @@
   "oxc.path.node": "",
   "oxc.requireConfig": true,
   "editor.defaultFormatter": "oxc.oxc-vscode",
-  
 }

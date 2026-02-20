@@ -4,7 +4,7 @@ import { resolveIssueFile } from '@/core/batch'
 import { createInterface } from 'readline'
 import { ResultAsync } from 'neverthrow'
 import { z } from 'zod'
-import type { Config } from '@/types'
+import type { Config, ClaudeEvent } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { runClaudeIteration } from '@/core/claude'
 import { createLogger } from '@/utils/logger'
@@ -127,12 +127,16 @@ function formatQASection(pairs: QAPair[]): string {
  * @param issueId - ID of the issue being interviewed.
  * @param config - Loaded barf configuration (model, dirs, etc.).
  * @param provider - Issue provider for reading and writing the issue.
+ * @param onEvent - Optional callback fired for each {@link ClaudeEvent} during a turn.
+ * @param signal - Optional abort signal; kills the active Claude subprocess on abort.
  * @returns `ok(void)` when the interview completes, `err(Error)` on I/O or Claude failure.
  */
 export function interviewLoop(
   issueId: string,
   config: Config,
-  provider: IssueProvider
+  provider: IssueProvider,
+  onEvent?: (event: ClaudeEvent) => void,
+  signal?: AbortSignal
 ): ResultAsync<void, Error> {
   return ResultAsync.fromPromise(
     (async (): Promise<void> => {
@@ -160,7 +164,16 @@ export function interviewLoop(
 
         logger.info({ issueId, turn }, 'running interview turn')
 
-        const iterResult = await runClaudeIteration(prompt, config.interviewModel, config, issueId)
+        const iterResult = await runClaudeIteration(
+          prompt,
+          config.interviewModel,
+          config,
+          issueId,
+          {
+            onEvent,
+            signal
+          }
+        )
         if (iterResult.isErr()) {
           throw iterResult.error
         }
