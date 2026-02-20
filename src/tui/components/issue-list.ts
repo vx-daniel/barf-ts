@@ -6,7 +6,7 @@ import {
   type CliRenderer
 } from '@opentui/core'
 import type { Issue } from '@/types'
-import { _APP_COLORS } from '@/tui/index'
+import { _APP_COLORS } from '@/tui/colors'
 
 /** Maps an issue state to a compact colored prefix string. */
 function stateIndicator(state: Issue['state']): { prefix: string; color: string } {

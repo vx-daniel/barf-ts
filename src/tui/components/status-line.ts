@@ -1,5 +1,5 @@
 import { BoxRenderable, TextRenderable, type CliRenderer } from '@opentui/core'
-import { _APP_COLORS } from '@/tui/index'
+import { _APP_COLORS } from '@/tui/colors'
 
 /** Hint text shown when no operation is running. */
 const HINTS = '[a]uto [i]ntv [p]lan [b]uild [u]audit [n]ew [e]dit [x]kill [?]help [q]uit'
@@ -53,6 +53,21 @@ export class StatusLine {
     } else {
       this.rightText.content = ''
     }
+  }
+
+  /**
+   * Flashes an error message in the left hint area for 4 seconds,
+   * then restores the normal hint text.
+   *
+   * @param message - Short error description to display.
+   */
+  showError(message: string): void {
+    this.leftText.fg = _APP_COLORS.red
+    this.leftText.content = `✖ ${message}`
+    setTimeout(() => {
+      this.leftText.fg = _APP_COLORS.dim
+      this.leftText.content = HINTS
+    }, 4000)
   }
 
   /** The BoxRenderable to add to the layout tree. */

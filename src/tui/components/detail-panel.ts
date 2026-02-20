@@ -9,7 +9,7 @@ import {
 } from '@opentui/core'
 import type { Issue, ClaudeEvent } from '@/types'
 import { ActivityFeed } from './activity-feed'
-import { _APP_COLORS } from '@/tui/index'
+import { _APP_COLORS } from '@/tui/colors'
 
 type TabIndex = 0 | 1 | 2
 
@@ -193,6 +193,9 @@ export class DetailPanel {
     }
 
     this.activeTab = index
+    if (this.tabBar.getSelectedIndex() !== index) {
+      this.tabBar.setSelectedIndex(index)
+    }
 
     const wrappers: BoxRenderable[] = [this.detailWrapper, this.activityWrapper, this.logsWrapper]
     const next = wrappers[index]
@@ -209,6 +212,11 @@ export class DetailPanel {
   /** Blur the tab bar. */
   blur(): void {
     this.tabBar.blur()
+  }
+
+  /** Switch directly to the Activity tab. */
+  showActivity(): void {
+    this.switchTab(1)
   }
 
   /** Go to the previous tab (wraps). */

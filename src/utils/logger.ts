@@ -22,13 +22,7 @@ function buildLogger(name: string): pino.Logger {
     }
   }
 
-  const destinations: Parameters<typeof pino.multistream>[0] = [
-    { stream: pino.destination(resolveLogFile()) }
-  ]
-  if (!process.stderr.isTTY) {
-    destinations.unshift({ stream: pino.destination(2) })
-  }
-  const streams = pino.multistream(destinations)
+  const streams = pino.multistream([{ stream: pino.destination(resolveLogFile()) }])
   return pino({ name, level }, streams)
 }
 
@@ -36,7 +30,7 @@ function buildLogger(name: string): pino.Logger {
  * Create a named child logger. The underlying pino instance is built lazily
  * on first use so that the log file path resolves after --cwd / process.chdir().
  *
- * Writes JSON to both stderr and `barf.log` in the project directory.
+ * Writes JSON to `barf.log` in the project directory.
  * Overrides: LOG_LEVEL, LOG_PRETTY=1, BARF_LOG_FILE=/abs/path
  *
  * @category Utilities

@@ -152,7 +152,8 @@ export type Config = z.infer<typeof ConfigSchema>
  */
 export const ClaudeEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('usage'), tokens: z.number() }),
-  z.object({ type: z.literal('tool'), name: z.string() })
+  z.object({ type: z.literal('tool'), name: z.string() }),
+  z.object({ type: z.literal('status'), message: z.string() })
 ])
 /**
  * A parsed Claude stream event. Derived from {@link ClaudeEventSchema}.

@@ -5,7 +5,7 @@ import {
   InputRenderableEvents,
   type CliRenderer
 } from '@opentui/core'
-import { _APP_COLORS } from '@/tui/index'
+import { _APP_COLORS } from '@/tui/colors'
 
 /**
  * Absolutely-positioned modal overlay for creating a new issue.

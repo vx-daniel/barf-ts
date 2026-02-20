@@ -1,16 +1,22 @@
 import { createCliRenderer } from '@opentui/core'
-import { appendFileSync } from 'node:fs'
-import { tokyoNight } from '@/utils/themes'
+import { appendFileSync, mkdirSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 import { loadConfig } from '@/core/config'
 import { createIssueProvider } from '@/core/issue/factory'
 import { App } from './app'
 
 // ── Global error watcher ──────────────────────────────────────────────────────
 
-const TUI_LOG = '/tmp/barf-tui.log'
+/**
+ * Path to the TUI crash log.
+ *
+ * Initialised to `.barf/tui.log` relative to the startup cwd, then updated
+ * to `{config.barfDir}/tui.log` once the working directory and config are known.
+ */
+let tuiLog = join(process.cwd(), '.barf', 'tui.log')
 
 /**
- * Writes a timestamped error entry to {@link TUI_LOG} and exits.
+ * Writes a timestamped error entry to {@link tuiLog} and exits.
  *
  * Called before the process dies so that TUI crashes leave a readable
  * artifact even when the terminal is in raw/alternate-screen mode.
@@ -19,7 +25,8 @@ function handleFatalError(label: string, err: unknown): void {
   const ts = new Date().toISOString()
   const message = err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err)
   try {
-    appendFileSync(TUI_LOG, `[${ts}] ${label}: ${message}\n`)
+    mkdirSync(dirname(tuiLog), { recursive: true })
+    appendFileSync(tuiLog, `[${ts}] ${label}: ${message}\n`)
   } catch {
     // If we can't write to the log, nothing more we can do.
   }
@@ -29,32 +36,7 @@ function handleFatalError(label: string, err: unknown): void {
 process.on('uncaughtException', err => handleFatalError('uncaughtException', err))
 process.on('unhandledRejection', reason => handleFatalError('unhandledRejection', reason))
 
-// ── Theme colours ─────────────────────────────────────────────────────────────
-
-const theme = tokyoNight
-
-/**
- * Application-wide colour palette derived from the Tokyo Night theme.
- *
- * Exported so components can import it without circular deps — they import
- * from `@/tui/index` (this file) which has no runtime side-effects beyond
- * defining this object before App mounts.
- */
-export const _APP_COLORS = {
-  title: theme.color_14,
-  subtitle: theme.color_13,
-  dim: theme.color_08,
-  border: theme.color_06,
-  header: theme.color_01,
-  headerAlt: theme.color_09,
-  background: theme.background,
-  sidebar: theme.color_01,
-  red: theme.color_02,
-  yellow: theme.color_04,
-  green: theme.color_03,
-  white: theme.foreground,
-  orange: theme.color_12
-} as const
+export { _APP_COLORS } from './colors'
 
 // ── CLI arg parsing ───────────────────────────────────────────────────────────
 
@@ -82,6 +64,9 @@ if (cwd) {
 }
 
 const config = loadConfig(configPath)
+
+// Now that cwd and barfDir are known, point the error log at the project's .barf folder.
+tuiLog = join(process.cwd(), config.barfDir, 'tui.log')
 
 const providerResult = createIssueProvider(config)
 if (providerResult.isErr()) {

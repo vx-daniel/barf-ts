@@ -1,6 +1,6 @@
 import { ScrollBoxRenderable, TextRenderable, type CliRenderer } from '@opentui/core'
 import type { ClaudeEvent } from '@/types'
-import { _APP_COLORS } from '@/tui/index'
+import { _APP_COLORS } from '@/tui/colors'
 
 /**
  * Scrollable feed that appends lines as Claude emits events.
@@ -42,6 +42,8 @@ export class ActivityFeed {
       this.appendLine(`  tokens: ${event.tokens.toLocaleString()}`, _APP_COLORS.dim)
     } else if (event.type === 'tool') {
       this.appendLine(`  ⚙ ${event.name}`, _APP_COLORS.green)
+    } else if (event.type === 'status') {
+      this.appendLine(`  ${event.message}`, _APP_COLORS.subtitle)
     }
   }
 

@@ -21,6 +21,7 @@
     "check": "bun run format:check && bun run lint"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "latest",
     "@opentui-ui/dialog": "^0.1.2",
     "@opentui-ui/toast": "^0.0.5",
     "@opentui/core": "^0.1.80",

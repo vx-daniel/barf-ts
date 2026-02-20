@@ -6,10 +6,12 @@ import type { IssueProvider } from '@/core/issue/base'
 import { runLoop } from '@/core/batch'
 import { interviewLoop } from '@/core/interview'
 import { createLogger } from '@/utils/logger'
+import { _APP_COLORS } from '@/tui/colors'
 import { IssueList } from './components/issue-list'
 import { DetailPanel } from './components/detail-panel'
 import { StatusLine } from './components/status-line'
 import { NewIssueModal } from './components/new-issue-modal'
+import { AnswerModal } from './components/answer-modal'
 
 const logger = createLogger('tui')
 
@@ -53,6 +55,7 @@ export class App {
   private detailPanel!: DetailPanel
   private statusLine!: StatusLine
   private modal!: NewIssueModal
+  private answerModal!: AnswerModal
 
   constructor(renderer: CliRenderer, config: Config, provider: IssueProvider) {
     this.renderer = renderer
@@ -108,12 +111,16 @@ export class App {
       () => this.closeModal()
     )
 
+    // Interview answer modal (absolute overlay on app root)
+    this.answerModal = new AnswerModal(this.renderer)
+
     contentRow.add(this.issueList.renderable)
     contentRow.add(this.detailPanel.renderable)
 
     appRoot.add(contentRow)
     appRoot.add(this.statusLine.renderable)
     appRoot.add(this.modal.renderable)
+    appRoot.add(this.answerModal.renderable)
 
     this.renderer.root.add(appRoot)
 
@@ -143,7 +150,13 @@ export class App {
       return
     }
 
-    // Modal captures all keys when open
+    // Answer modal captures all keys when collecting an interview answer
+    if (this.answerModal.isOpen) {
+      this.handleAnswerModalKey(key)
+      return
+    }
+
+    // New-issue modal captures all keys when open
     if (this.modal.isOpen) {
       this.handleModalKey(key)
       return
@@ -225,6 +238,14 @@ export class App {
     // All other keys handled by the focused InputRenderable
   }
 
+  private handleAnswerModalKey(key: KeyEvent): void {
+    if (key.name === 'enter' || key.name === 'return') {
+      this.answerModal.submit()
+    }
+    // Escape is swallowed — use 'x' to kill the interview op if needed.
+    // All other keys flow to the focused InputRenderable for typing.
+  }
+
   // ── Focus management ───────────────────────────────────────────────────────
 
   private setFocusZone(zone: FocusZone): void {
@@ -269,7 +290,9 @@ export class App {
 
     fn()
       .catch(e => {
-        this.detailPanel.activity.appendLine(`ERROR: ${String(e)}`, '#f7768e')
+        const msg = e instanceof Error ? e.message : String(e)
+        this.detailPanel.activity.appendLine(`ERROR: ${msg}`, '#f7768e')
+        this.statusLine.showError(msg)
         logger.error({ err: e, type }, 'operation failed')
       })
       .finally(() => {
@@ -318,16 +341,55 @@ export class App {
     if (!this.selectedIssue || !this.runningOp) {
       return
     }
+    this.detailPanel.showActivity()
+
+    const issueId = this.selectedIssue.id
+
+    // NEW → INTERVIEWING (skip if already INTERVIEWING — resume an interrupted session)
+    if (this.selectedIssue.state === 'NEW') {
+      const startResult = await this.provider.transition(issueId, 'INTERVIEWING')
+      if (startResult.isErr()) {
+        throw startResult.error
+      }
+    }
+
     const result = await interviewLoop(
-      this.selectedIssue.id,
+      issueId,
       this.config,
       this.provider,
       this.makeEventHandler(),
-      this.runningOp.abort.signal
+      this.runningOp.abort.signal,
+      (question, options) => this.promptUser(question, options)
     )
     if (result.isErr()) {
       throw result.error
     }
+
+    // INTERVIEWING → PLANNED
+    const endResult = await this.provider.transition(issueId, 'PLANNED')
+    if (endResult.isErr()) {
+      throw endResult.error
+    }
+  }
+
+  /**
+   * Collects a single interview answer via the TUI answer modal.
+   * Appends the question and answer to the activity feed for the session record.
+   *
+   * @param question - Question text to display.
+   * @param options - Optional choice list; selecting 1–N resolves to the option text.
+   * @returns Promise resolving to the user's answer string.
+   */
+  private async promptUser(question: string, options?: string[]): Promise<string> {
+    this.detailPanel.activity.appendLine(`Q: ${question}`, _APP_COLORS.yellow)
+    if (options) {
+      options.forEach((opt, i) => {
+        this.detailPanel.activity.appendLine(`  ${i + 1}. ${opt}`, _APP_COLORS.dim)
+      })
+    }
+    const answer = await this.answerModal.ask(question, options)
+    this.detailPanel.activity.appendLine(`A: ${answer}`, _APP_COLORS.white)
+    return answer
   }
 
   private async runAudit(): Promise<void> {

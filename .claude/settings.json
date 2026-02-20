@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Read:plans",
+      "Read(./**/*)",
       "Write:plans",
       "Bash(bun x tsc:*)",
       "Bash(bun test:*)",
