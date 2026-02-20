@@ -149,6 +149,25 @@ export function runLoop(
           }
         }
 
+        // force_split: skip build, enter split flow directly
+        if (mode === 'build') {
+          const fsIssue = await provider.fetchIssue(issueId)
+          if (fsIssue.isOk() && fsIssue.value.force_split) {
+            logger.info({ issueId }, 'force_split detected — skipping build')
+            const decision = handleOverflow(fsIssue.value.split_count, config)
+            if (decision.action === 'split') {
+              splitPending = true
+              model = decision.nextModel
+              await provider.writeIssue(issueId, {
+                split_count: fsIssue.value.split_count + 1,
+                force_split: false
+              })
+            } else {
+              model = decision.nextModel
+            }
+          }
+        }
+
         iterationLoop: while (shouldContinue(iteration, config)) {
           const issueResult = await provider.fetchIssue(issueId)
           if (issueResult.isErr()) {

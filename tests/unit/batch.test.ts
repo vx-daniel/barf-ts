@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'bun:test'
-import { shouldContinue, handleOverflow } from '@/core/batch'
+import { mkdtempSync, writeFileSync, mkdirSync } from 'fs'
+import { join } from 'path'
+import { tmpdir } from 'os'
+import { shouldContinue, handleOverflow, resolveIssueFile } from '@/core/batch'
 import { type Config, ConfigSchema } from '@/types'
 
 const defaultConfig = (): Config => ConfigSchema.parse({})
@@ -46,5 +49,20 @@ describe('handleOverflow', () => {
       extendedContextModel: 'claude-opus-4-6'
     }
     expect(handleOverflow(1, config).nextModel).toBe('claude-opus-4-6')
+  })
+})
+
+describe('resolveIssueFile', () => {
+  it('returns path when issue file exists', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'barf-resolve-'))
+    mkdirSync(join(dir, 'issues'), { recursive: true })
+    writeFileSync(join(dir, 'issues', '001.md'), 'content')
+    const config = { ...defaultConfig(), issuesDir: join(dir, 'issues') }
+    expect(resolveIssueFile('001', config)).toBe(join(dir, 'issues', '001.md'))
+  })
+
+  it('returns issueId when file does not exist (GitHub fallback)', () => {
+    const config = { ...defaultConfig(), issuesDir: '/nonexistent/path' }
+    expect(resolveIssueFile('42', config)).toBe('42')
   })
 })

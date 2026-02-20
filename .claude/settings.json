@@ -18,5 +18,23 @@
         "repo": "affaan-m/everything-claude-code"
       }
     }
+  },
+    "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "PROJECT_PLANS_DIR": "./docs/plans"
+  },
+    "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/save-plan.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
   }
 }

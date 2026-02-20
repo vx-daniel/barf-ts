@@ -147,6 +147,7 @@ export class LocalIssueProvider extends IssueProvider {
         parent: input.parent ?? '',
         children: [],
         split_count: 0,
+        force_split: false,
         body: input.body ?? ''
       }
       return ResultAsync.fromPromise(

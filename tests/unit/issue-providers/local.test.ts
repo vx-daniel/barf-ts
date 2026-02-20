@@ -11,6 +11,7 @@ state=NEW
 parent=
 children=
 split_count=0
+force_split=false
 ---
 
 ## Description
@@ -130,6 +131,16 @@ describe('LocalIssueProvider', () => {
     const result = await provider.isLocked('001')
     expect(result._unsafeUnwrap()).toBe(false)
     expect(existsSync(join(dir, '.barf', '001.lock'))).toBe(false)
+  })
+
+  it('deletes an issue file', async () => {
+    await provider.deleteIssue('001')
+    expect(existsSync(join(dir, 'issues', '001.md'))).toBe(false)
+  })
+
+  it('deleteIssue succeeds even if file does not exist', async () => {
+    const result = await provider.deleteIssue('999')
+    expect(result.isOk()).toBe(true)
   })
 
   it('issue file is never renamed to .working', async () => {

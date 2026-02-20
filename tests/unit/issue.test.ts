@@ -5,7 +5,7 @@ import {
   validateTransition,
   parseAcceptanceCriteria
 } from '@/core/issue'
-import { InvalidTransitionError } from '@/types'
+import { InvalidTransitionError, ProviderError } from '@/types'
 
 const SAMPLE = `---
 id=001
@@ -14,6 +14,7 @@ state=NEW
 parent=
 children=
 split_count=0
+force_split=false
 ---
 
 ## Description
@@ -35,6 +36,20 @@ describe('parseIssue', () => {
     expect(issue.parent).toBe('')
     expect(issue.children).toEqual([])
     expect(issue.split_count).toBe(0)
+    expect(issue.force_split).toBe(false)
+  })
+
+  it('parses force_split=true', () => {
+    const result = parseIssue(SAMPLE.replace('force_split=false', 'force_split=true'))
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().force_split).toBe(true)
+  })
+
+  it('defaults force_split to false when absent', () => {
+    const withoutForceSplit = SAMPLE.replace('force_split=false\n', '')
+    const result = parseIssue(withoutForceSplit)
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().force_split).toBe(false)
   })
 
   it('parses children as array', () => {
@@ -64,6 +79,7 @@ describe('serializeIssue / parseIssue round-trip', () => {
     expect(reparsed.id).toBe(original.id)
     expect(reparsed.state).toBe(original.state)
     expect(reparsed.children).toEqual(original.children)
+    expect(reparsed.force_split).toBe(original.force_split)
   })
 })
 
@@ -103,5 +119,34 @@ describe('parseAcceptanceCriteria', () => {
 
   it('returns true when no Acceptance Criteria section exists', () => {
     expect(parseAcceptanceCriteria('no criteria here')).toBe(true)
+  })
+})
+
+describe('InvalidTransitionError', () => {
+  it('sets message describing the invalid transition', () => {
+    const err = new InvalidTransitionError('NEW', 'COMPLETED')
+    expect(err.message).toBe('Invalid transition: NEW → COMPLETED')
+    expect(err.name).toBe('InvalidTransitionError')
+    expect(err).toBeInstanceOf(Error)
+  })
+})
+
+describe('ProviderError', () => {
+  it('sets message and name', () => {
+    const err = new ProviderError('disk full')
+    expect(err.message).toBe('disk full')
+    expect(err.name).toBe('ProviderError')
+    expect(err).toBeInstanceOf(Error)
+  })
+
+  it('stores the cause when provided', () => {
+    const cause = new Error('ENOSPC')
+    const err = new ProviderError('write failed', cause)
+    expect(err.cause).toBe(cause)
+  })
+
+  it('works without a cause', () => {
+    const err = new ProviderError('something broke')
+    expect(err.cause).toBeUndefined()
   })
 })

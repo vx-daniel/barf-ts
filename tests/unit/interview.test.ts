@@ -1,5 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { ResultAsync } from 'neverthrow'
 import { errAsync, okAsync } from 'neverthrow'
+
+// Mock the Claude subprocess layer so tests never spawn a real process
+mock.module('@/core/claude', () => ({
+  runClaudeIteration: () =>
+    ResultAsync.fromSafePromise(Promise.resolve({ outcome: 'success', tokens: 0 })),
+  getThreshold: () => 150_000
+}))
+
 import { interviewCommand } from '@/cli/commands/interview'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Issue, Config } from '@/types'
@@ -15,6 +24,7 @@ function makeIssue(overrides: Partial<Issue> = {}): Issue {
     parent: '',
     children: [],
     split_count: 0,
+    force_split: false,
     body: '## Description\nBuild a widget.',
     ...overrides
   }
@@ -76,6 +86,31 @@ describe('interviewCommand', () => {
     await interviewCommand(provider, { issue: issue.id }, defaultConfig())
 
     expect(process.exitCode).toBe(1)
+  })
+
+  it('auto-selects a NEW issue when no issue id provided', async () => {
+    const issue = makeIssue({ id: '005', state: 'NEW' })
+    let transitionTargets: string[] = []
+
+    const provider = makeProvider({
+      autoSelect: () => okAsync(issue),
+      transition: (_id, to) => {
+        transitionTargets.push(to)
+        if (to === 'INTERVIEWING') {
+          return okAsync(makeIssue({ state: 'INTERVIEWING' }))
+        }
+        // PLANNED transition after interview loop completes
+        return okAsync(makeIssue({ state: 'PLANNED' }))
+      },
+      // interviewLoop calls fetchIssue internally — mock it
+      fetchIssue: () => okAsync(makeIssue({ state: 'INTERVIEWING' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'INTERVIEWING' }))
+    })
+
+    await interviewCommand(provider, {}, defaultConfig())
+
+    // First transition should be NEW → INTERVIEWING
+    expect(transitionTargets[0]).toBe('INTERVIEWING')
   })
 
   it('uses provided issue id instead of auto-selecting', async () => {

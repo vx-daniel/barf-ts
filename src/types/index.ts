@@ -50,6 +50,7 @@ export const IssueSchema = z.object({
   parent: z.string(),
   children: z.array(z.string()),
   split_count: z.number().int().nonnegative(),
+  force_split: z.boolean().default(false),
   body: z.string()
 })
 /**

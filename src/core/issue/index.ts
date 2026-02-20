@@ -58,6 +58,8 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
       fields[key] = val ? val.split(',').filter(Boolean) : []
     } else if (key === 'split_count') {
       fields[key] = parseInt(val, 10)
+    } else if (key === 'force_split') {
+      fields[key] = val === 'true'
     } else {
       fields[key] = val
     }
@@ -80,7 +82,8 @@ export function serializeIssue(issue: Issue): string {
     `state=${issue.state}`,
     `parent=${issue.parent}`,
     `children=${issue.children.join(',')}`,
-    `split_count=${issue.split_count}`
+    `split_count=${issue.split_count}`,
+    `force_split=${issue.force_split}`
   ].join('\n')
   return `---\n${fm}\n---\n\n${issue.body}\n`
 }

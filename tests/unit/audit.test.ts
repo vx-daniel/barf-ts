@@ -15,6 +15,7 @@ function makeIssue(overrides: Partial<Issue> = {}): Issue {
     parent: '',
     children: [],
     split_count: 0,
+    force_split: false,
     body: '## Acceptance Criteria\n- [x] Feature works\n',
     ...overrides
   }
@@ -87,6 +88,39 @@ describe('auditCommand', () => {
 
     // Not COMPLETED — should warn but not set exitCode=1
     expect(process.exitCode).toBe(0)
+  })
+
+  it('iterates over all COMPLETED issues in --all mode', async () => {
+    const issues = [makeIssue({ id: '001' }), makeIssue({ id: '002' })]
+    let fetchCount = 0
+    const provider = makeProvider({
+      listIssues: () => okAsync(issues),
+      // Return IN_PROGRESS so auditIssue skips (avoids spawning Claude)
+      fetchIssue: () => {
+        fetchCount++
+        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+      }
+    })
+
+    await auditCommand(provider, { all: true }, defaultConfig())
+
+    // Both issues should have been fetched for auditing
+    expect(fetchCount).toBe(2)
+  })
+
+  it('routes --issue to single-issue audit', async () => {
+    let fetchedId = ''
+    const provider = makeProvider({
+      // Return IN_PROGRESS so auditIssue skips (avoids spawning Claude)
+      fetchIssue: (id) => {
+        fetchedId = id
+        return okAsync(makeIssue({ id, state: 'IN_PROGRESS' }))
+      }
+    })
+
+    await auditCommand(provider, { issue: '005', all: false }, defaultConfig())
+
+    expect(fetchedId).toBe('005')
   })
 })
 

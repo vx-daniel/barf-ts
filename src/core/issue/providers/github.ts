@@ -49,6 +49,7 @@ function ghToIssue(gh: GHIssue): Issue {
     parent: '',
     children: [],
     split_count: 0,
+    force_split: false,
     body: gh.body
   }
 }
