@@ -1,5 +1,6 @@
 import { join } from 'path'
 import { existsSync, readFileSync, unlinkSync } from 'fs'
+import { resolveIssueFile } from '@/core/batch'
 import { createInterface } from 'readline'
 import { ResultAsync } from 'neverthrow'
 import { z } from 'zod'
@@ -136,7 +137,7 @@ export function interviewLoop(
   return ResultAsync.fromPromise(
     (async (): Promise<void> => {
       const questionsFile = join(config.barfDir, `${issueId}-interview.json`)
-      const issueFile = join(config.issuesDir, `${issueId}.md`)
+      const issueFile = resolveIssueFile(issueId, config)
       const priorQA: QAPair[] = []
 
       for (let turn = 0; turn < MAX_TURNS; turn++) {

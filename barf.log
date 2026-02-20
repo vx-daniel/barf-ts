@@ -88,3 +88,18 @@
 {"level":50,"time":1771559210508,"pid":530935,"hostname":"dark","name":"auto","err":{"type":"Error","message":"gh: not authenticated","stack":"Error: gh: not authenticated\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:38:54)\n    at autoCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/auto.ts:36:39)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:40:11)"},"msg":"gh: not authenticated"}
 {"level":30,"time":1771559210508,"pid":530935,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
 {"level":30,"time":1771559210508,"pid":530935,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":50,"time":1771594817816,"pid":577391,"hostname":"dark","name":"audit","err":{"type":"Error","message":"provider error","stack":"Error: provider error\n    at listIssues (/home/daniel/Projects/barf/barf-ts/tests/unit/audit.test.ts:52:38)\n    at auditCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/audit.ts:206:37)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/audit.test.ts:55:11)"},"msg":"provider error"}
+{"level":30,"time":1771594817817,"pid":577391,"hostname":"dark","name":"audit","msg":"No COMPLETED issues to audit."}
+{"level":50,"time":1771594817818,"pid":577391,"hostname":"dark","name":"audit","issueId":"001","err":"not found","msg":"could not fetch issue"}
+{"level":40,"time":1771594817818,"pid":577391,"hostname":"dark","name":"audit","issueId":"001","state":"IN_PROGRESS","msg":"skipping — issue is not COMPLETED"}
+{"level":50,"time":1771594817830,"pid":577391,"hostname":"dark","name":"interview","err":{"type":"Error","message":"provider error","stack":"Error: provider error\n    at autoSelect (/home/daniel/Projects/barf/barf-ts/tests/unit/interview.test.ts:52:38)\n    at interviewCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/interview.ts:27:35)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/interview.test.ts:55:11)"},"msg":"provider error"}
+{"level":30,"time":1771594817831,"pid":577391,"hostname":"dark","name":"interview","msg":"No NEW issues available for interview."}
+{"level":30,"time":1771594817831,"pid":577391,"hostname":"dark","name":"interview","issueId":"001","msg":"starting interview"}
+{"level":50,"time":1771594817831,"pid":577391,"hostname":"dark","name":"interview","issueId":"001","err":"transition failed","msg":"failed to start interview"}
+{"level":30,"time":1771594817831,"pid":577391,"hostname":"dark","name":"interview","issueId":"001","msg":"starting interview"}
+{"level":30,"time":1771594817832,"pid":577391,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"running interview turn"}
+{"level":30,"time":1771594817994,"pid":577391,"hostname":"dark","name":"interview","issueId":"001","turn":0,"msg":"no questions file written — interview complete"}
+{"level":50,"time":1771594817994,"pid":577391,"hostname":"dark","name":"interview","issueId":"001","err":"PLANNED transition","msg":"failed to complete interview"}
+{"level":50,"time":1771594818001,"pid":577391,"hostname":"dark","name":"auto","err":{"type":"Error","message":"gh: not authenticated","stack":"Error: gh: not authenticated\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:38:54)\n    at autoCommand (/home/daniel/Projects/barf/barf-ts/src/cli/commands/auto.ts:36:39)\n    at <anonymous> (/home/daniel/Projects/barf/barf-ts/tests/unit/auto.test.ts:40:11)"},"msg":"gh: not authenticated"}
+{"level":30,"time":1771594818001,"pid":577391,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}
+{"level":30,"time":1771594818001,"pid":577391,"hostname":"dark","name":"auto","msg":"no actionable issues — done"}

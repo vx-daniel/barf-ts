@@ -56,7 +56,7 @@ describe('autoCommand', () => {
       title: 'Done',
       state: 'COMPLETED',
       body: '',
-      parent: undefined,
+      parent: '',
       children: [],
       split_count: 0
     }

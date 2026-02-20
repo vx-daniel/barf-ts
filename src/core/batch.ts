@@ -67,7 +67,7 @@ export function handleOverflow(splitCount: number, config: Config): OverflowDeci
  * Resolves the file path for prompt injection.
  * GitHub provider has no local file — returns a placeholder.
  */
-function resolveIssueFile(issueId: string, config: Config): string {
+export function resolveIssueFile(issueId: string, config: Config): string {
   const md = join(config.issuesDir, `${issueId}.md`)
   if (existsSync(md)) {
     return md

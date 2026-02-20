@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Read:plans",
+      "Write:plans",
+      "Bash(bun x tsc:*)",
+      "Bash(bun test:*)",
+      "Bash(bun run:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "everything-claude-code@everything-claude-code": true
+  },
+  "extraKnownMarketplaces": {
+    "everything-claude-code": {
+      "source": {
+        "source": "github",
+        "repo": "affaan-m/everything-claude-code"
+      }
+    }
+  }
+}
