@@ -11,7 +11,8 @@ import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from
  * @category Issue Model
  */
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
-  NEW: ['PLANNED'],
+  NEW: ['INTERVIEWING'],
+  INTERVIEWING: ['PLANNED'],
   PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
   IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
   STUCK: ['PLANNED', 'SPLIT'],

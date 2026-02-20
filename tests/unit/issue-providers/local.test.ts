@@ -72,8 +72,8 @@ describe('LocalIssueProvider', () => {
   })
 
   it('transition() validates and applies state change', async () => {
-    const result = await provider.transition('001', 'PLANNED')
-    expect(result._unsafeUnwrap().state).toBe('PLANNED')
+    const result = await provider.transition('001', 'INTERVIEWING')
+    expect(result._unsafeUnwrap().state).toBe('INTERVIEWING')
   })
 
   it('transition() returns Err on invalid state change', async () => {
@@ -89,14 +89,14 @@ describe('LocalIssueProvider', () => {
     expect((await provider.isLocked('001'))._unsafeUnwrap()).toBe(false)
   })
 
-  it('autoSelect returns highest priority unlocked issue', async () => {
-    const result = await provider.autoSelect('plan')
+  it('autoSelect returns highest priority unlocked issue for interview mode', async () => {
+    const result = await provider.autoSelect('interview')
     expect(result._unsafeUnwrap()?.id).toBe('001')
   })
 
   it('autoSelect returns null when all issues locked', async () => {
     await provider.lockIssue('001')
-    const result = await provider.autoSelect('plan')
+    const result = await provider.autoSelect('interview')
     expect(result._unsafeUnwrap()).toBeNull()
   })
 

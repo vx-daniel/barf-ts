@@ -3,7 +3,15 @@ import { Command } from 'commander'
 import { loadConfig } from '@/core/config'
 import { createIssueProvider } from '@/core/issue/factory'
 import { logger } from '@/utils/logger'
-import { initCommand, statusCommand, planCommand, buildCommand, autoCommand } from '@/cli/commands'
+import {
+  auditCommand,
+  autoCommand,
+  buildCommand,
+  initCommand,
+  interviewCommand,
+  planCommand,
+  statusCommand
+} from '@/cli/commands'
 
 /**
  * Creates the issue provider for `config`.
@@ -38,7 +46,7 @@ program
     if (opts.config) {
       program.setOptionValue('config', resolve(opts.config))
     }
-    if (opts.cwd) { 
+    if (opts.cwd) {
       process.chdir(resolve(opts.cwd))
     }
   })
@@ -71,9 +79,19 @@ program
   })
 
 program
+  .command('interview')
+  .description('Clarify requirements interactively (NEW → INTERVIEWING → PLANNED)')
+  .option('--issue <id>', 'Issue ID to interview (auto-selects NEW issue if omitted)')
+  .action(async opts => {
+    const config = loadConfig(program.opts().config)
+    const provider = getProvider(config)
+    await interviewCommand(provider, { issue: opts.issue }, config)
+  })
+
+program
   .command('plan')
-  .description('Plan an issue with Claude AI (NEW → PLANNED)')
-  .option('--issue <id>', 'Issue ID to plan (auto-selects NEW issue if omitted)')
+  .description('Plan an issue with Claude AI (INTERVIEWING → PLANNED)')
+  .option('--issue <id>', 'Issue ID to plan (auto-selects INTERVIEWING issue if omitted)')
   .action(async opts => {
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
@@ -98,13 +116,24 @@ program
 
 program
   .command('auto')
-  .description('Auto-orchestrate: plan all NEW then build all PLANNED/IN_PROGRESS')
+  .description('Auto-orchestrate: interview NEW, plan INTERVIEWING, build PLANNED/IN_PROGRESS')
   .option('--batch <n>', 'Max concurrent builds', parseInt)
   .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
   .action(async opts => {
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
     await autoCommand(provider, { batch: opts.batch ?? 1, max: opts.max ?? 0 }, config)
+  })
+
+program
+  .command('audit')
+  .description('Audit completed issues for quality and rule compliance')
+  .option('--issue <id>', 'Issue ID to audit (default: all COMPLETED issues)')
+  .option('--all', 'Audit all COMPLETED issues (default behaviour)', false)
+  .action(async opts => {
+    const config = loadConfig(program.opts().config)
+    const provider = getProvider(config)
+    await auditCommand(provider, { issue: opts.issue, all: opts.all }, config)
   })
 
 program.parseAsync(process.argv)

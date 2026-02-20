@@ -6,9 +6,9 @@ import { z } from 'zod'
  * All valid states an issue can occupy.
  *
  * ```
- * NEW → PLANNED → IN_PROGRESS → COMPLETED
- *          ↘           ↘
- *           STUCK ←→ SPLIT
+ * NEW → INTERVIEWING → PLANNED → IN_PROGRESS → COMPLETED
+ *                         ↘           ↘
+ *                          STUCK ←→ SPLIT
  * ```
  *
  * Transitions are enforced by `validateTransition` — never mutate state directly.
@@ -18,6 +18,7 @@ import { z } from 'zod'
  */
 export const IssueStateSchema = z.enum([
   'NEW',
+  'INTERVIEWING',
   'PLANNED',
   'IN_PROGRESS',
   'STUCK',
@@ -116,6 +117,8 @@ export const ConfigSchema = z.object({
   maxIterations: z.number().int().default(0),
   claudeTimeout: z.number().int().default(3600),
   testCommand: z.string().default(''),
+  interviewModel: z.string().default('claude-sonnet-4-6'),
+  auditModel: z.string().default('claude-opus-4-6'),
   planModel: z.string().default('claude-opus-4-6'),
   buildModel: z.string().default('claude-sonnet-4-6'),
   splitModel: z.string().default('claude-sonnet-4-6'),

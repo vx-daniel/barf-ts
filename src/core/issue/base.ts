@@ -7,11 +7,12 @@ import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
  *
  * @category Issue Providers
  */
-export type AutoSelectMode = 'plan' | 'build'
+export type AutoSelectMode = 'plan' | 'build' | 'interview'
 
 const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
-  plan: ['NEW'],
-  build: ['IN_PROGRESS', 'PLANNED', 'NEW']
+  plan: ['INTERVIEWING'],
+  build: ['IN_PROGRESS', 'PLANNED'],
+  interview: ['NEW']
 }
 
 /**

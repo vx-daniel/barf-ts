@@ -73,6 +73,7 @@ export function runClaudeIteration(
   return ResultAsync.fromPromise(
     (async (): Promise<IterationResult> => {
       const threshold = getThreshold(model, config.contextUsagePercent)
+      const contextLimit = MODEL_CONTEXT_LIMITS[model] ?? 200_000
       const isTTY = process.stderr.isTTY ?? false
       let timedOut = false
       let lastTool = ''
@@ -120,10 +121,10 @@ export function runClaudeIteration(
             lastTokens = event.tokens
             logger.debug({ tokens: event.tokens, threshold }, 'context update')
             if (isTTY) {
-              const pct = Math.round((event.tokens / threshold) * 100)
+              const pct = Math.round((event.tokens / contextLimit) * 100)
               const toolPart = lastTool ? `  |  ${lastTool}` : ''
               process.stderr.write(
-                `\r\x1b[K  context: ${event.tokens.toLocaleString()} / ${threshold.toLocaleString()} (${pct}%)${toolPart}`
+                `\r\x1b[K  context: ${event.tokens.toLocaleString()} / ${contextLimit.toLocaleString()} (${pct}%)${toolPart}`
               )
             }
           } else if (event.type === 'tool') {
@@ -133,7 +134,7 @@ export function runClaudeIteration(
         }
         if (isTTY) {
           process.stderr.write('\r\x1b[K')
-      }
+        }
         await proc.exited
         if (timedOut) {
           logger.warn({ model, timeout: config.claudeTimeout }, 'claude timed out')

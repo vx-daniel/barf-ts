@@ -68,8 +68,16 @@ describe('serializeIssue / parseIssue round-trip', () => {
 })
 
 describe('validateTransition', () => {
-  it('returns Ok for valid transition NEW → PLANNED', () => {
-    expect(validateTransition('NEW', 'PLANNED').isOk()).toBe(true)
+  it('returns Ok for valid transition NEW → INTERVIEWING', () => {
+    expect(validateTransition('NEW', 'INTERVIEWING').isOk()).toBe(true)
+  })
+
+  it('returns Ok for valid transition INTERVIEWING → PLANNED', () => {
+    expect(validateTransition('INTERVIEWING', 'PLANNED').isOk()).toBe(true)
+  })
+
+  it('returns Err for removed transition NEW → PLANNED', () => {
+    expect(validateTransition('NEW', 'PLANNED').isErr()).toBe(true)
   })
 
   it('returns Err(InvalidTransitionError) for invalid transition', () => {

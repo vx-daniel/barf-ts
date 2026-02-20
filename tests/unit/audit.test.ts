@@ -1,0 +1,104 @@
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { errAsync, okAsync } from 'neverthrow'
+import { auditCommand } from '@/cli/commands/audit'
+import type { IssueProvider } from '@/core/issue/base'
+import type { Issue, Config } from '@/types'
+import { ConfigSchema } from '@/types'
+
+const defaultConfig = (): Config => ConfigSchema.parse({})
+
+function makeIssue(overrides: Partial<Issue> = {}): Issue {
+  return {
+    id: '001',
+    title: 'Test issue',
+    state: 'COMPLETED',
+    parent: '',
+    children: [],
+    split_count: 0,
+    body: '## Acceptance Criteria\n- [x] Feature works\n',
+    ...overrides
+  }
+}
+
+/** Minimal stub provider for auditCommand tests. */
+function makeProvider(overrides: Partial<IssueProvider> = {}): IssueProvider {
+  return {
+    listIssues: () => errAsync(new Error('not implemented')),
+    fetchIssue: () => errAsync(new Error('not implemented')),
+    createIssue: () => errAsync(new Error('not implemented')),
+    writeIssue: () => errAsync(new Error('not implemented')),
+    deleteIssue: () => errAsync(new Error('not implemented')),
+    lockIssue: () => errAsync(new Error('not implemented')),
+    unlockIssue: () => errAsync(new Error('not implemented')),
+    isLocked: () => errAsync(new Error('not implemented')),
+    transition: () => errAsync(new Error('not implemented')),
+    autoSelect: () => errAsync(new Error('not implemented')),
+    checkAcceptanceCriteria: () => errAsync(new Error('not implemented')),
+    ...overrides
+  } as unknown as IssueProvider
+}
+
+describe('auditCommand', () => {
+  beforeEach(() => {
+    process.exitCode = 0
+  })
+
+  afterEach(() => {
+    process.exitCode = 0
+  })
+
+  it('sets exitCode 1 when listIssues returns err (--all mode)', async () => {
+    const provider = makeProvider({
+      listIssues: () => errAsync(new Error('provider error'))
+    })
+
+    await auditCommand(provider, { all: true }, defaultConfig())
+
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('does nothing when no COMPLETED issues exist', async () => {
+    const provider = makeProvider({
+      listIssues: () => okAsync([])
+    })
+
+    await auditCommand(provider, { all: true }, defaultConfig())
+
+    expect(process.exitCode).toBe(0)
+  })
+
+  it('sets exitCode 1 when fetchIssue fails for --issue mode', async () => {
+    const provider = makeProvider({
+      fetchIssue: () => errAsync(new Error('not found'))
+    })
+
+    await auditCommand(provider, { issue: '001', all: false }, defaultConfig())
+
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('skips non-COMPLETED issues when --issue targets wrong state', async () => {
+    const issue = makeIssue({ state: 'IN_PROGRESS' })
+    const provider = makeProvider({
+      fetchIssue: () => okAsync(issue)
+    })
+
+    await auditCommand(provider, { issue: issue.id, all: false }, defaultConfig())
+
+    // Not COMPLETED — should warn but not set exitCode=1
+    expect(process.exitCode).toBe(0)
+  })
+})
+
+describe('VALID_TRANSITIONS includes INTERVIEWING', () => {
+  it('INTERVIEWING state is in IssueStateSchema', () => {
+    const { IssueStateSchema } = require('@/types')
+    expect(IssueStateSchema.options).toContain('INTERVIEWING')
+  })
+
+  it('VALID_TRANSITIONS maps NEW to INTERVIEWING only', () => {
+    const { VALID_TRANSITIONS } = require('@/core/issue')
+    expect(VALID_TRANSITIONS['NEW']).toEqual(['INTERVIEWING'])
+    expect(VALID_TRANSITIONS['INTERVIEWING']).toEqual(['PLANNED'])
+  })
+})
