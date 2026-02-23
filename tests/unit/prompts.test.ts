@@ -31,6 +31,11 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     auditProvider: 'openai' as const,
     geminiApiKey: '',
     geminiModel: 'gemini-1.5-pro',
+    anthropicApiKey: '',
+    claudeAuditModel: 'claude-sonnet-4-6',
+    logFile: 'barf.log',
+    logLevel: 'info',
+    logPretty: false,
     ...overrides
   }
 }

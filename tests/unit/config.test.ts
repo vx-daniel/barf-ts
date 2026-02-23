@@ -87,6 +87,86 @@ describe('parseBarfrc', () => {
       expect(result.value.geminiModel).toBe('gemini-1.5-pro')
     }
   })
+
+  it('parses AUDIT_PROVIDER=claude', () => {
+    const result = parseBarfrc('AUDIT_PROVIDER=claude')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.auditProvider).toBe('claude')
+    }
+  })
+
+  it('parses ANTHROPIC_API_KEY', () => {
+    const result = parseBarfrc('ANTHROPIC_API_KEY=sk-ant-test')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.anthropicApiKey).toBe('sk-ant-test')
+    }
+  })
+
+  it('defaults anthropicApiKey to empty string', () => {
+    const result = parseBarfrc('')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.anthropicApiKey).toBe('')
+    }
+  })
+
+  it('parses CLAUDE_AUDIT_MODEL', () => {
+    const result = parseBarfrc('CLAUDE_AUDIT_MODEL=claude-opus-4-6')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.claudeAuditModel).toBe('claude-opus-4-6')
+    }
+  })
+
+  it('defaults claudeAuditModel to claude-sonnet-4-6', () => {
+    const result = parseBarfrc('')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.claudeAuditModel).toBe('claude-sonnet-4-6')
+    }
+  })
+
+  it('parses LOG_FILE into logFile', () => {
+    const result = parseBarfrc('LOG_FILE=custom.log')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.logFile).toBe('custom.log')
+    }
+  })
+
+  it('defaults logFile to barf.log', () => {
+    const result = parseBarfrc('')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.logFile).toBe('barf.log')
+    }
+  })
+
+  it('parses LOG_LEVEL=debug into logLevel', () => {
+    const result = parseBarfrc('LOG_LEVEL=debug')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.logLevel).toBe('debug')
+    }
+  })
+
+  it('parses LOG_PRETTY=1 into logPretty=true', () => {
+    const result = parseBarfrc('LOG_PRETTY=1')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.logPretty).toBe(true)
+    }
+  })
+
+  it('defaults logPretty to false', () => {
+    const result = parseBarfrc('')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.logPretty).toBe(false)
+    }
+  })
 })
 
 describe('loadConfig', () => {

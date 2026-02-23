@@ -1,11 +1,13 @@
 import { AuditProvider } from '@/providers/base'
 import { OpenAIAuditProvider } from '@/providers/openai'
 import { GeminiAuditProvider } from '@/providers/gemini'
+import { ClaudeAuditProvider } from '@/providers/claude'
 import type { Config } from '@/types'
 
 export { AuditProvider }
 export { OpenAIAuditProvider }
 export { GeminiAuditProvider }
+export { ClaudeAuditProvider }
 export type { ChatResult, ChatOptions, PingResult, ProviderInfo } from '@/providers/base'
 
 /**
@@ -21,6 +23,8 @@ export function createAuditProvider(config: Config): AuditProvider {
   switch (config.auditProvider) {
     case 'gemini':
       return new GeminiAuditProvider(config)
+    case 'claude':
+      return new ClaudeAuditProvider(config)
     case 'openai':
     default:
       return new OpenAIAuditProvider(config)

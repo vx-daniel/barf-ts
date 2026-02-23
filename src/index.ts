@@ -2,7 +2,7 @@ import { resolve } from 'path'
 import { Command } from 'commander'
 import { loadConfig } from '@/core/config'
 import { createIssueProvider } from '@/core/issue/factory'
-import { logger } from '@/utils/logger'
+import { logger, setLoggerConfig } from '@/utils/logger'
 import {
   auditCommand,
   autoCommand,
@@ -49,6 +49,7 @@ program
     if (opts.cwd) {
       process.chdir(resolve(opts.cwd))
     }
+    setLoggerConfig(loadConfig(program.opts().config))
   })
 
 program

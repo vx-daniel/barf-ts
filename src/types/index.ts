@@ -123,9 +123,11 @@ export const ConfigSchema = z.object({
   interviewModel: z.string().default('claude-sonnet-4-6'),
   auditModel: z.string().default('gpt-4o'),
   openaiApiKey: z.string().default(''),
-  auditProvider: z.enum(['openai', 'gemini']).default('openai'),
+  auditProvider: z.enum(['openai', 'gemini', 'claude']).default('openai'),
   geminiApiKey: z.string().default(''),
   geminiModel: z.string().default('gemini-1.5-pro'),
+  anthropicApiKey: z.string().default(''),
+  claudeAuditModel: z.string().default('claude-sonnet-4-6'),
   planModel: z.string().default('claude-opus-4-6'),
   buildModel: z.string().default('claude-sonnet-4-6'),
   splitModel: z.string().default('claude-sonnet-4-6'),
@@ -135,7 +137,10 @@ export const ConfigSchema = z.object({
   githubRepo: z.string().default(''),
   streamLogDir: z.string().default(''),
   barfDir: z.string().default('.barf'),
-  promptDir: z.string().default('')
+  promptDir: z.string().default(''),
+  logFile: z.string().default('barf.log'),
+  logLevel: z.string().default('info'),
+  logPretty: z.boolean().default(false)
 })
 /**
  * Validated barf runtime configuration. Derived from {@link ConfigSchema}.

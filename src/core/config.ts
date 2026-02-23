@@ -10,7 +10,8 @@ const RawConfigSchema = ConfigSchema.extend({
   maxAutoSplits: z.coerce.number().int().default(3),
   maxIterations: z.coerce.number().int().default(0),
   claudeTimeout: z.coerce.number().int().default(3600),
-  streamLogDir: z.coerce.string().default('')
+  streamLogDir: z.coerce.string().default(''),
+  logPretty: z.preprocess(v => v === '1' || v === 'true' || v === true, z.boolean()).default(false)
 })
 
 /**
@@ -50,13 +51,18 @@ export function parseBarfrc(content: string): Result<Config, z.ZodError> {
       AUDIT_PROVIDER: 'auditProvider',
       GEMINI_API_KEY: 'geminiApiKey',
       GEMINI_MODEL: 'geminiModel',
+      ANTHROPIC_API_KEY: 'anthropicApiKey',
+      CLAUDE_AUDIT_MODEL: 'claudeAuditModel',
       EXTENDED_CONTEXT_MODEL: 'extendedContextModel',
       PUSH_STRATEGY: 'pushStrategy',
       ISSUE_PROVIDER: 'issueProvider',
       GITHUB_REPO: 'githubRepo',
       STREAM_LOG_DIR: 'streamLogDir',
       BARF_DIR: 'barfDir',
-      PROMPT_DIR: 'promptDir'
+      PROMPT_DIR: 'promptDir',
+      LOG_FILE: 'logFile',
+      LOG_LEVEL: 'logLevel',
+      LOG_PRETTY: 'logPretty'
     }
     const key = trimmed.slice(0, eq).trim()
     const val = trimmed.slice(eq + 1).trim()
