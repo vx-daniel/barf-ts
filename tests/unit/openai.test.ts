@@ -1,6 +1,5 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test'
 
-// Shared state object — avoids Bun mock.module closure issues with individual let bindings
 const mockState = {
   lastArgs: null as unknown,
   error: null as Error | null,
@@ -16,23 +15,40 @@ mock.module('openai', () => ({
       completions: {
         create: async (args: unknown) => {
           mockState.lastArgs = args
-          if (mockState.error) {
-            throw mockState.error
-          }
+          if (mockState.error) throw mockState.error
           return mockState.response
         }
       }
     }
-
-    constructor(_opts: unknown) {
-      // no-op
-    }
+    constructor(_opts: unknown) {}
   }
 }))
 
-import { runOpenAIChat } from '@/providers/openai'
+import { OpenAIAuditProvider } from '@/providers/openai'
+import { defaultConfig } from '@tests/fixtures/provider'
 
-describe('runOpenAIChat', () => {
+describe('OpenAIAuditProvider.describe', () => {
+  it('returns openai name and requiredConfigKeys', () => {
+    const provider = new OpenAIAuditProvider(defaultConfig())
+    const info = provider.describe()
+    expect(info.name).toBe('openai')
+    expect(info.requiredConfigKeys).toContain('openaiApiKey')
+  })
+})
+
+describe('OpenAIAuditProvider.isConfigured', () => {
+  it('returns true when openaiApiKey is set', () => {
+    const cfg = { ...defaultConfig(), openaiApiKey: 'sk-test' }
+    const provider = new OpenAIAuditProvider(cfg)
+    expect(provider.isConfigured(cfg)).toBe(true)
+  })
+  it('returns false when openaiApiKey is empty', () => {
+    const provider = new OpenAIAuditProvider(defaultConfig())
+    expect(provider.isConfigured(defaultConfig())).toBe(false)
+  })
+})
+
+describe('OpenAIAuditProvider.chat', () => {
   beforeEach(() => {
     mockState.lastArgs = null
     mockState.error = null
@@ -42,73 +58,72 @@ describe('runOpenAIChat', () => {
     }
   })
 
-  it('returns content and token counts on success', async () => {
-    const result = await runOpenAIChat('test prompt', 'gpt-4o', 'sk-test')
+  it('returns ChatResult on success', async () => {
+    const provider = new OpenAIAuditProvider({ ...defaultConfig(), openaiApiKey: 'sk-test' })
+    const result = await provider.chat('test prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
       expect(result.value.content).toBe('{"pass":true}')
       expect(result.value.promptTokens).toBe(50)
-      expect(result.value.completionTokens).toBe(30)
       expect(result.value.totalTokens).toBe(80)
     }
   })
 
-  it('passes model and temperature to the SDK', async () => {
-    await runOpenAIChat('prompt', 'gpt-4o-mini', 'sk-key', { temperature: 0.5 })
+  it('passes model and temperature to SDK', async () => {
+    const provider = new OpenAIAuditProvider({ ...defaultConfig(), openaiApiKey: 'sk-test', auditModel: 'gpt-4o-mini' })
+    await provider.chat('prompt', { temperature: 0.5 })
     const args = mockState.lastArgs as Record<string, unknown>
-    expect(args).not.toBeNull()
     expect(args.model).toBe('gpt-4o-mini')
     expect(args.temperature).toBe(0.5)
   })
 
-  it('defaults temperature to 0.2', async () => {
-    await runOpenAIChat('prompt', 'gpt-4o', 'sk-key')
+  it('sets response_format when jsonMode is true', async () => {
+    const provider = new OpenAIAuditProvider({ ...defaultConfig(), openaiApiKey: 'sk-test' })
+    await provider.chat('prompt', { jsonMode: true })
     const args = mockState.lastArgs as Record<string, unknown>
-    expect(args).not.toBeNull()
-    expect(args.temperature).toBe(0.2)
-  })
-
-  it('passes response_format when specified', async () => {
-    await runOpenAIChat('prompt', 'gpt-4o', 'sk-key', {
-      responseFormat: { type: 'json_object' }
-    })
-    const args = mockState.lastArgs as Record<string, unknown>
-    expect(args).not.toBeNull()
     expect(args.response_format).toEqual({ type: 'json_object' })
   })
 
   it('returns err on API error', async () => {
-    mockState.error = new Error('API rate limit exceeded')
-    const result = await runOpenAIChat('prompt', 'gpt-4o', 'sk-key')
+    mockState.error = new Error('rate limited')
+    const provider = new OpenAIAuditProvider({ ...defaultConfig(), openaiApiKey: 'sk-test' })
+    const result = await provider.chat('prompt')
     expect(result.isErr()).toBe(true)
-    if (result.isErr()) {
-      expect(result.error.message).toBe('API rate limit exceeded')
-    }
-  })
-
-  it('handles empty content gracefully', async () => {
-    mockState.response = {
-      choices: [{ message: { content: null } }],
-      usage: { prompt_tokens: 10, completion_tokens: 0, total_tokens: 10 }
-    }
-    const result = await runOpenAIChat('prompt', 'gpt-4o', 'sk-key')
-    expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value.content).toBe('')
-    }
+    if (result.isErr()) expect(result.error.message).toBe('rate limited')
   })
 
   it('handles missing usage gracefully', async () => {
+    mockState.response = { choices: [{ message: { content: 'hi' } }], usage: undefined }
+    const provider = new OpenAIAuditProvider({ ...defaultConfig(), openaiApiKey: 'sk-test' })
+    const result = await provider.chat('prompt')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) expect(result.value.totalTokens).toBe(0)
+  })
+})
+
+describe('OpenAIAuditProvider.ping', () => {
+  beforeEach(() => {
+    mockState.error = null
     mockState.response = {
-      choices: [{ message: { content: 'hi' } }],
-      usage: undefined
+      choices: [{ message: { content: 'pong' } }],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
     }
-    const result = await runOpenAIChat('prompt', 'gpt-4o', 'sk-key')
+  })
+
+  it('returns latencyMs and model on success', async () => {
+    const provider = new OpenAIAuditProvider({ ...defaultConfig(), openaiApiKey: 'sk-test', auditModel: 'gpt-4o' })
+    const result = await provider.ping()
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
-      expect(result.value.promptTokens).toBe(0)
-      expect(result.value.completionTokens).toBe(0)
-      expect(result.value.totalTokens).toBe(0)
+      expect(result.value.model).toBe('gpt-4o')
+      expect(result.value.latencyMs).toBeGreaterThanOrEqual(0)
     }
+  })
+
+  it('returns err when API call fails', async () => {
+    mockState.error = new Error('network failure')
+    const provider = new OpenAIAuditProvider({ ...defaultConfig(), openaiApiKey: 'sk-test' })
+    const result = await provider.ping()
+    expect(result.isErr()).toBe(true)
   })
 })

@@ -1,35 +1,30 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
-import { okAsync } from 'neverthrow'
+import { okAsync, errAsync } from 'neverthrow'
 import { mkdtempSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
-// Controllable mock state — mock at the OpenAI SDK level so @/core/openai wrapper is exercised
+// Mock the provider factory so audit.ts never touches a real AI SDK
 const mockState = {
-  content: '{"pass":true}',
+  isConfigured: true,
+  content: '{"pass":true,"findings":[]}',
   error: null as Error | null
 }
 
-mock.module('openai', () => ({
-  default: class MockOpenAI {
-    chat = {
-      completions: {
-        create: async () => {
-          if (mockState.error) {
-            throw mockState.error
-          }
-          return {
-            choices: [{ message: { content: mockState.content } }],
-            usage: { prompt_tokens: 50, completion_tokens: 50, total_tokens: 100 }
-          }
-        }
+mock.module('@/providers/index', () => ({
+  createAuditProvider: () => ({
+    name: 'mock',
+    isConfigured: () => mockState.isConfigured,
+    describe: () => ({ name: 'mock', displayName: 'Mock Provider', requiredConfigKeys: ['mockKey'], supportedModels: [] }),
+    chatJSON: () => {
+      if (mockState.error) return errAsync(mockState.error)
+      try {
+        return okAsync(JSON.parse(mockState.content))
+      } catch {
+        return errAsync(new Error('invalid JSON'))
       }
-    }
-
-    constructor(_opts: unknown) {
-      // no-op
-    }
-  }
+    },
+  })
 }))
 
 import { auditCommand } from '@/cli/commands/audit'
@@ -38,7 +33,8 @@ import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider
 describe('auditCommand (full flow)', () => {
   beforeEach(() => {
     process.exitCode = 0
-    mockState.content = '{"pass":true}'
+    mockState.isConfigured = true
+    mockState.content = '{"pass":true,"findings":[]}'
     mockState.error = null
   })
 
@@ -58,22 +54,17 @@ describe('auditCommand (full flow)', () => {
     mkdirSync(config.planDir, { recursive: true })
 
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
-    const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
-    })
+    const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(provider, { issue: '001', all: false }, config)
 
     expect(process.exitCode).toBe(0)
   })
 
-  it('sets exitCode 1 when OpenAI API returns error', async () => {
+  it('sets exitCode 1 when provider API returns error', async () => {
     mockState.error = new Error('API failure')
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
-    const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
-    })
-
+    const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
     const config = {
       ...defaultConfig(),
       openaiApiKey: 'sk-test',
@@ -88,14 +79,7 @@ describe('auditCommand (full flow)', () => {
   it('creates findings issue when audit returns pass=false', async () => {
     mockState.content = JSON.stringify({
       pass: false,
-      findings: [
-        {
-          category: 'failing_check',
-          severity: 'error',
-          title: 'Tests failing',
-          detail: '3 unit tests are broken'
-        }
-      ]
+      findings: [{ category: 'failing_check', severity: 'error', title: 'Tests failing', detail: '3 unit tests are broken' }]
     })
 
     const dirs = mkdtempSync(join(tmpdir(), 'barf-audit-findings-'))
@@ -127,15 +111,12 @@ describe('auditCommand (full flow)', () => {
     expect(createdIssue!.body).toContain('Tests failing')
   })
 
-  it('sets exitCode 1 when openaiApiKey is missing', async () => {
+  it('sets exitCode 1 when provider is not configured', async () => {
+    mockState.isConfigured = false
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
-    const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
-    })
-
+    const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
     const config = {
       ...defaultConfig(),
-      // openaiApiKey defaults to '' (empty)
       issuesDir: '/tmp/nonexistent-' + Date.now(),
       planDir: '/tmp/nonexistent-plans-' + Date.now()
     }
@@ -144,10 +125,9 @@ describe('auditCommand (full flow)', () => {
     expect(process.exitCode).toBe(1)
   })
 
-  it('sets exitCode 1 on malformed JSON response', async () => {
-    mockState.content = 'not json at all'
-
-    const dirs = mkdtempSync(join(tmpdir(), 'barf-audit-badjson-'))
+  it('sets exitCode 1 when chatJSON returns error (covers JSON/schema failures)', async () => {
+    mockState.error = new Error('chat failed')
+    const dirs = mkdtempSync(join(tmpdir(), 'barf-audit-err-'))
     const config = {
       ...defaultConfig(),
       openaiApiKey: 'sk-test',
@@ -158,31 +138,7 @@ describe('auditCommand (full flow)', () => {
     mkdirSync(config.planDir, { recursive: true })
 
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
-    const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
-    })
-
-    await auditCommand(provider, { issue: '001', all: false }, config)
-    expect(process.exitCode).toBe(1)
-  })
-
-  it('sets exitCode 1 when JSON does not match schema', async () => {
-    mockState.content = '{"pass": false}'
-
-    const dirs = mkdtempSync(join(tmpdir(), 'barf-audit-badschema-'))
-    const config = {
-      ...defaultConfig(),
-      openaiApiKey: 'sk-test',
-      issuesDir: join(dirs, 'issues'),
-      planDir: join(dirs, 'plans')
-    }
-    mkdirSync(config.issuesDir, { recursive: true })
-    mkdirSync(config.planDir, { recursive: true })
-
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
-    const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
-    })
+    const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(provider, { issue: '001', all: false }, config)
     expect(process.exitCode).toBe(1)

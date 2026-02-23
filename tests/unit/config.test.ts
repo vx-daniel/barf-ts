@@ -47,6 +47,46 @@ describe('parseBarfrc', () => {
     const result = parseBarfrc('')
     expect(result._unsafeUnwrap().promptDir).toBe('')
   })
+
+  it('parses AUDIT_PROVIDER=gemini', () => {
+    const result = parseBarfrc('AUDIT_PROVIDER=gemini')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.auditProvider).toBe('gemini')
+    }
+  })
+
+  it('defaults auditProvider to openai', () => {
+    const result = parseBarfrc('')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.auditProvider).toBe('openai')
+    }
+  })
+
+  it('parses GEMINI_API_KEY', () => {
+    const result = parseBarfrc('GEMINI_API_KEY=mykey')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.geminiApiKey).toBe('mykey')
+    }
+  })
+
+  it('parses GEMINI_MODEL', () => {
+    const result = parseBarfrc('GEMINI_MODEL=gemini-2.0-flash')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.geminiModel).toBe('gemini-2.0-flash')
+    }
+  })
+
+  it('defaults geminiModel to gemini-1.5-pro', () => {
+    const result = parseBarfrc('')
+    expect(result.isOk()).toBe(true)
+    if (result.isOk()) {
+      expect(result.value.geminiModel).toBe('gemini-1.5-pro')
+    }
+  })
 })
 
 describe('loadConfig', () => {

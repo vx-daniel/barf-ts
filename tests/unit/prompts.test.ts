@@ -28,6 +28,9 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     streamLogDir: '',
     barfDir: '.barf',
     promptDir: '',
+    auditProvider: 'openai' as const,
+    geminiApiKey: '',
+    geminiModel: 'gemini-1.5-pro',
     ...overrides
   }
 }

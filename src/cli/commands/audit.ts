@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'fs'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types'
 import type { ExecResult } from '@/types/schema/exec-schema'
-import { runOpenAIChat } from '@/providers/openai'
+import { createAuditProvider } from '@/providers/index'
 import { AuditResponseSchema, type AuditFinding } from '@/types/schema/audit-schema'
 import { injectTemplateVars } from '@/core/context'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
@@ -87,7 +87,7 @@ function formatFindings(findings: AuditFinding[]): string {
  * Audits a single COMPLETED issue by running deterministic checks and an AI review.
  *
  * Phase 1: runs tests, lint, and format check via `execFileNoThrow`.
- * Phase 2: sends prompt to OpenAI and parses structured JSON response.
+ * Phase 2: sends prompt to the configured audit provider and parses structured JSON response.
  *
  * If findings are returned, creates a new issue via `provider.createIssue()`.
  * If everything passes, logs a success message.
@@ -110,8 +110,13 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
     return
   }
 
-  if (!config.openaiApiKey) {
-    logger.error({ issueId }, 'OPENAI_API_KEY not set in .barfrc — cannot run AI audit')
+  const auditProvider = createAuditProvider(config)
+  if (!auditProvider.isConfigured(config)) {
+    const info = auditProvider.describe()
+    logger.error(
+      { provider: auditProvider.name, requiredKeys: info.requiredConfigKeys },
+      `${info.displayName} is not configured — check .barfrc`
+    )
     process.exitCode = 1
     return
   }
@@ -126,7 +131,7 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
     execFileNoThrow('bun', ['run', 'format:check'])
   ])
 
-  // ── Phase 2: AI audit via OpenAI ──────────────────────────────────────────
+  // ── Phase 2: AI audit ──────────────────────────────────────────────────────
 
   const issueFile = join(config.issuesDir, `${issueId}.md`)
   const planFilePath = join(config.planDir, `${issueId}.md`)
@@ -146,40 +151,16 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
     RULES_CONTEXT: rulesContext
   })
 
-  const chatResult = await runOpenAIChat(prompt, config.auditModel, config.openaiApiKey, {
-    responseFormat: { type: 'json_object' }
-  })
+  const auditResult = await auditProvider.chatJSON(prompt, AuditResponseSchema, { jsonMode: true })
 
-  if (chatResult.isErr()) {
-    logger.error({ issueId, err: chatResult.error.message }, 'audit OpenAI call failed')
+  if (auditResult.isErr()) {
+    logger.error({ issueId, err: auditResult.error.message }, 'audit call failed')
     process.exitCode = 1
     return
   }
 
-  const { content, totalTokens } = chatResult.value
-  logger.debug({ issueId, totalTokens }, 'OpenAI response received')
-
-  // Parse the JSON response
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(content)
-  } catch {
-    logger.error({ issueId, content: content.slice(0, 200) }, 'audit response is not valid JSON')
-    process.exitCode = 1
-    return
-  }
-
-  const validation = AuditResponseSchema.safeParse(parsed)
-  if (!validation.success) {
-    logger.error(
-      { issueId, errors: validation.error.issues },
-      'audit response failed schema validation'
-    )
-    process.exitCode = 1
-    return
-  }
-
-  const auditResponse = validation.data
+  const auditResponse = auditResult.value
+  logger.debug({ issueId, provider: auditProvider.name }, 'audit response received')
 
   if (auditResponse.pass) {
     process.stdout.write(`\u2713 Issue #${issueId} passes audit\n`)

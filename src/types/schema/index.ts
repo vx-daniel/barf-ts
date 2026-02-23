@@ -18,13 +18,6 @@ export {
 
 export { OverflowDecisionSchema, type OverflowDecision } from './batch-schema'
 
-export {
-  OpenAIChatResultSchema,
-  type OpenAIChatResult,
-  OpenAIChatOptionsSchema,
-  type OpenAIChatOptions
-} from './openai-schema'
-
 export { ExecResultSchema, type ExecResult } from './exec-schema'
 
 export {

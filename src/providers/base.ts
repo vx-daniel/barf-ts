@@ -1,4 +1,4 @@
-import { Result, ok, ResultAsync } from 'neverthrow'
+import { Result, ResultAsync } from 'neverthrow'
 import type { ZodType } from 'zod'
 import { toError } from '@/utils/toError'
 import { createLogger } from '@/utils/logger'
@@ -8,7 +8,7 @@ import type {
   ChatOptions,
   PingResult,
   ProviderInfo,
-  TokenUsage,
+  TokenUsage
 } from '@/types/schema/provider-schema'
 
 export type { ChatResult, ChatOptions, PingResult, ProviderInfo, TokenUsage }
@@ -89,7 +89,7 @@ export abstract class AuditProvider {
       content: raw.content.trim(),
       promptTokens: raw.usage.promptTokens ?? 0,
       completionTokens: raw.usage.completionTokens ?? 0,
-      totalTokens: raw.usage.totalTokens ?? 0,
+      totalTokens: raw.usage.totalTokens ?? 0
     }
   }
 
@@ -102,17 +102,16 @@ export abstract class AuditProvider {
    * @param opts - Optional chat options.
    * @returns `ok(T)` on success, `err(Error)` if the call fails, JSON is invalid, or schema validation fails.
    */
-  chatJSON<T>(
-    prompt: string,
-    schema: ZodType<T>,
-    opts?: ChatOptions
-  ): ResultAsync<T, Error> {
+  chatJSON<T>(prompt: string, schema: ZodType<T>, opts?: ChatOptions): ResultAsync<T, Error> {
     return this.chat(prompt, opts).andThen(result => {
       let parsed: unknown
       try {
         parsed = JSON.parse(result.content)
       } catch {
-        logger.debug({ provider: this.name, content: result.content.slice(0, 100) }, 'response is not valid JSON')
+        logger.debug(
+          { provider: this.name, content: result.content.slice(0, 100) },
+          'response is not valid JSON'
+        )
         return ResultAsync.fromPromise(
           Promise.reject(new Error(`${this.name} returned invalid JSON`)),
           toError
@@ -120,9 +119,14 @@ export abstract class AuditProvider {
       }
       const validation = schema.safeParse(parsed)
       if (!validation.success) {
-        logger.debug({ provider: this.name, issues: validation.error.issues }, 'response failed schema validation')
+        logger.debug(
+          { provider: this.name, issues: validation.error.issues },
+          'response failed schema validation'
+        )
         return ResultAsync.fromPromise(
-          Promise.reject(new Error(`${this.name} response failed schema validation: ${validation.error.message}`)),
+          Promise.reject(
+            new Error(`${this.name} response failed schema validation: ${validation.error.message}`)
+          ),
           toError
         )
       }

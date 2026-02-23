@@ -1,4 +1,4 @@
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
@@ -12,16 +12,16 @@ import type {
   TokenUsage
 } from '@/types/schema/provider-schema'
 
-const logger = createLogger('openai')
+const logger = createLogger('gemini')
 
 /**
- * Audit provider backed by the OpenAI chat completions API.
+ * Audit provider backed by the Google Gemini generative AI API.
  * Extends {@link AuditProvider} — use `createAuditProvider` to instantiate.
  *
  * @category Providers
  */
-export class OpenAIAuditProvider extends AuditProvider {
-  readonly name = 'openai'
+export class GeminiAuditProvider extends AuditProvider {
+  readonly name = 'gemini'
   private readonly config: Config
 
   constructor(config: Config) {
@@ -30,26 +30,26 @@ export class OpenAIAuditProvider extends AuditProvider {
   }
 
   /**
-   * Returns OpenAI provider metadata including required config keys.
+   * Returns Gemini provider metadata including required config keys.
    *
    * @returns Provider info with name, display name, required keys, and supported models.
    */
   describe(): ProviderInfo {
     return {
-      name: 'openai',
-      displayName: 'OpenAI',
-      requiredConfigKeys: ['openaiApiKey'],
-      supportedModels: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo']
+      name: 'gemini',
+      displayName: 'Google Gemini',
+      requiredConfigKeys: ['geminiApiKey'],
+      supportedModels: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash']
     }
   }
 
   /**
-   * Returns true when `openaiApiKey` is non-empty in config.
+   * Returns true when `geminiApiKey` is non-empty in config.
    *
    * @param config - Loaded barf configuration.
    */
   isConfigured(config: Config): boolean {
-    return config.openaiApiKey.length > 0
+    return config.geminiApiKey.length > 0
   }
 
   /**
@@ -58,16 +58,13 @@ export class OpenAIAuditProvider extends AuditProvider {
    * @returns `ok({ latencyMs, model })` on success, `err(Error)` on failure.
    */
   ping(): ResultAsync<PingResult, Error> {
-    const model = this.config.auditModel
+    const model = this.config.geminiModel
     return ResultAsync.fromPromise(
       (async (): Promise<PingResult> => {
         const start = Date.now()
-        const client = new OpenAI({ apiKey: this.config.openaiApiKey })
-        await client.chat.completions.create({
-          model,
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 1
-        })
+        const client = new GoogleGenerativeAI(this.config.geminiApiKey)
+        const genModel = client.getGenerativeModel({ model })
+        await genModel.generateContent('ping')
         return { latencyMs: Date.now() - start, model }
       })(),
       toError
@@ -75,7 +72,7 @@ export class OpenAIAuditProvider extends AuditProvider {
   }
 
   /**
-   * Sends a single-turn prompt to the OpenAI API.
+   * Sends a single-turn prompt to the Gemini API.
    *
    * @param prompt - Full prompt text.
    * @param opts - Optional temperature, max tokens, and JSON mode.
@@ -84,21 +81,23 @@ export class OpenAIAuditProvider extends AuditProvider {
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
     return ResultAsync.fromPromise(
       (async (): Promise<ChatResult> => {
-        const client = new OpenAI({ apiKey: this.config.openaiApiKey })
-        logger.debug(
-          { model: this.config.auditModel, promptLen: prompt.length },
-          'sending chat completion'
-        )
-
-        const response = await client.chat.completions.create({
-          model: this.config.auditModel,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: opts?.temperature ?? 0.2,
-          max_tokens: opts?.maxTokens,
-          ...(opts?.jsonMode ? { response_format: { type: 'json_object' as const } } : {})
+        const client = new GoogleGenerativeAI(this.config.geminiApiKey)
+        const genModel = client.getGenerativeModel({
+          model: this.config.geminiModel,
+          generationConfig: {
+            temperature: opts?.temperature ?? 0.2,
+            maxOutputTokens: opts?.maxTokens,
+            ...(opts?.jsonMode ? { responseMimeType: 'application/json' } : {})
+          }
         })
 
-        const parsed = this.parseResponse({ choices: response.choices, usage: response.usage })
+        logger.debug(
+          { model: this.config.geminiModel, promptLen: prompt.length },
+          'sending gemini chat'
+        )
+
+        const response = await genModel.generateContent(prompt)
+        const parsed = this.parseResponse(response.response)
         if (parsed.isErr()) {
           throw parsed.error
         }
@@ -109,25 +108,29 @@ export class OpenAIAuditProvider extends AuditProvider {
   }
 
   /**
-   * Extracts content and token counts from an OpenAI chat completion response.
+   * Extracts content and token counts from a Gemini API response.
    *
-   * @param raw - Raw response object from the OpenAI SDK.
+   * @param raw - Raw response object from the Gemini SDK.
    * @returns `ok({ content, usage })` on success, `err(Error)` if shape is unexpected.
    */
   protected parseResponse(raw: unknown): Result<{ content: string; usage: TokenUsage }, Error> {
     const r = raw as {
-      choices?: Array<{ message?: { content?: string | null } }>
-      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+      text?: () => string
+      usageMetadata?: {
+        promptTokenCount?: number
+        candidatesTokenCount?: number
+        totalTokenCount?: number
+      }
     }
-    const content = r.choices?.[0]?.message?.content ?? ''
+    const content = r.text?.() ?? ''
     const usage: TokenUsage = {
-      promptTokens: r.usage?.prompt_tokens ?? 0,
-      completionTokens: r.usage?.completion_tokens ?? 0,
-      totalTokens: r.usage?.total_tokens ?? 0
+      promptTokens: r.usageMetadata?.promptTokenCount ?? 0,
+      completionTokens: r.usageMetadata?.candidatesTokenCount ?? 0,
+      totalTokens: r.usageMetadata?.totalTokenCount ?? 0
     }
     logger.debug(
       { promptTokens: usage.promptTokens, totalTokens: usage.totalTokens },
-      'chat completion done'
+      'gemini chat done'
     )
     return ok({ content, usage })
   }

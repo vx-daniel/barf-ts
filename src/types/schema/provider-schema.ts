@@ -9,7 +9,7 @@ import { z } from 'zod'
 export const TokenUsageSchema = z.object({
   promptTokens: z.number().default(0),
   completionTokens: z.number().default(0),
-  totalTokens: z.number().default(0),
+  totalTokens: z.number().default(0)
 })
 /** Derived from {@link TokenUsageSchema}. */
 export type TokenUsage = z.infer<typeof TokenUsageSchema>
@@ -24,7 +24,7 @@ export const ChatResultSchema = z.object({
   content: z.string(),
   promptTokens: z.number(),
   completionTokens: z.number(),
-  totalTokens: z.number(),
+  totalTokens: z.number()
 })
 /** Derived from {@link ChatResultSchema}. */
 export type ChatResult = z.infer<typeof ChatResultSchema>
@@ -38,7 +38,7 @@ export type ChatResult = z.infer<typeof ChatResultSchema>
 export const ChatOptionsSchema = z.object({
   temperature: z.number().optional(),
   maxTokens: z.number().optional(),
-  jsonMode: z.boolean().optional(),
+  jsonMode: z.boolean().optional()
 })
 /** Derived from {@link ChatOptionsSchema}. */
 export type ChatOptions = z.infer<typeof ChatOptionsSchema>
@@ -50,7 +50,7 @@ export type ChatOptions = z.infer<typeof ChatOptionsSchema>
  */
 export const PingResultSchema = z.object({
   latencyMs: z.number(),
-  model: z.string(),
+  model: z.string()
 })
 /** Derived from {@link PingResultSchema}. */
 export type PingResult = z.infer<typeof PingResultSchema>
@@ -65,7 +65,7 @@ export const ProviderInfoSchema = z.object({
   name: z.string(),
   displayName: z.string(),
   requiredConfigKeys: z.array(z.string()),
-  supportedModels: z.array(z.string()),
+  supportedModels: z.array(z.string())
 })
 /** Derived from {@link ProviderInfoSchema}. */
 export type ProviderInfo = z.infer<typeof ProviderInfoSchema>
