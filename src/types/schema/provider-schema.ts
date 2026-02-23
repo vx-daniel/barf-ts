@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+/** Default sampling temperature for audit providers. */
+export const DEFAULT_TEMPERATURE = 0.2
+
 /**
  * Intermediate token usage extracted by each provider's `parseResponse`.
  * All counts default to 0 — providers that omit usage data are safe.
@@ -69,3 +72,27 @@ export const ProviderInfoSchema = z.object({
 })
 /** Derived from {@link ProviderInfoSchema}. */
 export type ProviderInfo = z.infer<typeof ProviderInfoSchema>
+
+/**
+ * Constructs a {@link TokenUsage} from optional raw API token counts.
+ * All fields default to 0; `totalTokens` defaults to `prompt + completion`
+ * when the API omits it (e.g. Anthropic Messages API).
+ *
+ * @param prompt - Raw prompt token count from the API response
+ * @param completion - Raw completion token count from the API response
+ * @param total - Raw total token count; defaults to `prompt + completion` when absent
+ * @returns Fully-populated {@link TokenUsage} with no optional fields
+ */
+export function toTokenUsage(
+  prompt?: number | null,
+  completion?: number | null,
+  total?: number | null
+): TokenUsage {
+  const p = prompt ?? 0
+  const c = completion ?? 0
+  return {
+    promptTokens: p,
+    completionTokens: c,
+    totalTokens: total ?? p + c
+  }
+}

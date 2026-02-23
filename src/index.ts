@@ -8,7 +8,6 @@ import {
   autoCommand,
   buildCommand,
   initCommand,
-  interviewCommand,
   planCommand,
   statusCommand
 } from '@/cli/commands'
@@ -80,18 +79,8 @@ program
   })
 
 program
-  .command('interview')
-  .description('Clarify requirements interactively (NEW → INTERVIEWING → PLANNED)')
-  .option('--issue <id>', 'Issue ID to interview (auto-selects NEW issue if omitted)')
-  .action(async opts => {
-    const config = loadConfig(program.opts().config)
-    const provider = getProvider(config)
-    await interviewCommand(provider, { issue: opts.issue }, config)
-  })
-
-program
   .command('plan')
-  .description('Plan an issue with Claude AI (INTERVIEWING → PLANNED)')
+  .description('Plan an issue with Claude AI (NEW → PLANNED)')
   .option('--issue <id>', 'Issue ID to plan (auto-selects INTERVIEWING issue if omitted)')
   .action(async opts => {
     const config = loadConfig(program.opts().config)
@@ -117,7 +106,7 @@ program
 
 program
   .command('auto')
-  .description('Auto-orchestrate: interview NEW, plan INTERVIEWING, build PLANNED/IN_PROGRESS')
+  .description('Auto-orchestrate: triage NEW, plan triaged, build PLANNED/IN_PROGRESS')
   .option('--batch <n>', 'Max concurrent builds', parseInt)
   .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
   .action(async opts => {

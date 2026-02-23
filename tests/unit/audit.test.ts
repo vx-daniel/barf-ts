@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { errAsync, okAsync } from 'neverthrow'
 import { auditCommand } from '@/cli/commands/audit'
 import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import { toTokenUsage } from '@/types/schema/provider-schema'
 
 describe('auditCommand', () => {
   beforeEach(() => {
@@ -88,15 +89,49 @@ describe('auditCommand', () => {
   })
 })
 
-describe('VALID_TRANSITIONS includes INTERVIEWING', () => {
-  it('INTERVIEWING state is in IssueStateSchema', () => {
-    const { IssueStateSchema } = require('@/types')
-    expect(IssueStateSchema.options).toContain('INTERVIEWING')
+describe('toTokenUsage', () => {
+  it('defaults all fields to 0 when called with no args', () => {
+    expect(toTokenUsage()).toEqual({ promptTokens: 0, completionTokens: 0, totalTokens: 0 })
   })
 
-  it('VALID_TRANSITIONS maps NEW to INTERVIEWING only', () => {
+  it('defaults all fields to 0 when called with undefined args', () => {
+    expect(toTokenUsage(undefined, undefined, undefined)).toEqual({
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0
+    })
+  })
+
+  it('computes totalTokens as prompt + completion when total is absent', () => {
+    expect(toTokenUsage(100, 50)).toEqual({ promptTokens: 100, completionTokens: 50, totalTokens: 150 })
+  })
+
+  it('uses provided total when all three args given', () => {
+    expect(toTokenUsage(100, 50, 200)).toEqual({
+      promptTokens: 100,
+      completionTokens: 50,
+      totalTokens: 200
+    })
+  })
+
+  it('treats null the same as undefined (defaults to 0)', () => {
+    expect(toTokenUsage(null, null, null)).toEqual({
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0
+    })
+  })
+})
+
+describe('state machine after triage migration', () => {
+  it('INTERVIEWING is not in IssueStateSchema', () => {
+    const { IssueStateSchema } = require('@/types')
+    expect(IssueStateSchema.options).not.toContain('INTERVIEWING')
+  })
+
+  it('VALID_TRANSITIONS maps NEW to PLANNED directly', () => {
     const { VALID_TRANSITIONS } = require('@/core/issue')
-    expect(VALID_TRANSITIONS['NEW']).toEqual(['INTERVIEWING'])
-    expect(VALID_TRANSITIONS['INTERVIEWING']).toEqual(['PLANNED'])
+    expect(VALID_TRANSITIONS['NEW']).toEqual(['PLANNED'])
+    expect(VALID_TRANSITIONS['INTERVIEWING']).toBeUndefined()
   })
 })

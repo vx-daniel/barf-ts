@@ -7,7 +7,7 @@ import { z } from 'zod'
  *
  * @category Modes
  */
-export const BarfModeSchema = z.enum(['plan', 'build', 'split', 'interview'])
+export const BarfModeSchema = z.enum(['plan', 'build', 'split'])
 /** A barf operational mode. Derived from {@link BarfModeSchema}. */
 export type BarfMode = z.infer<typeof BarfModeSchema>
 
@@ -38,6 +38,6 @@ export type PromptMode = z.infer<typeof PromptModeSchema>
  *
  * @category Modes
  */
-export const AutoSelectModeSchema = BarfModeSchema.extract(['plan', 'build', 'interview'])
+export const AutoSelectModeSchema = BarfModeSchema.extract(['plan', 'build'])
 /** An auto-select mode. Derived from {@link AutoSelectModeSchema}. */
 export type AutoSelectMode = z.infer<typeof AutoSelectModeSchema>

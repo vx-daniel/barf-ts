@@ -7,8 +7,12 @@ import {
 } from '@/types/schema/mode-schema'
 
 describe('BarfModeSchema', () => {
-  it.each(['plan', 'build', 'split', 'interview'])('accepts "%s"', mode => {
+  it.each(['plan', 'build', 'split'])('accepts "%s"', mode => {
     expect(BarfModeSchema.safeParse(mode).success).toBe(true)
+  })
+
+  it('rejects "interview" (removed)', () => {
+    expect(BarfModeSchema.safeParse('interview').success).toBe(false)
   })
 
   it('rejects invalid mode', () => {
@@ -27,8 +31,12 @@ describe('LoopModeSchema', () => {
 })
 
 describe('PromptModeSchema', () => {
-  it.each(['plan', 'build', 'split', 'interview'])('accepts "%s"', mode => {
+  it.each(['plan', 'build', 'split'])('accepts "%s"', mode => {
     expect(PromptModeSchema.safeParse(mode).success).toBe(true)
+  })
+
+  it('rejects "interview" (removed)', () => {
+    expect(PromptModeSchema.safeParse('interview').success).toBe(false)
   })
 
   it('rejects invalid mode', () => {
@@ -37,8 +45,12 @@ describe('PromptModeSchema', () => {
 })
 
 describe('AutoSelectModeSchema', () => {
-  it.each(['plan', 'build', 'interview'])('accepts "%s"', mode => {
+  it.each(['plan', 'build'])('accepts "%s"', mode => {
     expect(AutoSelectModeSchema.safeParse(mode).success).toBe(true)
+  })
+
+  it('rejects "interview" (removed)', () => {
+    expect(AutoSelectModeSchema.safeParse('interview').success).toBe(false)
   })
 
   it('rejects "split"', () => {

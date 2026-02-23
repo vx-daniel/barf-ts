@@ -11,8 +11,7 @@ import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from
  * @category Issue Model
  */
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
-  NEW: ['INTERVIEWING'],
-  INTERVIEWING: ['PLANNED', 'NEW'],
+  NEW: ['PLANNED'],
   PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
   IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
   STUCK: ['PLANNED', 'NEW', 'SPLIT'],
@@ -60,6 +59,13 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
       fields[key] = parseInt(val, 10)
     } else if (key === 'force_split') {
       fields[key] = val === 'true'
+    } else if (key === 'needs_interview') {
+      if (val === 'true') {
+        fields[key] = true
+      } else if (val === 'false') {
+        fields[key] = false
+      }
+      // absent or empty → leave undefined (not set in fields)
     } else if (key === 'context_usage_percent') {
       const parsed = parseInt(val, 10)
       if (!isNaN(parsed)) {
@@ -91,7 +97,8 @@ export function serializeIssue(issue: Issue): string {
     `force_split=${issue.force_split}`,
     ...(issue.context_usage_percent !== undefined
       ? [`context_usage_percent=${issue.context_usage_percent}`]
-      : [])
+      : []),
+    ...(issue.needs_interview !== undefined ? [`needs_interview=${issue.needs_interview}`] : [])
   ].join('\n')
   return `---\n${fm}\n---\n\n${issue.body}\n`
 }
@@ -99,6 +106,8 @@ export function serializeIssue(issue: Issue): string {
 /**
  * Validates a proposed state transition against {@link VALID_TRANSITIONS}.
  *
+ * @param from - Current state of the issue
+ * @param to - Desired next state to transition to
  * @returns `ok(undefined)` if the transition is permitted,
  *   `err(InvalidTransitionError)` if it is not.
  * @category Issue Model

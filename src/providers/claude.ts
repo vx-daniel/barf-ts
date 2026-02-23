@@ -4,12 +4,13 @@ import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 import type { Config } from '@/types'
-import type {
-  ChatResult,
-  ChatOptions,
-  PingResult,
-  ProviderInfo,
-  TokenUsage
+import {
+  toTokenUsage,
+  type ChatResult,
+  type ChatOptions,
+  type PingResult,
+  type ProviderInfo,
+  type TokenUsage
 } from '@/types/schema/provider-schema'
 
 const logger = createLogger('claude')
@@ -55,26 +56,45 @@ export class ClaudeAuditProvider extends AuditProvider {
     return config.anthropicApiKey.length > 0
   }
 
+  private async pingImpl(): Promise<PingResult> {
+    const model = this.config.claudeAuditModel
+    const start = Date.now()
+    const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
+    await client.messages.create({
+      model,
+      max_tokens: 1,
+      messages: [{ role: 'user', content: 'ping' }]
+    })
+    return { latencyMs: Date.now() - start, model }
+  }
+
   /**
    * Sends a minimal prompt to verify connectivity and API key validity.
    *
    * @returns `ok({ latencyMs, model })` on success, `err(Error)` on failure.
    */
   ping(): ResultAsync<PingResult, Error> {
-    const model = this.config.claudeAuditModel
-    return ResultAsync.fromPromise(
-      (async (): Promise<PingResult> => {
-        const start = Date.now()
-        const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
-        await client.messages.create({
-          model,
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'ping' }]
-        })
-        return { latencyMs: Date.now() - start, model }
-      })(),
-      toError
+    return ResultAsync.fromPromise(this.pingImpl(), toError)
+  }
+
+  private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
+    const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
+    logger.debug(
+      { model: this.config.claudeAuditModel, promptLen: prompt.length },
+      'sending claude messages call'
     )
+
+    const response = await client.messages.create({
+      model: this.config.claudeAuditModel,
+      max_tokens: opts?.maxTokens ?? 4096,
+      messages: [{ role: 'user', content: prompt }]
+    })
+
+    const parsed = this.parseResponse(response)
+    if (parsed.isErr()) {
+      throw parsed.error
+    }
+    return this.normalizeResponse(parsed.value)
   }
 
   /**
@@ -89,28 +109,7 @@ export class ClaudeAuditProvider extends AuditProvider {
    * @returns `ok(ChatResult)` on success, `err(Error)` on API failure.
    */
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
-    return ResultAsync.fromPromise(
-      (async (): Promise<ChatResult> => {
-        const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
-        logger.debug(
-          { model: this.config.claudeAuditModel, promptLen: prompt.length },
-          'sending claude messages call'
-        )
-
-        const response = await client.messages.create({
-          model: this.config.claudeAuditModel,
-          max_tokens: opts?.maxTokens ?? 4096,
-          messages: [{ role: 'user', content: prompt }]
-        })
-
-        const parsed = this.parseResponse(response)
-        if (parsed.isErr()) {
-          throw parsed.error
-        }
-        return this.normalizeResponse(parsed.value)
-      })(),
-      toError
-    )
+    return ResultAsync.fromPromise(this.chatImpl(prompt, opts), toError)
   }
 
   /**
@@ -126,13 +125,7 @@ export class ClaudeAuditProvider extends AuditProvider {
     }
     const firstBlock = r.content?.[0]
     const content = firstBlock?.type === 'text' ? (firstBlock.text ?? '') : ''
-    const promptTokens = r.usage?.input_tokens ?? 0
-    const completionTokens = r.usage?.output_tokens ?? 0
-    const usage: TokenUsage = {
-      promptTokens,
-      completionTokens,
-      totalTokens: promptTokens + completionTokens
-    }
+    const usage = toTokenUsage(r.usage?.input_tokens, r.usage?.output_tokens)
     logger.debug(
       { promptTokens: usage.promptTokens, totalTokens: usage.totalTokens },
       'claude messages call done'

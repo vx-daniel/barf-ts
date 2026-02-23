@@ -15,7 +15,6 @@ export type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>
 
 const STATE_TO_LABEL: Record<IssueState, string> = {
   NEW: 'barf:new',
-  INTERVIEWING: 'barf:interviewing',
   PLANNED: 'barf:planned',
   IN_PROGRESS: 'barf:in-progress',
   STUCK: 'barf:stuck',

@@ -264,10 +264,11 @@ describe('GitHubIssueProvider', () => {
 
   // ── state label mapping ───────────────────────────────────────────────────
 
-  it('maps barf:interviewing label to INTERVIEWING state', async () => {
+  it('maps unknown label to NEW state (barf:interviewing no longer exists)', async () => {
     authThen({ ...GH_ISSUE_NEW, labels: [{ name: 'barf:interviewing' }] })
     const result = await provider.fetchIssue('1')
-    expect(result._unsafeUnwrap().state).toBe('INTERVIEWING')
+    // barf:interviewing is no longer a recognized label — falls back to NEW
+    expect(result._unsafeUnwrap().state).toBe('NEW')
   })
 
   it('maps barf:in-progress label to IN_PROGRESS state', async () => {

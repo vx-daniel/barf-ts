@@ -15,7 +15,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     maxIterations: 0,
     claudeTimeout: 3600,
     testCommand: '',
-    interviewModel: 'claude-sonnet-4-6',
+    triageModel: 'claude-haiku-4-5-20251001',
     auditModel: 'gpt-4o',
     openaiApiKey: '',
     planModel: 'claude-opus-4-6',
@@ -84,8 +84,8 @@ describe('resolvePromptTemplate', () => {
     expect(buildResult.length).toBeGreaterThan(0)
   })
 
-  it('resolves all four modes correctly', () => {
-    const modes: PromptMode[] = ['plan', 'build', 'split', 'interview']
+  it('resolves all three modes correctly', () => {
+    const modes: PromptMode[] = ['plan', 'build', 'split']
     const config = makeConfig({ promptDir: '' })
     for (const mode of modes) {
       const result = resolvePromptTemplate(mode, config)

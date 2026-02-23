@@ -4,12 +4,14 @@ import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 import type { Config } from '@/types'
-import type {
-  ChatResult,
-  ChatOptions,
-  PingResult,
-  ProviderInfo,
-  TokenUsage
+import {
+  DEFAULT_TEMPERATURE,
+  toTokenUsage,
+  type ChatResult,
+  type ChatOptions,
+  type PingResult,
+  type ProviderInfo,
+  type TokenUsage
 } from '@/types/schema/provider-schema'
 
 const logger = createLogger('openai')
@@ -52,26 +54,47 @@ export class OpenAIAuditProvider extends AuditProvider {
     return config.openaiApiKey.length > 0
   }
 
+  private async pingImpl(): Promise<PingResult> {
+    const model = this.config.auditModel
+    const start = Date.now()
+    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: 'ping' }],
+      max_tokens: 1
+    })
+    return { latencyMs: Date.now() - start, model }
+  }
+
   /**
    * Sends a minimal prompt to verify connectivity and API key validity.
    *
    * @returns `ok({ latencyMs, model })` on success, `err(Error)` on failure.
    */
   ping(): ResultAsync<PingResult, Error> {
-    const model = this.config.auditModel
-    return ResultAsync.fromPromise(
-      (async (): Promise<PingResult> => {
-        const start = Date.now()
-        const client = new OpenAI({ apiKey: this.config.openaiApiKey })
-        await client.chat.completions.create({
-          model,
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 1
-        })
-        return { latencyMs: Date.now() - start, model }
-      })(),
-      toError
+    return ResultAsync.fromPromise(this.pingImpl(), toError)
+  }
+
+  private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
+    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    logger.debug(
+      { model: this.config.auditModel, promptLen: prompt.length },
+      'sending chat completion'
     )
+
+    const response = await client.chat.completions.create({
+      model: this.config.auditModel,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
+      max_tokens: opts?.maxTokens,
+      ...(opts?.jsonMode ? { response_format: { type: 'json_object' as const } } : {})
+    })
+
+    const parsed = this.parseResponse({ choices: response.choices, usage: response.usage })
+    if (parsed.isErr()) {
+      throw parsed.error
+    }
+    return this.normalizeResponse(parsed.value)
   }
 
   /**
@@ -82,30 +105,7 @@ export class OpenAIAuditProvider extends AuditProvider {
    * @returns `ok(ChatResult)` on success, `err(Error)` on API failure.
    */
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
-    return ResultAsync.fromPromise(
-      (async (): Promise<ChatResult> => {
-        const client = new OpenAI({ apiKey: this.config.openaiApiKey })
-        logger.debug(
-          { model: this.config.auditModel, promptLen: prompt.length },
-          'sending chat completion'
-        )
-
-        const response = await client.chat.completions.create({
-          model: this.config.auditModel,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: opts?.temperature ?? 0.2,
-          max_tokens: opts?.maxTokens,
-          ...(opts?.jsonMode ? { response_format: { type: 'json_object' as const } } : {})
-        })
-
-        const parsed = this.parseResponse({ choices: response.choices, usage: response.usage })
-        if (parsed.isErr()) {
-          throw parsed.error
-        }
-        return this.normalizeResponse(parsed.value)
-      })(),
-      toError
-    )
+    return ResultAsync.fromPromise(this.chatImpl(prompt, opts), toError)
   }
 
   /**
@@ -120,11 +120,11 @@ export class OpenAIAuditProvider extends AuditProvider {
       usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
     }
     const content = r.choices?.[0]?.message?.content ?? ''
-    const usage: TokenUsage = {
-      promptTokens: r.usage?.prompt_tokens ?? 0,
-      completionTokens: r.usage?.completion_tokens ?? 0,
-      totalTokens: r.usage?.total_tokens ?? 0
-    }
+    const usage = toTokenUsage(
+      r.usage?.prompt_tokens,
+      r.usage?.completion_tokens,
+      r.usage?.total_tokens
+    )
     logger.debug(
       { promptTokens: usage.promptTokens, totalTokens: usage.totalTokens },
       'chat completion done'

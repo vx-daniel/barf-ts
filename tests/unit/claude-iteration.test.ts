@@ -1,131 +1,363 @@
 import { describe, it, expect, mock } from 'bun:test'
-import { consumeClaudeStream } from '@/core/claude'
-import type { ClaudeProc, ConsumeStreamOptions } from '@/core/claude'
+import { consumeSDKQuery } from '@/core/claude'
+import type { Query } from '@anthropic-ai/claude-agent-sdk'
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Creates a ClaudeProc backed by real ReadableStream JSONL lines. */
-function makeProc(opts: { lines?: string[]; exitCode?: number } = {}): ClaudeProc {
-  const encoder = new TextEncoder()
-  return {
-    stdout: new ReadableStream({
-      start(controller) {
-        for (const line of opts.lines ?? []) {
-          controller.enqueue(encoder.encode(line + '\n'))
-        }
-        controller.close()
-      }
-    }),
-    kill: mock(() => {}),
-    exited: new Promise(resolve => queueMicrotask(() => resolve(opts.exitCode ?? 0)))
+/**
+ * Builds a mock Query (AsyncGenerator + interrupt()) from a list of messages.
+ * When interrupt() is called, the generator exits after the current yield point.
+ */
+function makeQuery(messages: SDKMessage[]): { q: Query; interrupt: ReturnType<typeof mock> } {
+  let interrupted = false
+  const interrupt = mock(async () => {
+    interrupted = true
+    return new Promise<void>(r => queueMicrotask(r))
+  })
+
+  async function* gen() {
+    for (const msg of messages) {
+      if (interrupted) return
+      yield msg
+    }
   }
+
+  const q = gen() as unknown as Query
+  ;(q as unknown as Record<string, unknown>).interrupt = interrupt
+  return { q, interrupt }
 }
 
-function defaultOpts(overrides: Partial<ConsumeStreamOptions> = {}): ConsumeStreamOptions {
+/**
+ * Builds a mock Query that waits until interrupt() is called before finishing.
+ * Simulates a long-running query that gets aborted.
+ */
+function makeBlockingQuery(): { q: Query; interrupt: ReturnType<typeof mock> } {
+  let resolveBlock: () => void = () => {}
+  const blockUntilInterrupt = new Promise<void>(r => {
+    resolveBlock = r
+  })
+  const interrupt = mock(async () => {
+    resolveBlock()
+    return new Promise<void>(r => queueMicrotask(r))
+  })
+
+  async function* gen() {
+    await blockUntilInterrupt
+    // Interrupted — yield nothing
+  }
+
+  const q = gen() as unknown as Query
+  ;(q as unknown as Record<string, unknown>).interrupt = interrupt
+  return { q, interrupt }
+}
+
+function defaultOpts() {
   return {
     threshold: 200_000,
     contextLimit: 200_000,
-    ...overrides
+    streamLogFile: undefined,
+    isTTY: false,
+    stderrWrite: (_data: string) => {},
   }
 }
 
-// ── JSONL fixtures (same format as context.test.ts) ──────────────────────────
+// ── SDKMessage fixtures ───────────────────────────────────────────────────────
 
-const USAGE_1000 = JSON.stringify({
-  parent_tool_use_id: null,
-  message: { usage: { cache_creation_input_tokens: 800, cache_read_input_tokens: 200 } }
-})
+function makeAssistantMsg(inputTokens: number, cacheCreate = 0, cacheRead = 0): SDKMessage {
+  return {
+    type: 'assistant',
+    parent_tool_use_id: null,
+    message: {
+      id: 'msg_test',
+      type: 'message',
+      role: 'assistant',
+      content: [],
+      model: 'claude-sonnet-4-6',
+      stop_reason: null,
+      stop_sequence: null,
+      usage: {
+        input_tokens: inputTokens,
+        output_tokens: 0,
+        cache_creation_input_tokens: cacheCreate,
+        cache_read_input_tokens: cacheRead,
+      },
+    },
+    uuid: '00000000-0000-0000-0000-000000000001' as `${string}-${string}-${string}-${string}-${string}`,
+    session_id: 'test',
+  } as SDKMessage
+}
 
-const USAGE_2000 = JSON.stringify({
-  parent_tool_use_id: null,
-  message: { usage: { cache_creation_input_tokens: 1500, cache_read_input_tokens: 500 } }
-})
+function makeAssistantToolMsg(toolName: string): SDKMessage {
+  return {
+    type: 'assistant',
+    parent_tool_use_id: null,
+    message: {
+      id: 'msg_test',
+      type: 'message',
+      role: 'assistant',
+      content: [{ type: 'tool_use', id: 'tu_1', name: toolName, input: {} }],
+      model: 'claude-sonnet-4-6',
+      stop_reason: null,
+      stop_sequence: null,
+      usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+      },
+    },
+    uuid: '00000000-0000-0000-0000-000000000002' as `${string}-${string}-${string}-${string}-${string}`,
+    session_id: 'test',
+  } as SDKMessage
+}
 
-const USAGE_500 = JSON.stringify({
-  parent_tool_use_id: null,
-  message: { usage: { cache_creation_input_tokens: 300, cache_read_input_tokens: 200 } }
-})
+function makeAssistantRateLimitMsg(): SDKMessage {
+  return {
+    type: 'assistant',
+    parent_tool_use_id: null,
+    error: 'rate_limit',
+    message: {
+      id: 'msg_test',
+      type: 'message',
+      role: 'assistant',
+      content: [],
+      model: 'claude-sonnet-4-6',
+      stop_reason: null,
+      stop_sequence: null,
+      usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    },
+    uuid: '00000000-0000-0000-0000-000000000003' as `${string}-${string}-${string}-${string}-${string}`,
+    session_id: 'test',
+  } as SDKMessage
+}
 
-const TOOL_READ = JSON.stringify({
-  type: 'assistant',
-  message: { content: [{ type: 'tool_use', name: 'Read' }] }
-})
+function makeResultSuccess(): SDKMessage {
+  return {
+    type: 'result',
+    subtype: 'success',
+    duration_ms: 100,
+    duration_api_ms: 90,
+    is_error: false,
+    num_turns: 1,
+    result: 'done',
+    stop_reason: 'end_turn',
+    total_cost_usd: 0.001,
+    usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    modelUsage: {},
+    permission_denials: [],
+    uuid: '00000000-0000-0000-0000-000000000004' as `${string}-${string}-${string}-${string}-${string}`,
+    session_id: 'test',
+  } as SDKMessage
+}
 
-const RATE_LIMIT = JSON.stringify({
-  type: 'rate_limit_event',
-  rate_limit_info: { status: 'rejected', resetsAt: 1_700_000_000 }
-})
+function makeResultError(errors: string[] = []): SDKMessage {
+  return {
+    type: 'result',
+    subtype: 'error_during_execution',
+    duration_ms: 100,
+    duration_api_ms: 90,
+    is_error: true,
+    num_turns: 1,
+    stop_reason: null,
+    total_cost_usd: 0,
+    usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    modelUsage: {},
+    permission_denials: [],
+    errors,
+    uuid: '00000000-0000-0000-0000-000000000005' as `${string}-${string}-${string}-${string}-${string}`,
+    session_id: 'test',
+  } as SDKMessage
+}
 
-// ── Tests ────────────────────────────────────────────────────────────────────
+// ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('consumeClaudeStream', () => {
-  it('returns success when stream completes normally', async () => {
-    const proc = makeProc({ lines: [USAGE_1000] })
-    const result = await consumeClaudeStream(proc, defaultOpts())
+describe('consumeSDKQuery', () => {
+  it('returns success when stream completes with result message', async () => {
+    const { q } = makeQuery([makeAssistantMsg(800, 100, 100), makeResultSuccess()])
+    const opts = defaultOpts()
+
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      new AbortController().signal
+    )
 
     expect(result.outcome).toBe('success')
-    expect(result.tokens).toBe(1000)
+    expect(result.tokens).toBe(1000) // 800 + 100 + 100
+  })
+
+  it('counts input_tokens + cache_creation + cache_read for total token count', async () => {
+    const { q } = makeQuery([makeAssistantMsg(500, 200, 300), makeResultSuccess()])
+    const opts = defaultOpts()
+
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      new AbortController().signal
+    )
+
+    expect(result.tokens).toBe(1000) // 500 + 200 + 300
   })
 
   it('returns overflow when context threshold is exceeded', async () => {
-    const proc = makeProc({ lines: [USAGE_1000] })
-    const result = await consumeClaudeStream(proc, defaultOpts({ threshold: 500 }))
+    const { q, interrupt } = makeQuery([makeAssistantMsg(800, 100, 100)]) // 1000 tokens
+
+    const result = await consumeSDKQuery(
+      q,
+      500, // threshold: 500
+      200_000,
+      undefined,
+      false,
+      () => {},
+      new AbortController().signal
+    )
 
     expect(result.outcome).toBe('overflow')
     expect(result.tokens).toBe(1000)
-    expect(proc.kill).toHaveBeenCalled()
+    expect(interrupt).toHaveBeenCalled()
   })
 
-  it('returns rate_limited when rate limit event is received', async () => {
-    const proc = makeProc({ lines: [USAGE_500, RATE_LIMIT] })
-    const result = await consumeClaudeStream(proc, defaultOpts())
+  it('returns rate_limited when assistant message has rate_limit error', async () => {
+    const { q } = makeQuery([makeAssistantMsg(100), makeAssistantRateLimitMsg()])
+    const opts = defaultOpts()
+
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      new AbortController().signal
+    )
 
     expect(result.outcome).toBe('rate_limited')
-    expect(result.tokens).toBe(500)
-    expect(result.rateLimitResetsAt).toBe(1_700_000_000)
+    expect(result.tokens).toBe(100)
   })
 
-  it('propagates unknown errors from the stream', async () => {
-    const proc: ClaudeProc = {
-      stdout: new ReadableStream({
-        start(controller) {
-          controller.error(new Error('unexpected failure'))
-        }
-      }),
-      kill: mock(() => {}),
-      exited: new Promise(resolve => queueMicrotask(() => resolve(1)))
-    }
+  it('returns rate_limited when result error message contains rate limit keyword', async () => {
+    const { q } = makeQuery([makeAssistantMsg(100), makeResultError(['rate_limit exceeded'])])
+    const opts = defaultOpts()
 
-    await expect(consumeClaudeStream(proc, defaultOpts())).rejects.toThrow('unexpected failure')
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      new AbortController().signal
+    )
+
+    expect(result.outcome).toBe('rate_limited')
+    expect(result.tokens).toBe(100)
   })
 
-  it('tracks tool events and reports last token count', async () => {
-    const proc = makeProc({ lines: [USAGE_500, TOOL_READ, USAGE_1000] })
-    const result = await consumeClaudeStream(proc, defaultOpts())
+  it('returns error when result message has non-rate-limit error', async () => {
+    const { q } = makeQuery([makeAssistantMsg(100), makeResultError(['some other error'])])
+    const opts = defaultOpts()
 
-    expect(result.outcome).toBe('success')
-    expect(result.tokens).toBe(1000)
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      new AbortController().signal
+    )
+
+    expect(result.outcome).toBe('error')
+    expect(result.tokens).toBe(100)
   })
 
-  it('returns zero tokens when no usage events', async () => {
-    const proc = makeProc({ lines: [] })
-    const result = await consumeClaudeStream(proc, defaultOpts())
+  it('returns zero tokens when no assistant messages', async () => {
+    const { q } = makeQuery([makeResultSuccess()])
+    const opts = defaultOpts()
+
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      new AbortController().signal
+    )
 
     expect(result.outcome).toBe('success')
     expect(result.tokens).toBe(0)
   })
 
-  it('writes TTY progress when isTTY is set', async () => {
+  it('tracks tool events and reports last token count', async () => {
+    const { q } = makeQuery([
+      makeAssistantMsg(500),
+      makeAssistantToolMsg('Read'),
+      makeAssistantMsg(1000),
+      makeResultSuccess(),
+    ])
+    const opts = defaultOpts()
+
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      new AbortController().signal
+    )
+
+    expect(result.outcome).toBe('success')
+    expect(result.tokens).toBe(1000)
+  })
+
+  it('returns error outcome when signal is pre-aborted', async () => {
+    const { q, interrupt } = makeBlockingQuery()
+    const opts = defaultOpts()
+
+    const result = await consumeSDKQuery(
+      q,
+      opts.threshold,
+      opts.contextLimit,
+      opts.streamLogFile,
+      opts.isTTY,
+      opts.stderrWrite,
+      AbortSignal.abort()
+    )
+
+    expect(result.outcome).toBe('error')
+    expect(interrupt).toHaveBeenCalled()
+  })
+
+  it('writes TTY progress with token count and tool name', async () => {
     let stderrOutput = ''
-    const proc = makeProc({ lines: [USAGE_1000, TOOL_READ, USAGE_2000] })
-    const result = await consumeClaudeStream(
-      proc,
-      defaultOpts({
-        isTTY: true,
-        stderrWrite: (data: string) => {
-          stderrOutput += data
-        }
-      })
+    const { q } = makeQuery([
+      makeAssistantMsg(1000),
+      makeAssistantToolMsg('Read'),
+      makeAssistantMsg(2000),
+      makeResultSuccess(),
+    ])
+
+    const result = await consumeSDKQuery(
+      q,
+      200_000,
+      200_000,
+      undefined,
+      true,
+      (data: string) => {
+        stderrOutput += data
+      },
+      new AbortController().signal
     )
 
     expect(result.outcome).toBe('success')
@@ -133,12 +365,42 @@ describe('consumeClaudeStream', () => {
     expect(stderrOutput).toContain('Read')
   })
 
-  it('returns error outcome when signal is aborted (timeout)', async () => {
-    const proc = makeProc({ lines: [USAGE_500] })
-    const result = await consumeClaudeStream(proc, defaultOpts(), AbortSignal.abort())
+  it('ignores token counts from sub-agent context (parent_tool_use_id not null)', async () => {
+    const subAgentMsg: SDKMessage = {
+      type: 'assistant',
+      parent_tool_use_id: 'some-tool-id',
+      message: {
+        id: 'msg_sub',
+        type: 'message',
+        role: 'assistant',
+        content: [],
+        model: 'claude-sonnet-4-6',
+        stop_reason: null,
+        stop_sequence: null,
+        usage: {
+          input_tokens: 99_000,
+          output_tokens: 0,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 0,
+        },
+      },
+      uuid: '00000000-0000-0000-0000-000000000006' as `${string}-${string}-${string}-${string}-${string}`,
+      session_id: 'test',
+    } as SDKMessage
 
-    expect(result.outcome).toBe('error')
-    expect(result.tokens).toBe(500)
-    expect(proc.kill).toHaveBeenCalled()
+    const { q } = makeQuery([subAgentMsg, makeAssistantMsg(100), makeResultSuccess()])
+
+    const result = await consumeSDKQuery(
+      q,
+      200_000,
+      200_000,
+      undefined,
+      false,
+      () => {},
+      new AbortController().signal
+    )
+
+    expect(result.outcome).toBe('success')
+    expect(result.tokens).toBe(100) // only main-context tokens counted
   })
 })

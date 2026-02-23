@@ -125,6 +125,46 @@ describe('context_usage_percent', () => {
   })
 })
 
+describe('needs_interview', () => {
+  it('parses needs_interview=true', () => {
+    const issue = parseIssue(SAMPLE.replace('force_split=false\n', 'force_split=false\nneeds_interview=true\n'))._unsafeUnwrap()
+    expect(issue.needs_interview).toBe(true)
+  })
+
+  it('parses needs_interview=false', () => {
+    const issue = parseIssue(SAMPLE.replace('force_split=false\n', 'force_split=false\nneeds_interview=false\n'))._unsafeUnwrap()
+    expect(issue.needs_interview).toBe(false)
+  })
+
+  it('returns undefined when needs_interview absent', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(issue.needs_interview).toBeUndefined()
+  })
+
+  it('serializes needs_interview=true', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    issue.needs_interview = true
+    expect(serializeIssue(issue)).toContain('needs_interview=true')
+  })
+
+  it('serializes needs_interview=false', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    issue.needs_interview = false
+    expect(serializeIssue(issue)).toContain('needs_interview=false')
+  })
+
+  it('omits needs_interview when undefined', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(serializeIssue(issue)).not.toContain('needs_interview')
+  })
+
+  it('round-trips needs_interview=true', () => {
+    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nneeds_interview=true\n')
+    const reparsed = parseIssue(serializeIssue(parseIssue(src)._unsafeUnwrap()))._unsafeUnwrap()
+    expect(reparsed.needs_interview).toBe(true)
+  })
+})
+
 describe('serializeIssue / parseIssue round-trip', () => {
   it('round-trips without data loss', () => {
     const original = parseIssue(SAMPLE)._unsafeUnwrap()
@@ -137,16 +177,17 @@ describe('serializeIssue / parseIssue round-trip', () => {
 })
 
 describe('validateTransition', () => {
-  it('returns Ok for valid transition NEW → INTERVIEWING', () => {
-    expect(validateTransition('NEW', 'INTERVIEWING').isOk()).toBe(true)
+  it('returns Ok for valid transition NEW → PLANNED', () => {
+    expect(validateTransition('NEW', 'PLANNED').isOk()).toBe(true)
   })
 
-  it('returns Ok for valid transition INTERVIEWING → PLANNED', () => {
-    expect(validateTransition('INTERVIEWING', 'PLANNED').isOk()).toBe(true)
+  it('returns Ok for valid transition PLANNED → IN_PROGRESS', () => {
+    expect(validateTransition('PLANNED', 'IN_PROGRESS').isOk()).toBe(true)
   })
 
-  it('returns Err for removed transition NEW → PLANNED', () => {
-    expect(validateTransition('NEW', 'PLANNED').isErr()).toBe(true)
+  it('returns Err for removed transition NEW → INTERVIEWING', () => {
+    // @ts-expect-error — INTERVIEWING is no longer a valid IssueState
+    expect(validateTransition('NEW', 'INTERVIEWING').isErr()).toBe(true)
   })
 
   it('returns Err(InvalidTransitionError) for invalid transition', () => {

@@ -9,6 +9,11 @@ mock.module('@/core/claude', () => ({
   getThreshold: () => 150_000
 }))
 
+// Mock triage so auto tests don't need a real claude binary
+mock.module('@/core/triage', () => ({
+  triageIssue: () => okAsync(undefined)
+}))
+
 import { autoCommand } from '@/cli/commands/auto'
 import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
 
@@ -51,69 +56,63 @@ describe('autoCommand', () => {
     expect(process.exitCode).toBe(0)
   })
 
-  it('interviews NEW issues then exits when no further work remains', async () => {
-    let callCount = 0
+  it('exits when only needs_interview=true NEW issues remain', async () => {
     const provider = makeProvider({
-      listIssues: () => {
-        callCount++
-        // First call: has a NEW issue; second call: issue moved to INTERVIEWING (stuck)
-        if (callCount === 1) {
-          return okAsync([makeIssue({ id: '001', state: 'NEW' })])
-        }
-        return okAsync([]) // done
-      },
-      transition: (_id, to) => {
-        if (to === 'INTERVIEWING') {
-          return okAsync(makeIssue({ state: 'INTERVIEWING' }))
-        }
-        return okAsync(makeIssue({ state: 'PLANNED' }))
-      },
-      fetchIssue: () => okAsync(makeIssue({ state: 'INTERVIEWING' })),
-      writeIssue: () => okAsync(makeIssue({ state: 'INTERVIEWING' }))
+      listIssues: () =>
+        okAsync([makeIssue({ id: '001', state: 'NEW', needs_interview: true })])
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
 
-    expect(callCount).toBeGreaterThanOrEqual(1)
-  })
-
-  it('warns about stuck INTERVIEWING issues', async () => {
-    let callCount = 0
-    const provider = makeProvider({
-      listIssues: () => {
-        callCount++
-        if (callCount === 1) {
-          return okAsync([makeIssue({ id: '002', state: 'INTERVIEWING' })])
-        }
-        return okAsync([]) // no work left
-      }
-    })
-
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
-
-    // INTERVIEWING issue is not actionable work (not in toPlan/toBuild/toInterview)
-    // so the loop sees no work and exits
+    // No plannable work — exits cleanly (exitCode stays 0)
     expect(process.exitCode).toBe(0)
   })
 
-  it('plans INTERVIEWING issues in plan phase', async () => {
+  it('plans NEW issues with needs_interview=false', async () => {
     let callCount = 0
     let lockCalls = 0
     const provider = makeProvider({
       listIssues: () => {
         callCount++
-        if (callCount === 1) {
-          return okAsync([makeIssue({ id: '003', state: 'INTERVIEWING' })])
+        if (callCount <= 2) {
+          return okAsync([makeIssue({ id: '003', state: 'NEW', needs_interview: false })])
         }
         return okAsync([])
       },
-      // runLoop calls lockIssue
       lockIssue: () => {
         lockCalls++
         return okAsync(undefined)
       },
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'INTERVIEWING' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'NEW', needs_interview: false })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      checkAcceptanceCriteria: () => okAsync(false)
+    })
+
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+
+    expect(lockCalls).toBeGreaterThanOrEqual(1)
+  })
+
+  it('plans NEW issues with needs_interview=undefined (backward compat)', async () => {
+    let callCount = 0
+    let lockCalls = 0
+    const provider = makeProvider({
+      listIssues: () => {
+        callCount++
+        // needs_interview=undefined treated same as false for planning
+        if (callCount <= 2) {
+          return okAsync([makeIssue({ id: '004', state: 'NEW' })])
+        }
+        return okAsync([])
+      },
+      lockIssue: () => {
+        lockCalls++
+        return okAsync(undefined)
+      },
+      unlockIssue: () => okAsync(undefined),
+      fetchIssue: () => okAsync(makeIssue({ state: 'NEW' })),
       writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
       checkAcceptanceCriteria: () => okAsync(false)
@@ -130,8 +129,8 @@ describe('autoCommand', () => {
     const provider = makeProvider({
       listIssues: () => {
         callCount++
-        if (callCount === 1) {
-          return okAsync([makeIssue({ id: '004', state: 'PLANNED' })])
+        if (callCount <= 2) {
+          return okAsync([makeIssue({ id: '005', state: 'PLANNED' })])
         }
         return okAsync([])
       },
@@ -140,7 +139,6 @@ describe('autoCommand', () => {
         return okAsync(undefined)
       },
       unlockIssue: () => okAsync(undefined),
-      // After lock+transition, fetchIssue returns COMPLETED so runLoop exits immediately
       fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
@@ -157,14 +155,13 @@ describe('autoCommand', () => {
     const provider = makeProvider({
       listIssues: () => {
         callCount++
-        if (callCount === 1) {
-          return okAsync([makeIssue({ id: '005', state: 'IN_PROGRESS' })])
+        if (callCount <= 2) {
+          return okAsync([makeIssue({ id: '006', state: 'IN_PROGRESS' })])
         }
         return okAsync([])
       },
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
-      // Return COMPLETED so runLoop exits immediately
       fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
@@ -176,22 +173,20 @@ describe('autoCommand', () => {
     expect(callCount).toBeGreaterThanOrEqual(1)
   })
 
-  it('handles interview transition failure gracefully', async () => {
+  it('sets exitCode 1 when second listIssues() (post-triage refresh) returns err', async () => {
     let callCount = 0
     const provider = makeProvider({
       listIssues: () => {
         callCount++
         if (callCount === 1) {
-          return okAsync([makeIssue({ id: '006', state: 'NEW' })])
+          return okAsync([]) // first call — no untriaged NEW issues
         }
-        return okAsync([])
-      },
-      transition: () => errAsync(new Error('locked'))
+        return errAsync(new Error('network error'))
+      }
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
 
-    // Should not crash — gracefully continue
-    expect(process.exitCode).toBe(0)
+    expect(process.exitCode).toBe(1)
   })
 })

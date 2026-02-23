@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'bun:test'
-import { getThreshold } from '@/core/claude'
+import { describe, it, expect, afterEach } from 'bun:test'
+import { getThreshold, getContextLimit, setContextLimit, DEFAULT_CONTEXT_LIMIT } from '@/core/claude'
 
 // runClaudeIteration spawns a real subprocess — tested in tests/integration/
-// getThreshold is the only pure function to unit test here.
+// getThreshold, getContextLimit, and setContextLimit are the pure functions tested here.
 
 describe('getThreshold', () => {
   it('computes 75% of 200000 = 150000 for sonnet', () => {
@@ -19,5 +19,40 @@ describe('getThreshold', () => {
 
   it('handles 100% threshold', () => {
     expect(getThreshold('claude-sonnet-4-6', 100)).toBe(200_000)
+  })
+})
+
+describe('getContextLimit', () => {
+  afterEach(() => {
+    // Restore any custom limits set during tests
+    setContextLimit('test-model-xyz', DEFAULT_CONTEXT_LIMIT)
+  })
+
+  it('returns 200_000 for known model claude-sonnet-4-6', () => {
+    expect(getContextLimit('claude-sonnet-4-6')).toBe(200_000)
+  })
+
+  it('returns DEFAULT_CONTEXT_LIMIT fallback for unknown model', () => {
+    expect(getContextLimit('unknown-model-xyz')).toBe(DEFAULT_CONTEXT_LIMIT)
+  })
+})
+
+describe('setContextLimit', () => {
+  afterEach(() => {
+    // Clean up custom registration
+    setContextLimit('test-model-xyz', DEFAULT_CONTEXT_LIMIT)
+  })
+
+  it('registers a custom limit retrievable by getContextLimit', () => {
+    setContextLimit('test-model-xyz', 128_000)
+    expect(getContextLimit('test-model-xyz')).toBe(128_000)
+  })
+
+  it('overrides existing limit for a known model then restores', () => {
+    setContextLimit('claude-haiku-4-5-20251001', 100_000)
+    expect(getContextLimit('claude-haiku-4-5-20251001')).toBe(100_000)
+    // Restore
+    setContextLimit('claude-haiku-4-5-20251001', DEFAULT_CONTEXT_LIMIT)
+    expect(getContextLimit('claude-haiku-4-5-20251001')).toBe(DEFAULT_CONTEXT_LIMIT)
   })
 })

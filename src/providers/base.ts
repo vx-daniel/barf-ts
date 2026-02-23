@@ -1,4 +1,4 @@
-import { Result, ResultAsync } from 'neverthrow'
+import { Result, ResultAsync, errAsync } from 'neverthrow'
 import type { ZodType } from 'zod'
 import { toError } from '@/utils/toError'
 import { createLogger } from '@/utils/logger'
@@ -87,9 +87,9 @@ export abstract class AuditProvider {
   protected normalizeResponse(raw: { content: string; usage: TokenUsage }): ChatResult {
     return {
       content: raw.content.trim(),
-      promptTokens: raw.usage.promptTokens ?? 0,
-      completionTokens: raw.usage.completionTokens ?? 0,
-      totalTokens: raw.usage.totalTokens ?? 0
+      promptTokens: raw.usage.promptTokens,
+      completionTokens: raw.usage.completionTokens,
+      totalTokens: raw.usage.totalTokens
     }
   }
 
@@ -112,10 +112,7 @@ export abstract class AuditProvider {
           { provider: this.name, content: result.content.slice(0, 100) },
           'response is not valid JSON'
         )
-        return ResultAsync.fromPromise(
-          Promise.reject(new Error(`${this.name} returned invalid JSON`)),
-          toError
-        )
+        return errAsync(new Error(`${this.name} returned invalid JSON`))
       }
       const validation = schema.safeParse(parsed)
       if (!validation.success) {
@@ -123,11 +120,8 @@ export abstract class AuditProvider {
           { provider: this.name, issues: validation.error.issues },
           'response failed schema validation'
         )
-        return ResultAsync.fromPromise(
-          Promise.reject(
-            new Error(`${this.name} response failed schema validation: ${validation.error.message}`)
-          ),
-          toError
+        return errAsync(
+          new Error(`${this.name} response failed schema validation: ${validation.error.message}`)
         )
       }
       return ResultAsync.fromPromise(Promise.resolve(validation.data), toError)

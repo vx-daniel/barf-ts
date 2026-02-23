@@ -6,9 +6,8 @@ import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 export type { AutoSelectMode } from '@/types/schema/mode-schema'
 
 const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
-  plan: ['INTERVIEWING'],
-  build: ['IN_PROGRESS', 'PLANNED'],
-  interview: ['NEW']
+  plan: ['NEW'],
+  build: ['IN_PROGRESS', 'PLANNED']
 }
 
 /**
