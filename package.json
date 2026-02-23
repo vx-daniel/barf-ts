@@ -16,7 +16,8 @@
     "format:check": "oxfmt --check src/ ",
     "lint": "oxlint src/ ",
     "lint:fix": "oxlint --fix src/ ",
-    "check": "bun run format:check && bun run lint"
+    "check": "bun run format:check && bun run lint",
+    "playground": "bun tools/playground-server.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project "
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

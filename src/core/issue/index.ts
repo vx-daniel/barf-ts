@@ -12,10 +12,10 @@ import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from
  */
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
   NEW: ['INTERVIEWING'],
-  INTERVIEWING: ['PLANNED'],
+  INTERVIEWING: ['PLANNED', 'NEW'],
   PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
   IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
-  STUCK: ['PLANNED', 'SPLIT'],
+  STUCK: ['PLANNED', 'NEW', 'SPLIT'],
   SPLIT: [],
   COMPLETED: []
 }
