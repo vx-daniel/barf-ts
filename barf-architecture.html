@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>barf-ts Architecture Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --text: #e1e4ed;
+    --text-dim: #8b90a0;
+    --accent: #6c8cff;
+    --blue: #3b82f6;
+    --green: #10b981;
+    --orange: #f97316;
+    --gray-conn: #6b7280;
+    --node-cli-entry: #1e3a5f;
+    --node-cli-entry-stroke: #3b82f6;
+    --node-commands: #3d2e0a;
+    --node-commands-stroke: #f59e0b;
+    --node-orchestrators: #2d1f4e;
+    --node-orchestrators-stroke: #a78bfa;
+    --node-services: #0f2f1f;
+    --node-services-stroke: #34d399;
+    --node-issue: #3b1f3b;
+    --node-issue-stroke: #f472b6;
+    --node-types: #1f2937;
+    --node-types-stroke: #9ca3af;
+    --node-utils: #1e293b;
+    --node-utils-stroke: #64748b;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar h1 {
+    font-size: 16px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .sidebar h1 span { color: var(--accent); }
+
+  .section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .preset-btn {
+    display: block;
+    width: 100%;
+    padding: 7px 10px;
+    margin-bottom: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover { border-color: var(--accent); }
+  .preset-btn.active {
+    border-color: var(--accent);
+    background: rgba(108, 140, 255, 0.12);
+    color: #fff;
+  }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .check-row input { accent-color: var(--accent); }
+
+  .color-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .conn-line {
+    display: inline-block;
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .comments-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .comment-item {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    position: relative;
+  }
+
+  .comment-item strong {
+    color: var(--accent);
+    font-size: 11px;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .comment-item .comment-file {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  .comment-item .comment-body {
+    margin-top: 4px;
+  }
+
+  .comment-item .del-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .comment-item .del-btn:hover { color: #ef4444; }
+
+  .no-comments { color: var(--text-dim); font-size: 12px; font-style: italic; }
+
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .zoom-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .zoom-btn:hover { border-color: var(--accent); }
+  .zoom-label { color: var(--text-dim); min-width: 40px; text-align: center; }
+
+  .toolbar-spacer { flex: 1; }
+  .toolbar-hint { color: var(--text-dim); font-size: 12px; }
+
+  .canvas-wrap {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+  }
+
+  svg { display: block; }
+
+  .node-rect {
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+
+  .node-rect:hover { filter: brightness(1.3); }
+
+  .node-label {
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--text);
+    pointer-events: none;
+  }
+
+  .node-subtitle {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 9px;
+    fill: var(--text-dim);
+    pointer-events: none;
+  }
+
+  .node-commented {
+    stroke-width: 3 !important;
+    filter: drop-shadow(0 0 6px rgba(108, 140, 255, 0.5));
+  }
+
+  .connection { fill: none; stroke-width: 1.5; }
+
+  .conn-label {
+    font-family: system-ui, sans-serif;
+    font-size: 9px;
+    fill: var(--text-dim);
+    pointer-events: none;
+  }
+
+  .legend {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(26, 29, 39, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    pointer-events: none;
+  }
+
+  .legend-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+  }
+
+  .legend-swatch {
+    width: 24px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+
+  .prompt-area {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    max-height: 180px;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .prompt-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .copy-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.15s;
+  }
+
+  .copy-btn:hover { opacity: 0.85; }
+  .copy-btn.copied { background: var(--green); }
+
+  .prompt-text {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    width: 400px;
+    max-width: 90vw;
+  }
+
+  .modal h3 { font-size: 15px; margin-bottom: 4px; }
+
+  .modal .modal-path {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .modal textarea {
+    width: 100%;
+    height: 80px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    padding: 8px;
+    resize: vertical;
+  }
+
+  .modal textarea:focus { outline: 1px solid var(--accent); }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .modal-actions button {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .modal-actions .save-btn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .state-diagram { padding: 8px 0 4px; }
+  .state-diagram svg { pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h1><span>barf-ts</span> Architecture</h1>
+
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <button class="preset-btn active" data-preset="full">Full System</button>
+    <button class="preset-btn" data-preset="build">Build Flow</button>
+    <button class="preset-btn" data-preset="interview">Interview Flow</button>
+    <button class="preset-btn" data-preset="issue">Issue Management</button>
+    <button class="preset-btn" data-preset="audit">Audit Flow</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Layers</div>
+    <label class="check-row"><input type="checkbox" data-layer="entry" checked>
+      <span class="color-dot" style="background:#3b82f6"></span> CLI Entry</label>
+    <label class="check-row"><input type="checkbox" data-layer="commands" checked>
+      <span class="color-dot" style="background:#f59e0b"></span> CLI Commands</label>
+    <label class="check-row"><input type="checkbox" data-layer="orchestrators" checked>
+      <span class="color-dot" style="background:#a78bfa"></span> Core Orchestrators</label>
+    <label class="check-row"><input type="checkbox" data-layer="services" checked>
+      <span class="color-dot" style="background:#34d399"></span> Core Services</label>
+    <label class="check-row"><input type="checkbox" data-layer="issue" checked>
+      <span class="color-dot" style="background:#f472b6"></span> Issue Subsystem</label>
+    <label class="check-row"><input type="checkbox" data-layer="types" checked>
+      <span class="color-dot" style="background:#9ca3af"></span> Types / Schemas</label>
+    <label class="check-row"><input type="checkbox" data-layer="utils" checked>
+      <span class="color-dot" style="background:#64748b"></span> Utilities</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Connections</div>
+    <label class="check-row"><input type="checkbox" data-conn="data-flow" checked>
+      <span class="conn-line" style="background:#3b82f6"></span> Data Flow</label>
+    <label class="check-row"><input type="checkbox" data-conn="state-change" checked>
+      <span class="conn-line" style="background:transparent;border:1px dashed #10b981"></span> State Change</label>
+    <label class="check-row"><input type="checkbox" data-conn="subprocess" checked>
+      <span class="conn-line" style="background:#f97316"></span> Subprocess</label>
+    <label class="check-row"><input type="checkbox" data-conn="import" checked>
+      <span class="conn-line" style="background:#6b7280;opacity:0.5"></span> Import</label>
+  </div>
+
+  <div class="section">
+    <div class="section-title">State Machine</div>
+    <div class="state-diagram">
+      <svg width="248" height="110" viewBox="0 0 248 110">
+        <defs>
+          <marker id="sm-arrow" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+            <polygon points="0 0, 6 2.5, 0 5" fill="#34d399"/>
+          </marker>
+        </defs>
+        <rect x="2" y="2" width="48" height="20" rx="4" fill="#0f2f1f" stroke="#34d399" stroke-width="1"/>
+        <text x="26" y="15" text-anchor="middle" fill="#34d399" font-size="8" font-family="monospace">NEW</text>
+        <line x1="50" y1="12" x2="68" y2="12" stroke="#34d399" stroke-width="1" marker-end="url(#sm-arrow)"/>
+        <rect x="70" y="2" width="80" height="20" rx="4" fill="#0f2f1f" stroke="#34d399" stroke-width="1"/>
+        <text x="110" y="15" text-anchor="middle" fill="#34d399" font-size="8" font-family="monospace">INTERVIEWING</text>
+        <line x1="150" y1="12" x2="168" y2="12" stroke="#34d399" stroke-width="1" marker-end="url(#sm-arrow)"/>
+        <rect x="170" y="2" width="60" height="20" rx="4" fill="#0f2f1f" stroke="#34d399" stroke-width="1"/>
+        <text x="200" y="15" text-anchor="middle" fill="#34d399" font-size="8" font-family="monospace">PLANNED</text>
+        <line x1="200" y1="22" x2="200" y2="38" stroke="#34d399" stroke-width="1" marker-end="url(#sm-arrow)"/>
+        <rect x="155" y="40" width="90" height="20" rx="4" fill="#0f2f1f" stroke="#34d399" stroke-width="1"/>
+        <text x="200" y="53" text-anchor="middle" fill="#34d399" font-size="8" font-family="monospace">IN_PROGRESS</text>
+        <line x1="200" y1="60" x2="200" y2="76" stroke="#34d399" stroke-width="1" marker-end="url(#sm-arrow)"/>
+        <rect x="160" y="78" width="80" height="20" rx="4" fill="#0f2f1f" stroke="#34d399" stroke-width="1"/>
+        <text x="200" y="91" text-anchor="middle" fill="#34d399" font-size="8" font-family="monospace">COMPLETED</text>
+        <rect x="2" y="45" width="50" height="20" rx="4" fill="#3b1f1f" stroke="#ef4444" stroke-width="1"/>
+        <text x="27" y="58" text-anchor="middle" fill="#ef4444" font-size="8" font-family="monospace">STUCK</text>
+        <rect x="70" y="45" width="50" height="20" rx="4" fill="#3b2e1f" stroke="#f59e0b" stroke-width="1"/>
+        <text x="95" y="58" text-anchor="middle" fill="#f59e0b" font-size="8" font-family="monospace">SPLIT</text>
+        <line x1="155" y1="50" x2="122" y2="55" stroke="#ef4444" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#sm-arrow)"/>
+        <line x1="155" y1="50" x2="122" y2="50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#sm-arrow)"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="section" style="flex:1;">
+    <div class="section-title">Comments (<span id="comment-count">0</span>)</div>
+    <div class="comments-list" id="comments-list">
+      <div class="no-comments">Click a component to add feedback</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="toolbar">
+    <button class="zoom-btn" id="zoom-out">-</button>
+    <span class="zoom-label" id="zoom-label">100%</span>
+    <button class="zoom-btn" id="zoom-in">+</button>
+    <button class="zoom-btn" id="zoom-reset" style="width:auto;padding:0 8px;font-size:12px">Reset</button>
+    <div class="toolbar-spacer"></div>
+    <span class="toolbar-hint">Click a node to comment · Scroll to pan</span>
+  </div>
+
+  <div class="canvas-wrap" id="canvas-wrap">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="legend">
+      <div class="legend-title">Layers</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:var(--node-cli-entry);border-color:var(--node-cli-entry-stroke)"></span> CLI Entry</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:var(--node-commands);border-color:var(--node-commands-stroke)"></span> Commands</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:var(--node-orchestrators);border-color:var(--node-orchestrators-stroke)"></span> Orchestrators</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:var(--node-services);border-color:var(--node-services-stroke)"></span> Services</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:var(--node-issue);border-color:var(--node-issue-stroke)"></span> Issue Subsystem</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:var(--node-types);border-color:var(--node-types-stroke)"></span> Types / Schemas</div>
+      <div class="legend-row"><span class="legend-swatch" style="background:var(--node-utils);border-color:var(--node-utils-stroke)"></span> Utilities</div>
+    </div>
+  </div>
+
+  <div class="prompt-area">
+    <div class="prompt-header">
+      <span class="prompt-label">Prompt Output</span>
+      <button class="copy-btn" id="copy-btn">Copy</button>
+    </div>
+    <div class="prompt-text" id="prompt-text">Viewing the full barf-ts architecture. Click components to add feedback.</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <div class="modal-path" id="modal-path"></div>
+    <textarea id="modal-input" placeholder="Add your feedback about this component..."></textarea>
+    <div class="modal-actions">
+      <button id="modal-cancel">Cancel</button>
+      <button class="save-btn" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- DATA ---
+const NODES = [
+  { id: 'index', label: 'CLI Entry', subtitle: 'src/index.ts', x: 580, y: 30, w: 140, h: 48, layer: 'entry',
+    desc: 'Commander-based CLI entry. Loads config, creates provider, dispatches to commands.' },
+  { id: 'cmd-init', label: 'init', subtitle: 'cli/commands/init.ts', x: 40, y: 130, w: 110, h: 44, layer: 'commands',
+    desc: 'Creates directories/labels, writes .barfrc if absent.' },
+  { id: 'cmd-status', label: 'status', subtitle: 'cli/commands/status.ts', x: 180, y: 130, w: 110, h: 44, layer: 'commands',
+    desc: 'Lists all issues via provider.listIssues(), prints text or JSON.' },
+  { id: 'cmd-interview', label: 'interview', subtitle: 'cli/commands/interview.ts', x: 320, y: 130, w: 110, h: 44, layer: 'commands',
+    desc: 'Auto-selects NEW issue, calls runInterview().' },
+  { id: 'cmd-plan', label: 'plan', subtitle: 'cli/commands/plan.ts', x: 460, y: 130, w: 110, h: 44, layer: 'commands',
+    desc: 'Auto-selects INTERVIEWING issue, calls runLoop(plan).' },
+  { id: 'cmd-build', label: 'build', subtitle: 'cli/commands/build.ts', x: 600, y: 130, w: 110, h: 44, layer: 'commands',
+    desc: 'Single or batch build via runLoop(build), concurrent via Promise.allSettled.' },
+  { id: 'cmd-auto', label: 'auto', subtitle: 'cli/commands/auto.ts', x: 740, y: 130, w: 110, h: 44, layer: 'commands',
+    desc: 'Continuous orchestration: interview ALL new, plan ALL planned, build N concurrent.' },
+  { id: 'cmd-audit', label: 'audit', subtitle: 'cli/commands/audit.ts', x: 880, y: 130, w: 110, h: 44, layer: 'commands',
+    desc: 'Runs lint/test/format, sends OpenAI audit prompt, creates findings issue on failure.' },
+  { id: 'batch', label: 'Batch / runLoop', subtitle: 'core/batch.ts', x: 250, y: 260, w: 160, h: 48, layer: 'orchestrators',
+    desc: 'Main orchestration loop. Handles iterations, overflow (split/escalate), acceptance criteria, test validation.' },
+  { id: 'claude', label: 'Claude Runner', subtitle: 'core/claude.ts', x: 530, y: 260, w: 160, h: 48, layer: 'orchestrators',
+    desc: 'Spawns claude CLI subprocess, consumeClaudeStream() reads JSONL output, applies timeout via AbortController.' },
+  { id: 'interview-core', label: 'Interview Loop', subtitle: 'core/interview.ts', x: 810, y: 260, w: 160, h: 48, layer: 'orchestrators',
+    desc: 'Multi-turn Q&A loop. Reads Claude questions JSON, prompts user, accumulates prior Q&A.' },
+  { id: 'config', label: 'Config', subtitle: 'core/config.ts', x: 80, y: 380, w: 130, h: 44, layer: 'services',
+    desc: 'Parses .barfrc KEY=VALUE into validated Config via ConfigSchema.' },
+  { id: 'context', label: 'Stream Parser', subtitle: 'core/context.ts', x: 310, y: 380, w: 140, h: 44, layer: 'services',
+    desc: 'parseClaudeStream() async generator. Yields ClaudeEvents. Throws ContextOverflowError / RateLimitError.' },
+  { id: 'prompts', label: 'Prompt Resolver', subtitle: 'core/prompts.ts', x: 560, y: 380, w: 150, h: 44, layer: 'services',
+    desc: 'resolvePromptTemplate() returns built-in .md or custom override from config.promptDir.' },
+  { id: 'openai', label: 'OpenAI Client', subtitle: 'core/openai.ts', x: 810, y: 380, w: 140, h: 44, layer: 'services',
+    desc: 'runOpenAIChat() single-shot OpenAI API call for audit agent.' },
+  { id: 'issue-index', label: 'Issue Parser', subtitle: 'core/issue/index.ts', x: 60, y: 510, w: 150, h: 48, layer: 'issue',
+    desc: 'parseIssue(), serializeIssue(), validateTransition(), VALID_TRANSITIONS state machine.' },
+  { id: 'issue-base', label: 'IssueProvider', subtitle: 'core/issue/base.ts', x: 280, y: 510, w: 150, h: 48, layer: 'issue',
+    desc: 'Abstract base class. 8 abstract I/O methods + 3 concrete shared methods.' },
+  { id: 'issue-factory', label: 'Factory', subtitle: 'core/issue/factory.ts', x: 500, y: 510, w: 130, h: 48, layer: 'issue',
+    desc: 'createIssueProvider() switches on config.issueProvider to return Local or GitHub.' },
+  { id: 'provider-local', label: 'Local Provider', subtitle: 'providers/local.ts', x: 700, y: 510, w: 150, h: 48, layer: 'issue',
+    desc: 'FS-backed provider. POSIX O_CREAT|O_EXCL locking, atomic writes via rename.' },
+  { id: 'provider-github', label: 'GitHub Provider', subtitle: 'providers/github.ts', x: 920, y: 510, w: 150, h: 48, layer: 'issue',
+    desc: 'Maps state to barf:* labels via gh CLI API calls.' },
+  { id: 'types', label: 'Core Types', subtitle: 'types/index.ts', x: 120, y: 640, w: 140, h: 44, layer: 'types',
+    desc: 'IssueSchema, LockInfoSchema, ConfigSchema, ClaudeEventSchema, error classes.' },
+  { id: 'schemas', label: 'Sub-Schemas', subtitle: 'types/schema/*.ts', x: 340, y: 640, w: 150, h: 44, layer: 'types',
+    desc: 'BarfModeSchema, IterationResultSchema, OverflowDecisionSchema, ExecResultSchema, AuditResponseSchema.' },
+  { id: 'logger', label: 'Logger', subtitle: 'utils/logger.ts', x: 570, y: 640, w: 110, h: 44, layer: 'utils',
+    desc: 'createLogger(name) pino proxy, multistream (stderr + barf.log).' },
+  { id: 'toError', label: 'toError', subtitle: 'utils/toError.ts', x: 710, y: 640, w: 110, h: 44, layer: 'utils',
+    desc: 'Coerces unknown to Error. Pure leaf function.' },
+  { id: 'execFile', label: 'execFileNoThrow', subtitle: 'utils/execFileNoThrow.ts', x: 850, y: 640, w: 140, h: 44, layer: 'utils',
+    desc: 'Shell-injection-safe Bun subprocess, never throws. Returns ExecResult.' },
+  { id: 'syncResult', label: 'syncToResultAsync', subtitle: 'utils/syncToResultAsync.ts', x: 1020, y: 640, w: 150, h: 44, layer: 'utils',
+    desc: 'Wraps sync-throwing function into ResultAsync.' },
+];
+
+const CONNECTIONS = [
+  { from: 'index', to: 'cmd-init', type: 'data-flow', label: 'dispatch' },
+  { from: 'index', to: 'cmd-status', type: 'data-flow' },
+  { from: 'index', to: 'cmd-interview', type: 'data-flow' },
+  { from: 'index', to: 'cmd-plan', type: 'data-flow' },
+  { from: 'index', to: 'cmd-build', type: 'data-flow' },
+  { from: 'index', to: 'cmd-auto', type: 'data-flow' },
+  { from: 'index', to: 'cmd-audit', type: 'data-flow' },
+  { from: 'cmd-plan', to: 'batch', type: 'data-flow', label: 'runLoop(plan)' },
+  { from: 'cmd-build', to: 'batch', type: 'data-flow', label: 'runLoop(build)' },
+  { from: 'cmd-auto', to: 'batch', type: 'data-flow', label: 'runLoop' },
+  { from: 'cmd-auto', to: 'interview-core', type: 'data-flow', label: 'runInterview' },
+  { from: 'cmd-interview', to: 'interview-core', type: 'data-flow', label: 'runInterview' },
+  { from: 'cmd-audit', to: 'openai', type: 'data-flow', label: 'runOpenAIChat' },
+  { from: 'batch', to: 'claude', type: 'data-flow', label: 'runClaudeIteration' },
+  { from: 'batch', to: 'context', type: 'data-flow', label: 'injectTemplateVars' },
+  { from: 'batch', to: 'prompts', type: 'data-flow', label: 'resolvePromptTemplate' },
+  { from: 'interview-core', to: 'claude', type: 'data-flow', label: 'runClaudeIteration' },
+  { from: 'interview-core', to: 'prompts', type: 'data-flow', label: 'resolvePromptTemplate' },
+  { from: 'claude', to: 'context', type: 'data-flow', label: 'parseClaudeStream' },
+  { from: 'claude', to: 'execFile', type: 'subprocess', label: 'spawn claude CLI' },
+  { from: 'batch', to: 'issue-base', type: 'state-change', label: 'lock/transition/unlock' },
+  { from: 'interview-core', to: 'issue-base', type: 'state-change', label: 'transition' },
+  { from: 'index', to: 'config', type: 'data-flow', label: 'loadConfig' },
+  { from: 'index', to: 'issue-factory', type: 'data-flow', label: 'createIssueProvider' },
+  { from: 'issue-factory', to: 'issue-base', type: 'import' },
+  { from: 'issue-factory', to: 'provider-local', type: 'import' },
+  { from: 'issue-factory', to: 'provider-github', type: 'import' },
+  { from: 'provider-local', to: 'issue-base', type: 'import' },
+  { from: 'provider-github', to: 'issue-base', type: 'import' },
+  { from: 'issue-base', to: 'issue-index', type: 'import', label: 'validateTransition' },
+  { from: 'provider-local', to: 'issue-index', type: 'import', label: 'parse/serialize' },
+  { from: 'cmd-audit', to: 'context', type: 'data-flow', label: 'injectTemplateVars' },
+  { from: 'cmd-audit', to: 'execFile', type: 'subprocess', label: 'run tests/lint' },
+  { from: 'config', to: 'types', type: 'import' },
+  { from: 'batch', to: 'schemas', type: 'import' },
+  { from: 'issue-index', to: 'types', type: 'import' },
+  { from: 'execFile', to: 'schemas', type: 'import', label: 'ExecResult' },
+];
+
+const LAYER_META = {
+  entry:         { fill: 'var(--node-cli-entry)',    stroke: 'var(--node-cli-entry-stroke)' },
+  commands:      { fill: 'var(--node-commands)',      stroke: 'var(--node-commands-stroke)' },
+  orchestrators: { fill: 'var(--node-orchestrators)', stroke: 'var(--node-orchestrators-stroke)' },
+  services:      { fill: 'var(--node-services)',      stroke: 'var(--node-services-stroke)' },
+  issue:         { fill: 'var(--node-issue)',          stroke: 'var(--node-issue-stroke)' },
+  types:         { fill: 'var(--node-types)',          stroke: 'var(--node-types-stroke)' },
+  utils:         { fill: 'var(--node-utils)',          stroke: 'var(--node-utils-stroke)' },
+};
+
+const CONN_STYLES = {
+  'data-flow':    { color: '#3b82f6', dash: '',    marker: 'arrow-blue' },
+  'state-change': { color: '#10b981', dash: '6,3', marker: 'arrow-green' },
+  'subprocess':   { color: '#f97316', dash: '8,4', marker: 'arrow-orange' },
+  'import':       { color: '#6b7280', dash: '2,3', marker: 'arrow-gray', opacity: 0.45 },
+};
+
+const PRESETS = {
+  full: {
+    layers: { entry: true, commands: true, orchestrators: true, services: true, issue: true, types: true, utils: true },
+    conns: { 'data-flow': true, 'state-change': true, subprocess: true, import: true },
+  },
+  build: {
+    layers: { entry: true, commands: true, orchestrators: true, services: true, issue: true, types: false, utils: true },
+    conns: { 'data-flow': true, 'state-change': true, subprocess: true, import: false },
+    highlight: ['index', 'cmd-build', 'batch', 'claude', 'context', 'prompts', 'issue-base', 'execFile'],
+  },
+  interview: {
+    layers: { entry: true, commands: true, orchestrators: true, services: true, issue: true, types: false, utils: false },
+    conns: { 'data-flow': true, 'state-change': true, subprocess: true, import: false },
+    highlight: ['index', 'cmd-interview', 'interview-core', 'claude', 'context', 'prompts', 'issue-base'],
+  },
+  issue: {
+    layers: { entry: false, commands: false, orchestrators: false, services: false, issue: true, types: true, utils: true },
+    conns: { 'data-flow': true, 'state-change': true, subprocess: false, import: true },
+    highlight: ['issue-index', 'issue-base', 'issue-factory', 'provider-local', 'provider-github', 'types'],
+  },
+  audit: {
+    layers: { entry: true, commands: true, orchestrators: false, services: true, issue: false, types: false, utils: true },
+    conns: { 'data-flow': true, 'state-change': false, subprocess: true, import: false },
+    highlight: ['index', 'cmd-audit', 'openai', 'context', 'execFile'],
+  },
+};
+
+// --- STATE ---
+const state = {
+  layers: { entry: true, commands: true, orchestrators: true, services: true, issue: true, types: true, utils: true },
+  conns: { 'data-flow': true, 'state-change': true, subprocess: true, import: true },
+  zoom: 1,
+  comments: [],
+  activePreset: 'full',
+  highlightNodes: null,
+  modalTarget: null,
+};
+
+const nodeMap = {};
+NODES.forEach(function(n) { nodeMap[n.id] = n; });
+
+// --- SVG HELPERS ---
+const svg = document.getElementById('canvas');
+var NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs, parent) {
+  var e = document.createElementNS(NS, tag);
+  if (attrs) {
+    var keys = Object.keys(attrs);
+    for (var i = 0; i < keys.length; i++) {
+      e.setAttribute(keys[i], attrs[keys[i]]);
+    }
+  }
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+// --- RENDER DIAGRAM ---
+function renderDiagram() {
+  var visibleLayers = state.layers;
+  var visibleConns = state.conns;
+  var hl = state.highlightNodes;
+  var commentedIds = {};
+  state.comments.forEach(function(c) { commentedIds[c.target] = true; });
+
+  var maxX = 0, maxY = 0;
+  NODES.forEach(function(n) {
+    if (visibleLayers[n.layer]) {
+      maxX = Math.max(maxX, n.x + n.w);
+      maxY = Math.max(maxY, n.y + n.h);
+    }
+  });
+
+  var pad = 40;
+  var W = Math.max(maxX + pad * 2, 800);
+  var H = Math.max(maxY + pad * 2, 400);
+
+  svg.setAttribute('width', W * state.zoom);
+  svg.setAttribute('height', H * state.zoom);
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+  // Clear SVG safely
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // Defs (arrowheads)
+  var defs = svgEl('defs', {}, svg);
+  var connKeys = Object.keys(CONN_STYLES);
+  for (var ci = 0; ci < connKeys.length; ci++) {
+    var s = CONN_STYLES[connKeys[ci]];
+    var marker = svgEl('marker', {
+      id: s.marker, markerWidth: '8', markerHeight: '6', refX: '7', refY: '3', orient: 'auto',
+    }, defs);
+    svgEl('polygon', { points: '0 0, 8 3, 0 6', fill: s.color }, marker);
+  }
+
+  // Layer band labels
+  var bandLabels = [
+    { y: 20, text: 'CLI ENTRY', layer: 'entry' },
+    { y: 118, text: 'CLI COMMANDS', layer: 'commands' },
+    { y: 248, text: 'CORE ORCHESTRATORS', layer: 'orchestrators' },
+    { y: 370, text: 'CORE SERVICES', layer: 'services' },
+    { y: 498, text: 'ISSUE SUBSYSTEM', layer: 'issue' },
+    { y: 630, text: 'TYPES & SCHEMAS', layer: 'types' },
+    { y: 630, text: 'UTILITIES', layer: 'utils', x: 540 },
+  ];
+
+  for (var bi = 0; bi < bandLabels.length; bi++) {
+    var bl = bandLabels[bi];
+    if (!visibleLayers[bl.layer]) continue;
+    var labelEl = svgEl('text', {
+      x: bl.x || 10, y: bl.y, fill: '#4a4f63', 'font-size': '10',
+      'font-family': 'system-ui, sans-serif', 'font-weight': '600',
+      'letter-spacing': '0.06em',
+    }, svg);
+    labelEl.textContent = bl.text;
+  }
+
+  // Visible node IDs set
+  var visibleNodeIds = {};
+  NODES.forEach(function(n) {
+    if (visibleLayers[n.layer]) visibleNodeIds[n.id] = true;
+  });
+
+  // Draw connections (under nodes)
+  for (var cj = 0; cj < CONNECTIONS.length; cj++) {
+    var conn = CONNECTIONS[cj];
+    if (!visibleConns[conn.type]) continue;
+    if (!visibleNodeIds[conn.from] || !visibleNodeIds[conn.to]) continue;
+
+    var fromN = nodeMap[conn.from];
+    var toN = nodeMap[conn.to];
+    var style = CONN_STYLES[conn.type];
+
+    var dimmed = hl && (!hl.includes(conn.from) || !hl.includes(conn.to));
+    var opacity = dimmed ? 0.08 : (style.opacity || 0.7);
+
+    var fx = fromN.x + fromN.w / 2;
+    var fy = fromN.y + fromN.h;
+    var tx = toN.x + toN.w / 2;
+    var ty = toN.y;
+
+    var dy = Math.abs(ty - fy);
+    var cp = Math.max(dy * 0.4, 20);
+    var path = 'M ' + fx + ' ' + fy + ' C ' + fx + ' ' + (fy + cp) + ', ' + tx + ' ' + (ty - cp) + ', ' + tx + ' ' + ty;
+
+    var pathAttrs = {
+      d: path, fill: 'none', stroke: style.color,
+      'stroke-width': dimmed ? '1' : '1.5',
+      'marker-end': 'url(#' + style.marker + ')',
+      opacity: opacity,
+      class: 'connection',
+    };
+    if (style.dash) pathAttrs['stroke-dasharray'] = style.dash;
+
+    svgEl('path', pathAttrs, svg);
+
+    if (conn.label && !dimmed) {
+      var mx = (fx + tx) / 2;
+      var my = (fy + ty) / 2;
+      var connLabelEl = svgEl('text', {
+        x: mx + 4, y: my - 4, class: 'conn-label', opacity: '0.7',
+      }, svg);
+      connLabelEl.textContent = conn.label;
+    }
+  }
+
+  // Draw nodes
+  for (var ni = 0; ni < NODES.length; ni++) {
+    var n = NODES[ni];
+    if (!visibleLayers[n.layer]) continue;
+
+    var meta = LAYER_META[n.layer];
+    var nodeDimmed = hl && !hl.includes(n.id);
+    var commented = commentedIds[n.id];
+
+    var g = svgEl('g', { transform: 'translate(' + n.x + ', ' + n.y + ')' }, svg);
+    g.dataset.id = n.id;
+
+    var rectAttrs = {
+      width: n.w, height: n.h, rx: '8',
+      fill: meta.fill, stroke: meta.stroke,
+      'stroke-width': commented ? '2.5' : '1.5',
+      class: 'node-rect' + (commented ? ' node-commented' : ''),
+      opacity: nodeDimmed ? '0.2' : '1',
+      cursor: 'pointer',
+    };
+    svgEl('rect', rectAttrs, g);
+
+    var titleEl = svgEl('text', {
+      x: n.w / 2, y: n.h / 2 - 4,
+      'text-anchor': 'middle', class: 'node-label',
+      opacity: nodeDimmed ? '0.2' : '1',
+    }, g);
+    titleEl.textContent = n.label;
+
+    var subEl = svgEl('text', {
+      x: n.w / 2, y: n.h / 2 + 10,
+      'text-anchor': 'middle', class: 'node-subtitle',
+      opacity: nodeDimmed ? '0.15' : '1',
+    }, g);
+    subEl.textContent = n.subtitle;
+
+    if (commented && !nodeDimmed) {
+      svgEl('circle', {
+        cx: n.w - 6, cy: '6', r: '4', fill: '#6c8cff', stroke: 'none',
+      }, g);
+    }
+
+    (function(nodeId) {
+      g.addEventListener('click', function() { openModal(nodeId); });
+    })(n.id);
+  }
+}
+
+// --- MODAL ---
+function openModal(nodeId) {
+  var node = nodeMap[nodeId];
+  state.modalTarget = nodeId;
+  document.getElementById('modal-title').textContent = node.label;
+  document.getElementById('modal-path').textContent = node.subtitle + ' \u2014 ' + node.desc;
+  document.getElementById('modal-input').value = '';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(function() { document.getElementById('modal-input').focus(); }, 50);
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  state.modalTarget = null;
+}
+
+function saveComment() {
+  var text = document.getElementById('modal-input').value.trim();
+  if (!text) { closeModal(); return; }
+  var node = nodeMap[state.modalTarget];
+  state.comments.push({
+    id: Date.now(),
+    target: state.modalTarget,
+    targetLabel: node.label,
+    targetFile: node.subtitle,
+    text: text,
+  });
+  closeModal();
+  updateAll();
+}
+
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-save').addEventListener('click', saveComment);
+
+// --- COMMENTS PANEL (safe DOM) ---
+function renderComments() {
+  var list = document.getElementById('comments-list');
+  document.getElementById('comment-count').textContent = state.comments.length;
+
+  // Clear safely
+  while (list.firstChild) list.removeChild(list.firstChild);
+
+  if (state.comments.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'no-comments';
+    empty.textContent = 'Click a component to add feedback';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (var i = 0; i < state.comments.length; i++) {
+    var c = state.comments[i];
+
+    var item = document.createElement('div');
+    item.className = 'comment-item';
+
+    var title = document.createElement('strong');
+    title.textContent = c.targetLabel;
+    item.appendChild(title);
+
+    var file = document.createElement('span');
+    file.className = 'comment-file';
+    file.textContent = c.targetFile;
+    item.appendChild(file);
+
+    var body = document.createElement('div');
+    body.className = 'comment-body';
+    body.textContent = c.text;
+    item.appendChild(body);
+
+    var del = document.createElement('button');
+    del.className = 'del-btn';
+    del.textContent = '\u00D7';
+    del.dataset.commentId = c.id;
+    del.addEventListener('click', function() {
+      deleteComment(parseInt(this.dataset.commentId, 10));
+    });
+    item.appendChild(del);
+
+    list.appendChild(item);
+  }
+}
+
+function deleteComment(id) {
+  state.comments = state.comments.filter(function(c) { return c.id !== id; });
+  updateAll();
+}
+
+// --- PROMPT OUTPUT ---
+function updatePrompt() {
+  var layers = [];
+  var layerKeys = Object.keys(state.layers);
+  for (var i = 0; i < layerKeys.length; i++) {
+    if (state.layers[layerKeys[i]]) layers.push(layerKeys[i]);
+  }
+  var allLayers = layers.length === 7;
+  var presetNames = {
+    full: 'Full System', build: 'Build Flow', interview: 'Interview Flow',
+    issue: 'Issue Management', audit: 'Audit Flow',
+  };
+  var presetName = presetNames[state.activePreset] || 'Custom View';
+
+  var prompt = 'This is the barf-ts architecture';
+  if (presetName !== 'Full System') prompt += ', focusing on the ' + presetName;
+  if (!allLayers) prompt += ' (layers: ' + layers.join(', ') + ')';
+  prompt += '.\n';
+
+  prompt += '\nbarf-ts is a TypeScript/Bun CLI that orchestrates Claude AI agent work on issues.';
+  prompt += ' It uses a state machine (NEW \u2192 INTERVIEWING \u2192 PLANNED \u2192 IN_PROGRESS \u2192 COMPLETED)';
+  prompt += ' with neverthrow for error handling and Zod schemas as single source of truth.\n';
+
+  if (state.comments.length > 0) {
+    prompt += '\nFeedback on specific components:\n';
+    for (var j = 0; j < state.comments.length; j++) {
+      var c = state.comments[j];
+      prompt += '\n**' + c.targetLabel + '** (' + c.targetFile + '):\n' + c.text + '\n';
+    }
+  } else {
+    prompt += '\nClick components to add feedback.';
+  }
+
+  document.getElementById('prompt-text').textContent = prompt;
+}
+
+// --- COPY ---
+document.getElementById('copy-btn').addEventListener('click', function() {
+  var text = document.getElementById('prompt-text').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+});
+
+// --- PRESETS ---
+document.querySelectorAll('.preset-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var preset = PRESETS[btn.dataset.preset];
+    state.activePreset = btn.dataset.preset;
+    state.highlightNodes = preset.highlight || null;
+
+    var layerKeys = Object.keys(preset.layers);
+    for (var i = 0; i < layerKeys.length; i++) {
+      state.layers[layerKeys[i]] = preset.layers[layerKeys[i]];
+      var cb = document.querySelector('[data-layer="' + layerKeys[i] + '"]');
+      if (cb) cb.checked = preset.layers[layerKeys[i]];
+    }
+
+    var connKeys = Object.keys(preset.conns);
+    for (var j = 0; j < connKeys.length; j++) {
+      state.conns[connKeys[j]] = preset.conns[connKeys[j]];
+      var ccb = document.querySelector('[data-conn="' + connKeys[j] + '"]');
+      if (ccb) ccb.checked = preset.conns[connKeys[j]];
+    }
+
+    document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    updateAll();
+  });
+});
+
+// --- LAYER TOGGLES ---
+document.querySelectorAll('[data-layer]').forEach(function(cb) {
+  cb.addEventListener('change', function() {
+    state.layers[cb.dataset.layer] = cb.checked;
+    state.activePreset = 'custom';
+    state.highlightNodes = null;
+    document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+    updateAll();
+  });
+});
+
+// --- CONNECTION TOGGLES ---
+document.querySelectorAll('[data-conn]').forEach(function(cb) {
+  cb.addEventListener('change', function() {
+    state.conns[cb.dataset.conn] = cb.checked;
+    updateAll();
+  });
+});
+
+// --- ZOOM ---
+function setZoom(z) {
+  state.zoom = Math.max(0.4, Math.min(2, z));
+  document.getElementById('zoom-label').textContent = Math.round(state.zoom * 100) + '%';
+  renderDiagram();
+}
+
+document.getElementById('zoom-in').addEventListener('click', function() { setZoom(state.zoom + 0.15); });
+document.getElementById('zoom-out').addEventListener('click', function() { setZoom(state.zoom - 0.15); });
+document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(1); });
+
+// --- KEYBOARD ---
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && state.modalTarget) saveComment();
+});
+
+// --- UPDATE ALL ---
+function updateAll() {
+  renderDiagram();
+  renderComments();
+  updatePrompt();
+}
+
+// Initial render
+updateAll();
+</script>
+</body>
+</html>

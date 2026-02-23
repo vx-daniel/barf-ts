@@ -30,7 +30,7 @@ mock.module('openai', () => ({
   }
 }))
 
-import { runOpenAIChat } from '@/core/openai'
+import { runOpenAIChat } from '@/providers/openai'
 
 describe('runOpenAIChat', () => {
   beforeEach(() => {
