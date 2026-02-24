@@ -6,6 +6,7 @@
     "dev": "bun run src/index.ts",
     "dev:sample": "bun run src/index.ts --cwd tests/sample-project",
     "run:local": "bun run src/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project auto",
+    "audit:local": "bun run src/index.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project audit --all",
     "run:gh": "bun run src/index.ts --config tests/sample-project/.barfrc.github --cwd tests/sample-project auto",
     "reset:local": "cd tests/sample-project && npm run reset-local",
     "reset:gh": " cd tests/sample-project && npm run reset-gh",

@@ -2,6 +2,7 @@ import { describe, it, expect, mock } from 'bun:test'
 import { OpenAIAuditProvider } from '@/providers/openai'
 import { GeminiAuditProvider } from '@/providers/gemini'
 import { ClaudeAuditProvider } from '@/providers/claude'
+import { CodexAuditProvider } from '@/providers/codex'
 import { AuditProvider } from '@/providers/base'
 import type { Config } from '@/types'
 import { defaultConfig } from '@tests/fixtures/provider'
@@ -13,6 +14,7 @@ function createAuditProvider(config: Config): AuditProvider {
   switch (config.auditProvider) {
     case 'gemini': return new GeminiAuditProvider(config)
     case 'claude': return new ClaudeAuditProvider(config)
+    case 'codex': return new CodexAuditProvider(config)
     case 'openai':
     default:       return new OpenAIAuditProvider(config)
   }
@@ -32,6 +34,11 @@ describe('createAuditProvider', () => {
   it('returns ClaudeAuditProvider when auditProvider is claude', () => {
     const provider = createAuditProvider({ ...defaultConfig(), auditProvider: 'claude' })
     expect(provider).toBeInstanceOf(ClaudeAuditProvider)
+  })
+
+  it('returns CodexAuditProvider when auditProvider is codex', () => {
+    const provider = createAuditProvider({ ...defaultConfig(), auditProvider: 'codex' })
+    expect(provider).toBeInstanceOf(CodexAuditProvider)
   })
 
   it('defaults to OpenAIAuditProvider', () => {

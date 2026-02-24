@@ -41,7 +41,7 @@ function loadRulesContext(): string {
  * @param result - Result from `execFileNoThrow`, or `null` if the check was skipped.
  * @returns A string describing pass/fail status and captured output.
  */
-function formatCheckResult(result: ExecResult | null): string {
+function formatCheckResult(result: ExecResult | null): string { 
   if (result === null) {
     return '(skipped — not configured)'
   }

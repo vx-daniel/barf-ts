@@ -130,7 +130,7 @@ export const ConfigSchema = z.object({
   triageModel: z.string().default('claude-haiku-4-5-20251001'),
   auditModel: z.string().default('gpt-4o'),
   openaiApiKey: z.string().default(''),
-  auditProvider: z.enum(['openai', 'gemini', 'claude']).default('openai'),
+  auditProvider: z.enum(['openai', 'gemini', 'claude', 'codex']).default('openai'),
   geminiApiKey: z.string().default(''),
   geminiModel: z.string().default('gemini-1.5-pro'),
   anthropicApiKey: z.string().default(''),

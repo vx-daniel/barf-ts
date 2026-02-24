@@ -3,6 +3,7 @@ import { Result, ok, err } from 'neverthrow'
 import { ConfigSchema, type Config } from '@/types/index'
 import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
+import { homedir } from 'os'
 
 const KEY_MAP: Record<string, keyof Config> = {
   ISSUES_DIR: 'issuesDir',
@@ -77,6 +78,35 @@ export function parseBarfrc(content: string): Result<Config, z.ZodError> {
 }
 
 /**
+ * Reads an OpenAI API key or OAuth access token from `~/.codex/auth.json`.
+ * Tries `OPENAI_API_KEY` first (explicit key), then `tokens.access_token` (OAuth bearer).
+ *
+ * @returns Token string, or empty string if the file is missing or unparseable.
+ */
+function readCodexToken(): string {
+  try {
+    const authPath = join(homedir(), '.codex', 'auth.json')
+    const raw = readFileSync(authPath, 'utf8')
+    const parsed = JSON.parse(raw) as unknown
+    if (typeof parsed !== 'object' || parsed === null) return ''
+    const auth = parsed as Record<string, unknown>
+    if (typeof auth['OPENAI_API_KEY'] === 'string' && auth['OPENAI_API_KEY'].length > 0) {
+      return auth['OPENAI_API_KEY']
+    }
+    const tokens = auth['tokens']
+    if (typeof tokens === 'object' && tokens !== null) {
+      const t = tokens as Record<string, unknown>
+      if (typeof t['access_token'] === 'string' && t['access_token'].length > 0) {
+        return t['access_token']
+      }
+    }
+    return ''
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Loads barf configuration from a `.barfrc` file.
  *
  * Falls back to schema defaults if the file is missing or cannot be parsed.
@@ -87,13 +117,23 @@ export function parseBarfrc(content: string): Result<Config, z.ZodError> {
  */
 export function loadConfig(rcPath?: string): Config {
   const filePath = rcPath ? resolve(rcPath) : join(process.cwd(), '.barfrc')
+  let config: Config
   try {
     const content = readFileSync(filePath, 'utf8')
-    return parseBarfrc(content).match(
-      config => config,
+    config = parseBarfrc(content).match(
+      c => c,
       () => RawConfigSchema.parse({})
     )
   } catch {
-    return RawConfigSchema.parse({})
+    config = RawConfigSchema.parse({})
   }
+
+  if (config.openaiApiKey === '') {
+    const codexToken = readCodexToken()
+    if (codexToken) {
+      config = { ...config, openaiApiKey: codexToken }
+    }
+  }
+
+  return config
 }
