@@ -6,6 +6,7 @@ import type { IssueProvider } from '@/core/issue/base'
 import type { LoopMode } from '@/types/schema/mode-schema'
 import type { OverflowDecision } from '@/types/schema/batch-schema'
 import { runClaudeIteration } from '@/core/claude'
+import { verifyIssue } from '@/core/verification'
 import { injectTemplateVars } from '@/core/context'
 import { resolvePromptTemplate } from '@/core/prompts'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
@@ -15,9 +16,13 @@ import { toError } from '@/utils/toError'
 export type { LoopMode } from '@/types/schema/mode-schema'
 export type { OverflowDecision } from '@/types/schema/batch-schema'
 
-/** Injectable deps for {@link runLoop}. Pass a mock `runClaudeIteration` in tests. */
+/**
+ * Injectable deps for {@link runLoop}. Pass mocks in tests.
+ * `verifyIssue` is called after a COMPLETED transition to run automated verification.
+ */
 export type RunLoopDeps = {
   runClaudeIteration?: typeof runClaudeIteration
+  verifyIssue?: typeof verifyIssue
 }
 
 const logger = createLogger('batch')
@@ -93,6 +98,7 @@ async function runLoopImpl(
   deps: RunLoopDeps
 ): Promise<void> {
   const _runClaudeIteration = deps.runClaudeIteration ?? runClaudeIteration
+  const _verifyIssue = deps.verifyIssue ?? verifyIssue
   const lockResult = await provider.lockIssue(issueId, { mode })
   if (lockResult.isErr()) {
     throw lockResult.error
@@ -261,6 +267,14 @@ async function runLoopImpl(
             const fresh = await provider.fetchIssue(issueId)
             if (fresh.isOk() && fresh.value.state !== 'COMPLETED') {
               await provider.transition(issueId, 'COMPLETED')
+            }
+            // Run verification immediately after COMPLETED
+            const verifyResult = await _verifyIssue(issueId, config, provider)
+            if (verifyResult.isErr()) {
+              logger.warn(
+                { issueId, err: verifyResult.error.message },
+                'verification failed after COMPLETED'
+              )
             }
             break iterationLoop
           }

@@ -10,6 +10,8 @@ import type { Config, Issue } from '@/types'
 import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
 import { serializeIssue } from '@/core/issue'
 
+const mockVerifyIssue = () => okAsync(undefined)
+
 // Controllable mock: reassign `mockOutcomes` to control runClaudeIteration per-test
 // Each call pops the first element; once empty, repeats the last.
 let mockOutcomes: Array<{ outcome: string; tokens: number; rateLimitResetsAt?: number }> = [
@@ -46,7 +48,10 @@ function writeIssueFile(issuesDir: string, issue: Issue): void {
   writeFileSync(join(issuesDir, `${issue.id}.md`), serializeIssue(issue))
 }
 
-const deps = { runClaudeIteration: mockRunClaudeIteration as never }
+const deps = {
+  runClaudeIteration: mockRunClaudeIteration as never,
+  verifyIssue: mockVerifyIssue as never
+}
 
 describe('runLoop', () => {
   beforeEach(() => {
@@ -408,6 +413,66 @@ describe('runLoop', () => {
     })
 
     const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
+    expect(result.isOk()).toBe(true)
+  })
+
+  // ── verifyIssue called after COMPLETED ────────────────────────────
+
+  it('calls verifyIssue after transitioning to COMPLETED', async () => {
+    let verifyIssueCalled = false
+    const mockVerifyIssue = () => {
+      verifyIssueCalled = true
+      return ResultAsync.fromSafePromise(Promise.resolve(undefined))
+    }
+    let fetchCount = 0
+    const provider = makeProvider({
+      lockIssue: () => okAsync(undefined),
+      unlockIssue: () => okAsync(undefined),
+      fetchIssue: () => {
+        fetchCount++
+        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+      },
+      transition: (_id, to) => okAsync(makeIssue({ state: to })),
+      checkAcceptanceCriteria: () => okAsync(true),
+      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+    })
+
+    const depsWithVerify = {
+      runClaudeIteration: mockRunClaudeIteration as never,
+      verifyIssue: mockVerifyIssue as never
+    }
+    const result = await runLoop('001', 'build', defaultConfig(), provider, depsWithVerify)
+    expect(result.isOk()).toBe(true)
+    expect(verifyIssueCalled).toBe(true)
+  })
+
+  it('logs warning but continues when verifyIssue returns err', async () => {
+    const mockVerifyIssue = () =>
+      ResultAsync.fromSafePromise(Promise.resolve(undefined)).andThen(() =>
+        // hack: wrap err
+        Promise.resolve(undefined) as never
+      )
+    const mockVerifyErr = () => errAsync(new Error('verify io error'))
+
+    let fetchCount = 0
+    const provider = makeProvider({
+      lockIssue: () => okAsync(undefined),
+      unlockIssue: () => okAsync(undefined),
+      fetchIssue: () => {
+        fetchCount++
+        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+      },
+      transition: (_id, to) => okAsync(makeIssue({ state: to })),
+      checkAcceptanceCriteria: () => okAsync(true),
+      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+    })
+
+    const depsWithErr = {
+      runClaudeIteration: mockRunClaudeIteration as never,
+      verifyIssue: mockVerifyErr as never
+    }
+    // Should still complete without throwing
+    const result = await runLoop('001', 'build', defaultConfig(), provider, depsWithErr)
     expect(result.isOk()).toBe(true)
   })
 

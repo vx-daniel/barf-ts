@@ -6,7 +6,8 @@ import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from
  * The allowed state transitions in the barf issue lifecycle.
  *
  * Used by {@link validateTransition} to reject illegal moves.
- * Terminal states (`SPLIT`, `COMPLETED`) have empty arrays — no further transitions allowed.
+ * Terminal states (`SPLIT`, `VERIFIED`) have empty arrays — no further transitions allowed.
+ * `COMPLETED` is an intermediate state; only `VERIFIED` is the true terminal after verification.
  *
  * @category Issue Model
  */
@@ -16,7 +17,8 @@ export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
   IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
   STUCK: ['PLANNED', 'NEW', 'SPLIT'],
   SPLIT: [],
-  COMPLETED: []
+  COMPLETED: ['VERIFIED'],
+  VERIFIED: []
 }
 
 /**
@@ -66,6 +68,16 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
         fields[key] = false
       }
       // absent or empty → leave undefined (not set in fields)
+    } else if (key === 'verify_count') {
+      const parsed = parseInt(val, 10)
+      fields[key] = isNaN(parsed) ? 0 : parsed
+    } else if (key === 'is_verify_fix' || key === 'verify_exhausted') {
+      if (val === 'true') {
+        fields[key] = true
+      } else if (val === 'false') {
+        fields[key] = false
+      }
+      // absent or empty → leave undefined (not set in fields)
     } else if (key === 'context_usage_percent') {
       const parsed = parseInt(val, 10)
       if (!isNaN(parsed)) {
@@ -98,7 +110,10 @@ export function serializeIssue(issue: Issue): string {
     ...(issue.context_usage_percent !== undefined
       ? [`context_usage_percent=${issue.context_usage_percent}`]
       : []),
-    ...(issue.needs_interview !== undefined ? [`needs_interview=${issue.needs_interview}`] : [])
+    ...(issue.needs_interview !== undefined ? [`needs_interview=${issue.needs_interview}`] : []),
+    `verify_count=${issue.verify_count}`,
+    ...(issue.is_verify_fix !== undefined ? [`is_verify_fix=${issue.is_verify_fix}`] : []),
+    ...(issue.verify_exhausted !== undefined ? [`verify_exhausted=${issue.verify_exhausted}`] : [])
   ].join('\n')
   return `---\n${fm}\n---\n\n${issue.body}\n`
 }

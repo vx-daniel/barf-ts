@@ -176,6 +176,84 @@ describe('serializeIssue / parseIssue round-trip', () => {
   })
 })
 
+describe('verify_count / is_verify_fix / verify_exhausted', () => {
+  it('defaults verify_count=0 when absent', () => {
+    const result = parseIssue(SAMPLE)
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().verify_count).toBe(0)
+  })
+
+  it('parses verify_count=2', () => {
+    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_count=2\n')
+    const result = parseIssue(src)
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().verify_count).toBe(2)
+  })
+
+  it('always serializes verify_count', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(serializeIssue(issue)).toContain('verify_count=0')
+  })
+
+  it('round-trips verify_count=5', () => {
+    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_count=5\n')
+    const original = parseIssue(src)._unsafeUnwrap()
+    const reparsed = parseIssue(serializeIssue(original))._unsafeUnwrap()
+    expect(reparsed.verify_count).toBe(5)
+  })
+
+  it('parses is_verify_fix=true', () => {
+    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nis_verify_fix=true\n')
+    const issue = parseIssue(src)._unsafeUnwrap()
+    expect(issue.is_verify_fix).toBe(true)
+  })
+
+  it('parses is_verify_fix=false', () => {
+    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nis_verify_fix=false\n')
+    const issue = parseIssue(src)._unsafeUnwrap()
+    expect(issue.is_verify_fix).toBe(false)
+  })
+
+  it('returns undefined for is_verify_fix when absent', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(issue.is_verify_fix).toBeUndefined()
+  })
+
+  it('serializes is_verify_fix=true', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    issue.is_verify_fix = true
+    expect(serializeIssue(issue)).toContain('is_verify_fix=true')
+  })
+
+  it('omits is_verify_fix when undefined', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(serializeIssue(issue)).not.toContain('is_verify_fix')
+  })
+
+  it('parses verify_exhausted=true', () => {
+    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_exhausted=true\n')
+    const issue = parseIssue(src)._unsafeUnwrap()
+    expect(issue.verify_exhausted).toBe(true)
+  })
+
+  it('returns undefined for verify_exhausted when absent', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(issue.verify_exhausted).toBeUndefined()
+  })
+
+  it('omits verify_exhausted when undefined', () => {
+    const issue = parseIssue(SAMPLE)._unsafeUnwrap()
+    expect(serializeIssue(issue)).not.toContain('verify_exhausted')
+  })
+
+  it('round-trips verify_exhausted=true', () => {
+    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_exhausted=true\n')
+    const original = parseIssue(src)._unsafeUnwrap()
+    const reparsed = parseIssue(serializeIssue(original))._unsafeUnwrap()
+    expect(reparsed.verify_exhausted).toBe(true)
+  })
+})
+
 describe('validateTransition', () => {
   it('returns Ok for valid transition NEW → PLANNED', () => {
     expect(validateTransition('NEW', 'PLANNED').isOk()).toBe(true)
@@ -183,6 +261,10 @@ describe('validateTransition', () => {
 
   it('returns Ok for valid transition PLANNED → IN_PROGRESS', () => {
     expect(validateTransition('PLANNED', 'IN_PROGRESS').isOk()).toBe(true)
+  })
+
+  it('returns Ok for valid transition COMPLETED → VERIFIED', () => {
+    expect(validateTransition('COMPLETED', 'VERIFIED').isOk()).toBe(true)
   })
 
   it('returns Err for removed transition NEW → INTERVIEWING', () => {
@@ -196,7 +278,11 @@ describe('validateTransition', () => {
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(InvalidTransitionError)
   })
 
-  it('returns Err for transition from terminal COMPLETED state', () => {
+  it('returns Err for transition from terminal VERIFIED state', () => {
+    expect(validateTransition('VERIFIED', 'PLANNED').isErr()).toBe(true)
+  })
+
+  it('returns Err for COMPLETED → PLANNED (not a valid transition)', () => {
     expect(validateTransition('COMPLETED', 'PLANNED').isErr()).toBe(true)
   })
 })

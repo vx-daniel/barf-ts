@@ -6,13 +6,15 @@ import { autoCommand } from '@/cli/commands/auto'
 import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
 
 const mockTriageIssue = () => okAsync(undefined)
+const mockVerifyIssue = () => okAsync(undefined)
 
 const mockRunClaudeIteration = () =>
   ResultAsync.fromSafePromise(Promise.resolve({ outcome: 'success', tokens: 0 }))
 
 const deps = {
   triageIssue: mockTriageIssue as never,
-  runClaudeIteration: mockRunClaudeIteration as never
+  runClaudeIteration: mockRunClaudeIteration as never,
+  verifyIssue: mockVerifyIssue as never
 }
 
 describe('autoCommand', () => {
@@ -186,5 +188,148 @@ describe('autoCommand', () => {
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(1)
+  })
+
+  // ── Verify phase ────────────────────────────────────────────────────────
+
+  it('includes COMPLETED issues with verify_count>0 in toVerify', async () => {
+    let verifyCalledFor: string[] = []
+    const mockVerify = (id: string) => {
+      verifyCalledFor.push(id)
+      return okAsync(undefined)
+    }
+    let callCount = 0
+    // Issue is COMPLETED with verify_count=1 (has been attempted before) — needs re-verify
+    const completedIssue = makeIssue({ id: '007', state: 'COMPLETED', verify_count: 1, children: [] })
+    const provider = makeProvider({
+      listIssues: () => {
+        callCount++
+        if (callCount <= 2) {
+          return okAsync([completedIssue])
+        }
+        return okAsync([]) // second loop: empty → exit
+      }
+    })
+
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+      ...deps,
+      verifyIssue: mockVerify as never
+    })
+
+    expect(verifyCalledFor).toContain('007')
+  })
+
+  it('excludes COMPLETED issues with verify_exhausted=true from toVerify', async () => {
+    let verifyCalled = false
+    const mockVerify = () => {
+      verifyCalled = true
+      return okAsync(undefined)
+    }
+    const exhaustedIssue = makeIssue({
+      id: '008',
+      state: 'COMPLETED',
+      verify_count: 3,
+      verify_exhausted: true,
+      children: []
+    })
+    const provider = makeProvider({
+      listIssues: () => okAsync([exhaustedIssue])
+    })
+
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+      ...deps,
+      verifyIssue: mockVerify as never
+    })
+
+    expect(verifyCalled).toBe(false)
+  })
+
+  it('excludes is_verify_fix=true issues from toVerify', async () => {
+    let verifyCalled = false
+    const mockVerify = () => {
+      verifyCalled = true
+      return okAsync(undefined)
+    }
+    const fixIssue = makeIssue({
+      id: '009',
+      state: 'COMPLETED',
+      verify_count: 1,
+      is_verify_fix: true,
+      children: []
+    })
+    const provider = makeProvider({
+      listIssues: () => okAsync([fixIssue])
+    })
+
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+      ...deps,
+      verifyIssue: mockVerify as never
+    })
+
+    expect(verifyCalled).toBe(false)
+  })
+
+  it('skips verify for issue whose fix children are not yet done', async () => {
+    let verifyCalled = false
+    const mockVerify = () => {
+      verifyCalled = true
+      return okAsync(undefined)
+    }
+    // Parent has a fix child that is still IN_PROGRESS
+    const fixChild = makeIssue({ id: '010-1', state: 'IN_PROGRESS', is_verify_fix: true })
+    const parentIssue = makeIssue({
+      id: '010',
+      state: 'COMPLETED',
+      verify_count: 1,
+      children: ['010-1']
+    })
+    let callCount = 0
+    const provider = makeProvider({
+      // After 2 calls (one triage + one refresh), return empty so loop exits
+      listIssues: () => {
+        callCount++
+        if (callCount <= 2) return okAsync([parentIssue])
+        return okAsync([])
+      },
+      fetchIssue: () => okAsync(fixChild)
+    })
+
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+      ...deps,
+      verifyIssue: mockVerify as never
+    })
+
+    expect(verifyCalled).toBe(false)
+  })
+
+  it('runs verify for issue whose fix children are all done', async () => {
+    let verifyCalledFor: string[] = []
+    const mockVerify = (id: string) => {
+      verifyCalledFor.push(id)
+      return okAsync(undefined)
+    }
+    let callCount = 0
+    const fixChild = makeIssue({ id: '011-1', state: 'COMPLETED', is_verify_fix: true })
+    const parentIssue = makeIssue({
+      id: '011',
+      state: 'COMPLETED',
+      verify_count: 1,
+      children: ['011-1']
+    })
+    const provider = makeProvider({
+      listIssues: () => {
+        callCount++
+        if (callCount <= 2) return okAsync([parentIssue])
+        return okAsync([])
+      },
+      fetchIssue: () => okAsync(fixChild)
+    })
+
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+      ...deps,
+      verifyIssue: mockVerify as never
+    })
+
+    expect(verifyCalledFor).toContain('011')
   })
 })

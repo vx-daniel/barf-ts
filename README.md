@@ -16,9 +16,10 @@ Each issue is a markdown file with frontmatter. The full lifecycle:
 1. **Triage** — A fast one-shot Claude call evaluates each `NEW` issue. If the requirements are clear, `needs_interview=false` is set and planning proceeds. If not, `needs_interview=true` is set and questions are appended to the issue body for the `/barf-interview` Claude Code slash command.
 2. **Plan** — Claude reads the issue, explores the codebase, writes a plan file (`NEW → PLANNED`)
 3. **Build** — Claude implements the plan, checking acceptance criteria between iterations (`PLANNED → COMPLETED`)
-4. **Audit** — An AI provider reviews the completed work for quality and rule compliance
+4. **Verify** — After `COMPLETED`, barf runs `bun run build`, `bun run check`, and `bun test`. If all pass, the issue transitions to `VERIFIED`. If they fail, a fix sub-issue is created and the loop iterates until all checks pass or `MAX_VERIFY_RETRIES` is exhausted.
+5. **Audit** — An AI provider reviews the completed work for quality and rule compliance
 
-`barf auto` runs all stages in sequence — triage `NEW` issues, plan ready issues, build `PLANNED` issues.
+`barf auto` runs all stages in sequence — triage `NEW` issues, plan ready issues, build `PLANNED` issues, verify `COMPLETED` issues.
 
 When Claude's context fills up, barf either escalates to a larger model or splits the issue into sub-issues automatically.
 
@@ -101,7 +102,9 @@ stateDiagram-v2
     IN_PROGRESS --> SPLIT
     STUCK --> PLANNED
     STUCK --> SPLIT
-    COMPLETED --> [*]
+    COMPLETED --> VERIFIED
+    COMPLETED --> COMPLETED : fix sub-issue loop
+    VERIFIED --> [*]
     SPLIT --> [*]
 ```
 
@@ -112,7 +115,8 @@ stateDiagram-v2
 | `IN_PROGRESS` | Claude is actively working on it |
 | `STUCK` | Blocked, needs human intervention or re-planning |
 | `SPLIT` | Split into sub-issues (terminal) |
-| `COMPLETED` | All acceptance criteria met |
+| `COMPLETED` | All acceptance criteria met; awaiting automated verification |
+| `VERIFIED` | Build, lint, and tests pass — truly done (terminal) |
 
 The `needs_interview` field on an issue (`true`/`false`/unset) is separate from state. When `barf auto` triages a `NEW` issue and finds it under-specified, it sets `needs_interview=true` and appends clarifying questions to the issue body. Run `/barf-interview` as a Claude Code slash command to answer them before planning.
 
@@ -200,10 +204,11 @@ ANTHROPIC_API_KEY=                  # required when AUDIT_PROVIDER=claude
 
 CONTEXT_USAGE_PERCENT=75    # interrupt Claude at this % of context window
 MAX_AUTO_SPLITS=3           # max splits before escalating to larger model
+MAX_VERIFY_RETRIES=3        # max verification attempts before giving up (leaves as COMPLETED)
 MAX_ITERATIONS=0            # max build iterations per issue (0 = unlimited)
 CLAUDE_TIMEOUT=3600         # seconds before killing a Claude process
 
-TEST_COMMAND=               # run after each iteration (e.g. "bun test")
+TEST_COMMAND=               # run after each build iteration (e.g. "bun test")
 PUSH_STRATEGY=iteration     # iteration | on_complete | manual
 
 PROMPT_DIR=                 # directory for custom prompt templates (empty = use built-in)
@@ -274,8 +279,9 @@ src/
     context.ts                Claude stream parser, prompt injection
     claude.ts                 Claude subprocess wrapper
     prompts.ts                runtime prompt template resolution (plan/build/split/audit/triage)
-    batch.ts                  orchestration loop (plan/build/split)
+    batch.ts                  orchestration loop (plan/build/split/verify)
     triage.ts                 one-shot triage call (NEW issues → needs_interview flag)
+    verification.ts           post-COMPLETED verification (build/check/test → VERIFIED)
     openai.ts                 OpenAI API client
     audit-schema.ts           audit result Zod schemas
   providers/                  pluggable audit providers (openai, gemini, claude)
@@ -294,7 +300,7 @@ src/
     PROMPT_audit.md           audit prompt template
     PROMPT_triage.md          triage prompt template
 tests/
-  unit/                       377 tests across 37 files
+  unit/                       413 tests across 38 files
   fixtures/                   test helpers (mock provider, etc.)
   sample-project/             sample project for manual testing (barf --cwd tests/sample-project)
 ```

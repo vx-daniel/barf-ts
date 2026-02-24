@@ -7,7 +7,7 @@ TypeScript/Bun rewrite of the bash `barf` CLI — an issue/work management syste
 ```bash
 bun install              # install deps
 bun run dev <cmd>        # run from source (no compile step)
-bun test                 # run tests (377 tests across 37 files)
+bun test                 # run tests (413 tests across 38 files)
 bun run build            # compile binary to dist/barf
 bun run format           # format with oxfmt (in-place)
 bun run format:check     # check formatting (CI)
@@ -36,8 +36,9 @@ src/
     context.ts          # Async stream parser, SIGTERM on context overflow
     claude.ts           # Claude subprocess wrapper
     prompts.ts          # Runtime prompt template resolution
-    batch.ts            # Orchestration loop (plan/build/split)
+    batch.ts            # Orchestration loop (plan/build/split/verify)
     triage.ts           # One-shot triage call (NEW issues → needs_interview flag)
+    verification.ts     # Post-COMPLETED verification (build/check/test → VERIFIED)
     openai.ts           # OpenAI API client (for audit)
     audit-schema.ts     # Audit result Zod schemas
   types/
@@ -55,7 +56,7 @@ src/
     PROMPT_audit.md     # Audit prompt template
     PROMPT_triage.md    # Triage prompt template
 tests/
-  unit/                 # 377 tests across 37 files
+  unit/                 # 413 tests across 38 files
   fixtures/             # Test helpers (mock provider, etc.)
   sample-project/       # Sample project for manual testing (barf --cwd tests/sample-project)
 ```
@@ -94,7 +95,7 @@ Plans saved with the wrong name must be renamed before the task is considered co
 
 ## Key Conventions
 
-- **State machine**: `IssueState` transitions are validated by `VALID_TRANSITIONS` in `core/issue/index.ts` — never mutate state directly, use `validateTransition()`. States: `NEW → PLANNED → IN_PROGRESS → COMPLETED`, with `STUCK` and `SPLIT` as side-states. `INTERVIEWING` was removed; triage sets `needs_interview` on `Issue` instead.
+- **State machine**: `IssueState` transitions are validated by `VALID_TRANSITIONS` in `core/issue/index.ts` — never mutate state directly, use `validateTransition()`. States: `NEW → PLANNED → IN_PROGRESS → COMPLETED → VERIFIED`, with `STUCK` and `SPLIT` as side-states. `VERIFIED` is the true terminal state (post-verification). `INTERVIEWING` was removed; triage sets `needs_interview` on `Issue` instead.
 - **No globals**: ISSUE_ID/MODE/ISSUE_STATE were the bash bugs; pass state as function args
 - **Issue files**: Frontmatter markdown in `issuesDir`, not SQLite — git-trackable
 - **Context monitoring**: Async iterator on Claude's stdout stream, not PostToolUse hooks

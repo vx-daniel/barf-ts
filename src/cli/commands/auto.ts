@@ -1,7 +1,8 @@
-import type { Config, IssueState } from '@/types'
+import type { Config, IssueState, Issue } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { runLoop, type RunLoopDeps } from '@/core/batch'
 import { triageIssue } from '@/core/triage'
+import { verifyIssue } from '@/core/verification'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('auto')
@@ -13,6 +14,7 @@ const logger = createLogger('auto')
 export type AutoDeps = {
   triageIssue?: typeof triageIssue
   runClaudeIteration?: RunLoopDeps['runClaudeIteration']
+  verifyIssue?: typeof verifyIssue
 }
 
 /** Issue states queued for planning on each {@link autoCommand} loop iteration. */
@@ -44,7 +46,11 @@ export async function autoCommand(
   deps: AutoDeps = {}
 ): Promise<void> {
   const _triageIssue = deps.triageIssue ?? triageIssue
-  const loopDeps: RunLoopDeps = { runClaudeIteration: deps.runClaudeIteration }
+  const _verifyIssue = deps.verifyIssue ?? verifyIssue
+  const loopDeps: RunLoopDeps = {
+    runClaudeIteration: deps.runClaudeIteration,
+    verifyIssue: deps.verifyIssue
+  }
 
   while (true) {
     const listResult = await provider.listIssues()
@@ -104,7 +110,12 @@ export async function autoCommand(
     const toPlan = refreshed.filter(i => PLAN_STATES.has(i.state) && i.needs_interview !== true)
     const toBuild = refreshed.filter(i => BUILD_STATES.has(i.state)).slice(0, opts.batch)
 
-    const hasWork = toPlan.length > 0 || toBuild.length > 0
+    // COMPLETED issues that still need verification (not fix-children, not exhausted)
+    const toVerify = refreshed.filter(
+      i => i.state === 'COMPLETED' && !i.is_verify_fix && i.verify_count > 0 && !i.verify_exhausted
+    )
+
+    const hasWork = toPlan.length > 0 || toBuild.length > 0 || toVerify.length > 0
 
     if (!hasWork) {
       if (needsInterview.length > 0) {
@@ -140,6 +151,26 @@ export async function autoCommand(
         if (r.status === 'fulfilled' && r.value.isErr()) {
           logger.warn({ err: r.value.error.message }, 'build loop failed')
         }
+      }
+    }
+
+    // ── Verify phase ────────────────────────────────────────────────────────────
+    for (const issue of toVerify) {
+      // Only re-verify once all fix-children are done
+      const childResults = await Promise.all(issue.children.map(id => provider.fetchIssue(id)))
+      const fixChildren = childResults
+        .filter(r => r.isOk())
+        .map(r => (r as { isOk: () => true; value: Issue }).value)
+        .filter(c => c.is_verify_fix === true)
+      const allDone = fixChildren.every(c => c.state === 'COMPLETED' || c.state === 'VERIFIED')
+      if (!allDone) {
+        logger.debug({ issueId: issue.id }, 'verify phase: fix children still in progress')
+        continue
+      }
+
+      const result = await _verifyIssue(issue.id, config, provider)
+      if (result.isErr()) {
+        logger.warn({ issueId: issue.id, err: result.error.message }, 'verify phase failed')
       }
     }
   }

@@ -7,12 +7,13 @@ import { LoopModeSchema } from '@/types/schema/mode-schema'
  * All valid states an issue can occupy.
  *
  * ```
- * NEW → PLANNED → IN_PROGRESS → COMPLETED
- *                     ↘
- *                      STUCK ←→ SPLIT
+ * NEW → PLANNED → IN_PROGRESS → COMPLETED → VERIFIED
+ *                     ↘                         ↑
+ *                      STUCK ←→ SPLIT    (via fix sub-issues)
  * ```
  *
  * NEW issues with `needs_interview=true` are parked until `/barf-interview` refines them.
+ * `VERIFIED` is the true terminal state — reached only after automated verification passes.
  * Transitions are enforced by `validateTransition` — never mutate state directly.
  *
  * @category Issue Model
@@ -24,7 +25,8 @@ export const IssueStateSchema = z.enum([
   'IN_PROGRESS',
   'STUCK',
   'SPLIT',
-  'COMPLETED'
+  'COMPLETED',
+  'VERIFIED'
 ])
 /**
  * A barf issue state. Derived from {@link IssueStateSchema}.
@@ -60,6 +62,12 @@ export const IssueSchema = z.object({
    * - `true` — triaged, needs `/barf-interview` before planning
    */
   needs_interview: z.boolean().optional(),
+  /** Number of times verification has been attempted on this issue. Incremented on each failure. */
+  verify_count: z.number().int().nonnegative().default(0),
+  /** When `true`, this issue was created by `verifyIssue` to fix a parent's failures — skip re-verifying it. */
+  is_verify_fix: z.boolean().optional(),
+  /** When `true`, `verify_count` exceeded `maxVerifyRetries`; issue is left as COMPLETED without VERIFIED. */
+  verify_exhausted: z.boolean().optional(),
   body: z.string()
 })
 /**
@@ -124,6 +132,7 @@ export const ConfigSchema = z.object({
   planDir: z.string().default('plans'),
   contextUsagePercent: z.number().int().default(75),
   maxAutoSplits: z.number().int().default(3),
+  maxVerifyRetries: z.number().int().nonnegative().default(3),
   maxIterations: z.number().int().default(0),
   claudeTimeout: z.number().int().default(3600),
   testCommand: z.string().default(''),

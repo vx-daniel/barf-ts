@@ -16,6 +16,7 @@ export function makeIssue(overrides: Partial<Issue> = {}): Issue {
     children: [],
     split_count: 0,
     force_split: false,
+    verify_count: 0,
     body: '',
     ...overrides
   }
