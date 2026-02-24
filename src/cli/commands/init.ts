@@ -6,16 +6,7 @@ import { mkdirSync, writeFileSync, existsSync } from 'fs'
 
 const logger = createLogger('init')
 
-/** GitHub label definitions that map barf issue states to `barf:*` labels. Applied by `barf init --provider=github`. */
-const BARF_LABELS = [
-  { name: 'barf:new', color: 'e4e669', description: 'Issue not yet planned' },
-  { name: 'barf:planned', color: 'bfd4f2', description: 'Issue planned, ready for build' },
-  { name: 'barf:in-progress', color: 'fef2c0', description: 'Issue being worked on by barf' },
-  { name: 'barf:stuck', color: 'e11d48', description: 'Issue blocked, needs intervention' },
-  { name: 'barf:split', color: 'c5def5', description: 'Issue split into child issues' },
-  { name: 'barf:completed', color: '0e8a16', description: 'Issue complete' },
-  { name: 'barf:locked', color: 'd93f0b', description: 'Issue currently being processed' }
-]
+
 
 /**
  * Initialises barf in the current project directory.
@@ -39,6 +30,17 @@ export async function initCommand(_provider: IssueProvider, config: Config): Pro
   }
 
   if (config.issueProvider === 'github') {
+    /** GitHub label definitions that map barf issue states to `barf:*` labels. Applied by `barf init --provider=github`. */
+    const BARF_LABELS = [
+      { name: 'barf:new', color: 'e4e669', description: 'Issue not yet planned' },
+      { name: 'barf:planned', color: 'bfd4f2', description: 'Issue planned, ready for build' },
+      { name: 'barf:in-progress', color: 'fef2c0', description: 'Issue being worked on by barf' },
+      { name: 'barf:stuck', color: 'e11d48', description: 'Issue blocked, needs intervention' },
+      { name: 'barf:split', color: 'c5def5', description: 'Issue split into child issues' },
+      { name: 'barf:completed', color: '0e8a16', description: 'Issue complete' },
+      { name: 'barf:locked', color: 'd93f0b', description: 'Issue currently being processed' }
+    ]
+
     logger.info({ repo: config.githubRepo }, 'Creating barf:* labels')
     for (const label of BARF_LABELS) {
       const result = await execFileNoThrow('gh', [

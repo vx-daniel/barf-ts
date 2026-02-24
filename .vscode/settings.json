@@ -12,5 +12,6 @@
   "oxc.path.node": "",
   "oxc.requireConfig": true,
   "editor.defaultFormatter": "oxc.oxc-vscode",
+  "workbench.colorTheme": "Dracula Theme",
   
 }

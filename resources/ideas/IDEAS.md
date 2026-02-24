@@ -1,0 +1,1 @@
+- Use Provider model types vs model names  (mini, general, frontier)

@@ -8,17 +8,7 @@
       "Bash(bun run:*)"
     ]
   },
-  "enabledPlugins": {
-    "everything-claude-code@everything-claude-code": true
-  },
-  "extraKnownMarketplaces": {
-    "everything-claude-code": {
-      "source": {
-        "source": "github",
-        "repo": "affaan-m/everything-claude-code"
-      }
-    }
-  },
+  "defaultMode": "plan",
   "env": {
     "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
     "PROJECT_PLANS_DIR": "resources/plans"
