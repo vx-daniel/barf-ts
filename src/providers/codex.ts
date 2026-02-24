@@ -1,4 +1,4 @@
-import { ok, Result, ResultAsync } from 'neverthrow'
+import { ok, okAsync, Result, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
@@ -8,6 +8,7 @@ import {
   toTokenUsage,
   type ChatResult,
   type ChatOptions,
+  type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage
@@ -62,7 +63,10 @@ export class CodexAuditProvider extends AuditProvider {
   private async pingImpl(): Promise<PingResult> {
     const start = Date.now()
     const result = await execFileNoThrow('codex', [
-      'exec', '--full-auto', '--ephemeral', 'Say only the word "pong".'
+      'exec',
+      '--full-auto',
+      '--ephemeral',
+      'Say only the word "pong".'
     ])
     if (result.status !== 0) {
       throw new Error(`codex ping failed (exit ${result.status}): ${result.stderr}`)
@@ -102,6 +106,19 @@ export class CodexAuditProvider extends AuditProvider {
    */
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
     return ResultAsync.fromPromise(this.chatImpl(prompt, opts), toError)
+  }
+
+  /**
+   * Returns the static Codex model list. No API call is needed.
+   * The codex CLI exposes a single model entry.
+   *
+   * @returns `ok([{ id: 'codex', displayName: 'Codex CLI', tier: 'general' }])` always.
+   * @example
+   * const result = await provider.listModels()
+   * if (result.isOk()) console.log(result.value)
+   */
+  listModels(): ResultAsync<ModelInfo[], Error> {
+    return okAsync([{ id: 'codex', displayName: 'Codex CLI', tier: 'general' as const }])
   }
 
   /**

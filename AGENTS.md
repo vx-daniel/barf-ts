@@ -14,8 +14,6 @@ bun run format:check     # check formatting (CI)
 bun run lint             # lint with oxlint
 bun run lint:fix         # auto-fix lint violations
 bun run check            # format:check + lint (CI gate)
-bun run docs             # generate API docs to docs/api/
-./dist/barf <command>    # run compiled binary
 ```
 
 ## Architecture
@@ -35,11 +33,12 @@ src/
     config.ts           # .barfrc KEY=VALUE parser
     context.ts          # Async stream parser, SIGTERM on context overflow
     claude.ts           # Claude subprocess wrapper
-    prompts.ts          # Runtime prompt template resolution
+    prompts.ts          # Runtime prompt template resolution (plan/build/split/audit/triage)
     batch.ts            # Orchestration loop (plan/build/split)
     triage.ts           # One-shot triage call (NEW issues → needs_interview flag)
     openai.ts           # OpenAI API client (for audit)
     audit-schema.ts     # Audit result Zod schemas
+  providers/            # Pluggable audit providers (openai, gemini, claude)
   types/
     index.ts            # Zod schemas + inferred types (Issue, Config, ClaudeEvent)
     assets.d.ts         # .md text import declaration for Bun
@@ -57,48 +56,17 @@ src/
 tests/
   unit/                 # 377 tests across 37 files
   fixtures/             # Test helpers (mock provider, etc.)
-  sample-project/       # Sample project for manual testing (barf --cwd tests/sample-project)
+  sample-project/       # Sample project for manual testing
 ```
-
-
-## Planning Requirements
-
-**BEFORE writing any plan file**, run:
-
-```bash
-ls ${PROJECT_PLANS_DIR}/
-```
-
-to determine the next sequential number. **Do not skip this step.**
-
-All plan files **must** follow this exact naming pattern:
-
-```
-${PROJECT_PLANS_DIR}/NNN-descriptive-name.md
-```
-
-- `NNN` — zero-padded three-digit sequence number (e.g. `006`, `007`)
-- `descriptive-name` — lowercase, hyphenated, clearly describes the plan
-- **Wrong:** `staged-drifting-cosmos.md`, `plan.md`, `my-plan.md`
-- **Right:** `006-add-submodule-setup-to-readme.md`
-
-**Process:**
-
-1. `ls ${PROJECT_PLANS_DIR}` — find the highest existing `NNN`
-2. Increment by 1 and zero-pad to 3 digits
-3. Choose a descriptive hyphenated name
-4. Save to `${PROJECT_PLANS_DIR}/NNN-descriptive-name.md`
-
-Plans saved with the wrong name must be renamed before the task is considered complete.
-
 
 ## Key Conventions
 
 - **State machine**: `IssueState` transitions are validated by `VALID_TRANSITIONS` in `core/issue/index.ts` — never mutate state directly, use `validateTransition()`. States: `NEW → PLANNED → IN_PROGRESS → COMPLETED`, with `STUCK` and `SPLIT` as side-states. `INTERVIEWING` was removed; triage sets `needs_interview` on `Issue` instead.
-- **No globals**: ISSUE_ID/MODE/ISSUE_STATE were the bash bugs; pass state as function args
-- **Issue files**: Frontmatter markdown in `issuesDir`, not SQLite — git-trackable
-- **Context monitoring**: Async iterator on Claude's stdout stream, not PostToolUse hooks
-- **Stream logging**: Set `STREAM_LOG_DIR` in `.barfrc` to append raw JSONL per-issue to `{dir}/{issueId}.jsonl` (disabled by default). Useful for debugging Claude output.
-- **Path aliases**: Use `@/` for `src/` imports, `@tests/` for `tests/` imports — no relative `../` paths
-- **Error handling**: All I/O returns `Result`/`ResultAsync` from neverthrow — no thrown errors except at CLI boundary (`src/index.ts`)
-- **Logging**: Never use `console.*` — always use `createLogger(name)` from `@/utils/logger` (pino, JSON to stderr + log file). Use `LOG_PRETTY=1` in dev for readable output. Prefer structured context: `logger.info({ key: val }, 'message')` over string interpolation.
+- **No globals**: pass state as function arguments, never as module-level variables
+- **Issue files**: frontmatter markdown in `issuesDir`, not SQLite — git-trackable
+- **Context monitoring**: async iterator on Claude's stdout stream, not PostToolUse hooks
+- **Path aliases**: use `@/` for `src/` imports, `@tests/` for `tests/` imports — no relative `../` paths
+- **Error handling**: all I/O returns `Result`/`ResultAsync` from neverthrow — no thrown errors except at CLI boundary (`src/index.ts`)
+- **Logging**: never use `console.*` — always use `createLogger(name)` from `@/utils/logger` (pino, JSON to stderr). Prefer structured context: `logger.info({ key: val }, 'message')` over string interpolation.
+- **Zod schemas**: single source of truth — never define types separately from schemas. Zod 4.x required.
+- **TypeScript**: strict mode, no `any` types, explicit return types on exported functions.

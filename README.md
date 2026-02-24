@@ -3,10 +3,9 @@
 AI issue orchestration CLI. Feeds issues to Claude one at a time, tracks state, and handles context overflow automatically.
 
 ```
-barf interview   # clarify requirements interactively
 barf plan        # Claude writes an implementation plan
 barf build       # Claude implements the plan
-barf audit       # audit completed work with OpenAI
+barf audit       # audit completed work with an AI provider
 barf auto        # orchestrate all stages automatically
 ```
 
@@ -14,12 +13,12 @@ barf auto        # orchestrate all stages automatically
 
 Each issue is a markdown file with frontmatter. The full lifecycle:
 
-1. **Interview** — Claude asks clarifying questions, refines requirements (`NEW → INTERVIEWING → PLANNED`)
-2. **Plan** — Claude reads the issue, explores the codebase, writes a plan file (`INTERVIEWING → PLANNED`)
+1. **Triage** — A fast one-shot Claude call evaluates each `NEW` issue. If the requirements are clear, `needs_interview=false` is set and planning proceeds. If not, `needs_interview=true` is set and questions are appended to the issue body for the `/barf-interview` Claude Code slash command.
+2. **Plan** — Claude reads the issue, explores the codebase, writes a plan file (`NEW → PLANNED`)
 3. **Build** — Claude implements the plan, checking acceptance criteria between iterations (`PLANNED → COMPLETED`)
-4. **Audit** — OpenAI reviews the completed work for quality and rule compliance
+4. **Audit** — An AI provider reviews the completed work for quality and rule compliance
 
-`barf auto` runs all stages in sequence — interview NEW issues, plan INTERVIEWING issues, build PLANNED issues.
+`barf auto` runs all stages in sequence — triage `NEW` issues, plan ready issues, build `PLANNED` issues.
 
 When Claude's context fills up, barf either escalates to a larger model or splits the issue into sub-issues automatically.
 
@@ -93,8 +92,7 @@ The optional `context_usage_percent` field overrides the global `CONTEXT_USAGE_P
 ```mermaid
 stateDiagram-v2
     [*] --> NEW
-    NEW --> INTERVIEWING
-    INTERVIEWING --> PLANNED
+    NEW --> PLANNED
     PLANNED --> IN_PROGRESS
     PLANNED --> STUCK
     PLANNED --> SPLIT
@@ -109,13 +107,14 @@ stateDiagram-v2
 
 | State | Meaning |
 |-------|---------|
-| `NEW` | Created, not yet interviewed |
-| `INTERVIEWING` | Claude is clarifying requirements |
+| `NEW` | Created, awaiting triage |
 | `PLANNED` | Plan file exists, ready to build |
 | `IN_PROGRESS` | Claude is actively working on it |
 | `STUCK` | Blocked, needs human intervention or re-planning |
 | `SPLIT` | Split into sub-issues (terminal) |
 | `COMPLETED` | All acceptance criteria met |
+
+The `needs_interview` field on an issue (`true`/`false`/unset) is separate from state. When `barf auto` triages a `NEW` issue and finds it under-specified, it sets `needs_interview=true` and appends clarifying questions to the issue body. Run `/barf-interview` as a Claude Code slash command to answer them before planning.
 
 ## Commands
 
@@ -137,21 +136,13 @@ barf status [--format text|json]
 
 Lists all issues and their current state.
 
-### `barf interview`
-
-```
-barf interview [--issue <id>]
-```
-
-Runs Claude to clarify requirements interactively (`NEW → INTERVIEWING → PLANNED`). Auto-selects the first `NEW` issue if `--issue` is omitted. Claude asks questions, refines the issue body, and transitions through INTERVIEWING to PLANNED.
-
 ### `barf plan`
 
 ```
 barf plan [--issue <id>]
 ```
 
-Runs Claude to plan an issue (`INTERVIEWING → PLANNED`). Auto-selects the first `INTERVIEWING` issue if `--issue` is omitted. Claude reads the issue, explores the codebase, and writes a plan file to `PLAN_DIR/<id>.md`.
+Runs Claude to plan an issue (`NEW → PLANNED`). Auto-selects the first plannable `NEW` issue if `--issue` is omitted. Claude reads the issue, explores the codebase, and writes a plan file to `PLAN_DIR/<id>.md`.
 
 ### `barf build`
 
@@ -170,7 +161,7 @@ Runs Claude to implement an issue (`PLANNED → COMPLETED`). Auto-selects the hi
 barf auto [--batch <n>] [--max <n>]
 ```
 
-Auto-orchestrate all stages: interview `NEW` issues, plan `INTERVIEWING` issues, build `PLANNED`/`IN_PROGRESS` issues. Runs the full lifecycle without manual intervention.
+Auto-orchestrate all stages: triage `NEW` issues, plan ready issues, build `PLANNED`/`IN_PROGRESS` issues. Runs the full lifecycle without manual intervention. Issues with `needs_interview=true` are skipped for planning — run `/barf-interview` first.
 
 - `--batch <n>` — max concurrent builds (default: 1)
 - `--max <n>` — max iterations per issue (0 = unlimited)
@@ -181,7 +172,7 @@ Auto-orchestrate all stages: interview `NEW` issues, plan `INTERVIEWING` issues,
 barf audit [--issue <id>] [--all]
 ```
 
-Audits completed issues for quality and rule compliance using OpenAI. Requires `OPENAI_API_KEY` in `.barfrc`. Defaults to auditing all `COMPLETED` issues.
+Audits completed issues for quality and rule compliance using a configured AI provider (OpenAI, Gemini, or Claude). Defaults to auditing all `COMPLETED` issues.
 
 ## Configuration
 
@@ -195,13 +186,17 @@ BARF_DIR=.barf              # directory for locks and internal state
 ISSUES_DIR=issues           # where issue files live
 PLAN_DIR=plans              # where plan files are saved
 
-INTERVIEW_MODEL=claude-sonnet-4-6   # model used for barf interview
-PLAN_MODEL=claude-opus-4-6          # model used for barf plan
-BUILD_MODEL=claude-sonnet-4-6       # model used for barf build
-SPLIT_MODEL=claude-sonnet-4-6       # model used when splitting
+TRIAGE_MODEL=claude-haiku-4-5-20251001  # model used for auto-triage
+PLAN_MODEL=claude-opus-4-6              # model used for barf plan
+BUILD_MODEL=claude-sonnet-4-6           # model used for barf build
+SPLIT_MODEL=claude-sonnet-4-6           # model used when splitting
 EXTENDED_CONTEXT_MODEL=claude-opus-4-6  # model used when escalating
-AUDIT_MODEL=gpt-4o                  # model used for barf audit
-OPENAI_API_KEY=                     # required for barf audit
+
+AUDIT_PROVIDER=openai               # openai | gemini | claude
+AUDIT_MODEL=gpt-4o                  # model used for barf audit (provider-specific)
+OPENAI_API_KEY=                     # required when AUDIT_PROVIDER=openai
+GEMINI_API_KEY=                     # required when AUDIT_PROVIDER=gemini
+ANTHROPIC_API_KEY=                  # required when AUDIT_PROVIDER=claude
 
 CONTEXT_USAGE_PERCENT=75    # interrupt Claude at this % of context window
 MAX_AUTO_SPLITS=3           # max splits before escalating to larger model
@@ -215,7 +210,7 @@ PROMPT_DIR=                 # directory for custom prompt templates (empty = use
 STREAM_LOG_DIR=             # directory for raw Claude stream logs (empty = disabled)
 ```
 
-When `PROMPT_DIR` is set, barf checks for `PROMPT_DIR/PROMPT_<mode>.md` before using the compiled-in template. Missing files fall back to built-in. This lets you customise prompts per-project without modifying barf source. Files are re-read each iteration, so you can edit them during long runs.
+When `PROMPT_DIR` is set, barf checks for `PROMPT_DIR/PROMPT_<mode>.md` before using the compiled-in template for any of the five modes: `plan`, `build`, `split`, `audit`, `triage`. Missing files fall back to built-in. This lets you customise prompts per-project without modifying barf source. Files are re-read each iteration, so you can edit them during long runs.
 
 When `STREAM_LOG_DIR` is set, each issue's raw Claude output is appended to `{STREAM_LOG_DIR}/{issueId}.jsonl` as JSONL — exactly as emitted by `--output-format stream-json`. Multiple iterations of the same issue append to the same file. Useful for debugging and auditing Claude's raw output.
 
@@ -242,7 +237,7 @@ Requires `gh auth login`.
 ```bash
 bun install                    # install deps
 git submodule update --init    # fetch tests/sample-project
-bun test                       # run tests (242 tests)
+bun test                       # run tests (377 tests)
 bun run build                  # compile binary to dist/barf
 bun run format                 # format with oxfmt
 bun run lint                   # lint with oxlint
@@ -266,7 +261,7 @@ LOG_LEVEL=debug barf plan --issue 001
 ```
 src/
   index.ts                    CLI entry (commander)
-  cli/commands/               init  status  interview  plan  build  auto  audit
+  cli/commands/               init  status  plan  build  auto  audit
   core/
     issue/
       index.ts                frontmatter parser, state machine
@@ -278,11 +273,12 @@ src/
     config.ts                 .barfrc parser
     context.ts                Claude stream parser, prompt injection
     claude.ts                 Claude subprocess wrapper
-    prompts.ts                runtime prompt template resolution
+    prompts.ts                runtime prompt template resolution (plan/build/split/audit/triage)
     batch.ts                  orchestration loop (plan/build/split)
-    interview.ts              interview loop logic
+    triage.ts                 one-shot triage call (NEW issues → needs_interview flag)
     openai.ts                 OpenAI API client
     audit-schema.ts           audit result Zod schemas
+  providers/                  pluggable audit providers (openai, gemini, claude)
   types/
     index.ts                  Zod schemas + inferred types
     assets.d.ts               .md text import declaration for Bun
@@ -292,13 +288,13 @@ src/
     toError.ts                unknown → Error coercion
     syncToResultAsync.ts      sync Result → ResultAsync bridge
   prompts/
-    PROMPT_interview.md       interview prompt template
     PROMPT_plan.md            planning prompt template
     PROMPT_build.md           build prompt template
     PROMPT_split.md           split prompt template
     PROMPT_audit.md           audit prompt template
+    PROMPT_triage.md          triage prompt template
 tests/
-  unit/                       242 tests across 25 files
+  unit/                       377 tests across 37 files
   fixtures/                   test helpers (mock provider, etc.)
   sample-project/             sample project for manual testing (barf --cwd tests/sample-project)
 ```

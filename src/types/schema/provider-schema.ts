@@ -59,6 +59,28 @@ export const PingResultSchema = z.object({
 export type PingResult = z.infer<typeof PingResultSchema>
 
 /**
+ * Tier classification for a model: `small` = fast/cheap, `general` = balanced, `frontier` = high quality/cost.
+ *
+ * @category Providers
+ */
+export const ModelTierSchema = z.enum(['small', 'general', 'frontier'])
+/** Derived from {@link ModelTierSchema}. */
+export type ModelTier = z.infer<typeof ModelTierSchema>
+
+/**
+ * Annotated model entry returned by {@link AuditProvider.listModels}.
+ *
+ * @category Providers
+ */
+export const ModelInfoSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  tier: ModelTierSchema
+})
+/** Derived from {@link ModelInfoSchema}. */
+export type ModelInfo = z.infer<typeof ModelInfoSchema>
+
+/**
  * Static metadata about a provider. Returned by AuditProvider.describe.
  * No network call required — used for error messages and config validation.
  *

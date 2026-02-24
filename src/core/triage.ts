@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from 'fs'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { z } from 'zod'
 import { ResultAsync } from 'neverthrow'
 import type { Config, DisplayContext } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { injectTemplateVars } from '@/core/context'
+import { resolvePromptTemplate } from '@/core/prompts'
 import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
@@ -16,9 +17,6 @@ import { toError } from '@/utils/toError'
 export type ExecFn = (file: string, args?: string[]) => Promise<ExecResult>
 
 const logger = createLogger('triage')
-
-// Built-in triage prompt — embedded at compile time via Bun import attribute
-import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with { type: 'text' }
 
 /** JSON shape Claude must return for a triage evaluation. */
 const TriageResultSchema = z.union([
@@ -60,21 +58,6 @@ function resolveIssueFilePath(issueId: string, config: Config): string {
 }
 
 /**
- * Loads the triage prompt template.
- * When `config.promptDir` is set, checks for a custom `PROMPT_triage.md` override.
- */
-function loadTriagePrompt(config: Config): string {
-  if (config.promptDir) {
-    const custom = join(config.promptDir, 'PROMPT_triage.md')
-    if (existsSync(custom)) {
-      logger.info({ path: custom }, 'using custom triage prompt')
-      return readFileSync(custom, 'utf-8')
-    }
-  }
-  return triagePromptTemplate
-}
-
-/**
  * Evaluates a single NEW issue with a one-shot Claude call to determine whether
  * it needs further refinement before planning can proceed.
  *
@@ -110,7 +93,7 @@ async function triageIssueImpl(
   }
 
   const issueFile = resolveIssueFilePath(issueId, config)
-  const prompt = injectTemplateVars(loadTriagePrompt(config), {
+  const prompt = injectTemplateVars(resolvePromptTemplate('triage', config), {
     BARF_ISSUE_ID: issueId,
     BARF_ISSUE_FILE: issueFile
   })

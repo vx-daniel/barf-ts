@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'bun:test'
-import { ok, err, ResultAsync } from 'neverthrow'
+import { ok, err, okAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 import { AuditProvider } from '@/providers/base'
-import type { ChatResult, ChatOptions, PingResult, ProviderInfo, TokenUsage } from '@/types/schema/provider-schema'
+import type { ChatResult, ChatOptions, ModelInfo, PingResult, ProviderInfo, TokenUsage } from '@/types/schema/provider-schema'
 import type { Config } from '@/types'
 
 // Minimal stub — only implements abstract methods
@@ -33,6 +33,10 @@ class MockAuditProvider extends AuditProvider {
       Promise.resolve({ content: this._chatContent, promptTokens: 5, completionTokens: 3, totalTokens: 8 }),
       e => e as Error
     )
+  }
+
+  listModels(): ResultAsync<ModelInfo[], Error> {
+    return okAsync([])
   }
 
   protected parseResponse(_raw: unknown): ReturnType<AuditProvider['parseResponse']> {

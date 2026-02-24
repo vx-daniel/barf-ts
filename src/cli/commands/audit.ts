@@ -6,11 +6,9 @@ import type { ExecResult } from '@/types/schema/exec-schema'
 import { createAuditProvider } from '@/providers/index'
 import { AuditResponseSchema, type AuditFinding } from '@/types/schema/audit-schema'
 import { injectTemplateVars } from '@/core/context'
+import { resolvePromptTemplate } from '@/core/prompts'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
-
-// Embedded at compile time via Bun import attribute
-import auditPromptTemplate from '@/prompts/PROMPT_audit.md' with { type: 'text' }
 
 const logger = createLogger('audit')
 
@@ -41,7 +39,7 @@ function loadRulesContext(): string {
  * @param result - Result from `execFileNoThrow`, or `null` if the check was skipped.
  * @returns A string describing pass/fail status and captured output.
  */
-function formatCheckResult(result: ExecResult | null): string { 
+function formatCheckResult(result: ExecResult | null): string {
   if (result === null) {
     return '(skipped — not configured)'
   }
@@ -141,7 +139,7 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
 
   const rulesContext = loadRulesContext()
 
-  const prompt = injectTemplateVars(auditPromptTemplate, {
+  const prompt = injectTemplateVars(resolvePromptTemplate('audit', config), {
     BARF_ISSUE_ID: issueId,
     BARF_ISSUE_FILE: issueFile,
     PLAN_FILE: planFile,

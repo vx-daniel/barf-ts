@@ -10,13 +10,17 @@ export type { PromptMode } from '@/types/schema/mode-schema'
 import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
 import buildPromptTemplate from '@/prompts/PROMPT_build.md' with { type: 'text' }
 import splitPromptTemplate from '@/prompts/PROMPT_split.md' with { type: 'text' }
+import auditPromptTemplate from '@/prompts/PROMPT_audit.md' with { type: 'text' }
+import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with { type: 'text' }
 
 const logger = createLogger('prompts')
 
 const BUILTIN_TEMPLATES: Record<PromptMode, string> = {
   plan: planPromptTemplate,
   build: buildPromptTemplate,
-  split: splitPromptTemplate
+  split: splitPromptTemplate,
+  audit: auditPromptTemplate,
+  triage: triagePromptTemplate
 }
 
 /**

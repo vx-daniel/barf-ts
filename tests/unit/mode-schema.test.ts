@@ -31,7 +31,7 @@ describe('LoopModeSchema', () => {
 })
 
 describe('PromptModeSchema', () => {
-  it.each(['plan', 'build', 'split'])('accepts "%s"', mode => {
+  it.each(['plan', 'build', 'split', 'audit', 'triage'])('accepts "%s"', mode => {
     expect(PromptModeSchema.safeParse(mode).success).toBe(true)
   })
 
@@ -40,7 +40,7 @@ describe('PromptModeSchema', () => {
   })
 
   it('rejects invalid mode', () => {
-    expect(PromptModeSchema.safeParse('audit').success).toBe(false)
+    expect(PromptModeSchema.safeParse('deploy').success).toBe(false)
   })
 })
 

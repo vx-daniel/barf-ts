@@ -3,16 +3,20 @@ import { Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
+import { inferTier, GEMINI_TIERS } from '@/providers/model-tiers'
 import type { Config } from '@/types'
 import {
   DEFAULT_TEMPERATURE,
   toTokenUsage,
   type ChatResult,
   type ChatOptions,
+  type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage
 } from '@/types/schema/provider-schema'
+
+const GEMINI_LIST_MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 const logger = createLogger('gemini')
 
@@ -105,6 +109,53 @@ export class GeminiAuditProvider extends AuditProvider {
    */
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
     return ResultAsync.fromPromise(this.chatImpl(prompt, opts), toError)
+  }
+
+  private async listModelsImpl(): Promise<ModelInfo[]> {
+    const url = `${GEMINI_LIST_MODELS_URL}?key=${this.config.geminiApiKey}`
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Gemini listModels failed: ${response.status} ${response.statusText}`)
+    }
+    const data = (await response.json()) as {
+      models?: Array<{
+        name?: string
+        displayName?: string
+        supportedGenerationMethods?: string[]
+      }>
+    }
+    const models: ModelInfo[] = []
+    for (const m of data.models ?? []) {
+      const name = m.name ?? ''
+      if (!name.startsWith('models/gemini-')) {
+        continue
+      }
+      if (!m.supportedGenerationMethods?.includes('generateContent')) {
+        continue
+      }
+      const id = name.replace(/^models\//, '')
+      models.push({
+        id,
+        displayName: m.displayName ?? id,
+        tier: inferTier(id, GEMINI_TIERS)
+      })
+    }
+    return models
+  }
+
+  /**
+   * Lists available Gemini models with tier annotations.
+   * Uses the REST API (`GET /v1beta/models`) since the `@google/generative-ai` SDK has no listModels.
+   * Filters to `gemini-*` models that support `generateContent`.
+   * Tier classification uses {@link GEMINI_TIERS} with keyword fallback via {@link inferTier}.
+   *
+   * @returns `ok(ModelInfo[])` on success, `err(Error)` on API failure.
+   * @example
+   * const result = await provider.listModels()
+   * if (result.isOk()) console.log(result.value)
+   */
+  listModels(): ResultAsync<ModelInfo[], Error> {
+    return ResultAsync.fromPromise(this.listModelsImpl(), toError)
   }
 
   /**

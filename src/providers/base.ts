@@ -8,10 +8,11 @@ import type {
   ChatOptions,
   PingResult,
   ProviderInfo,
-  TokenUsage
+  TokenUsage,
+  ModelInfo
 } from '@/types/schema/provider-schema'
 
-export type { ChatResult, ChatOptions, PingResult, ProviderInfo, TokenUsage }
+export type { ChatResult, ChatOptions, PingResult, ProviderInfo, TokenUsage, ModelInfo }
 
 const logger = createLogger('providers')
 
@@ -65,6 +66,20 @@ export abstract class AuditProvider {
    * @returns `ok(ChatResult)` on success, `err(Error)` on API failure.
    */
   abstract chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error>
+
+  /**
+   * Queries the provider's API for available models with tier annotations.
+   * Implementations should filter to chat-capable models only and apply
+   * tier classification via {@link inferTier} from `@/providers/model-tiers`.
+   *
+   * @returns `ok(ModelInfo[])` on success, `err(Error)` on API failure.
+   * @example
+   * const result = await provider.listModels()
+   * if (result.isOk()) {
+   *   const frontier = result.value.filter(m => m.tier === 'frontier')
+   * }
+   */
+  abstract listModels(): ResultAsync<ModelInfo[], Error>
 
   /**
    * Extracts content and token usage from a provider-specific raw API response.

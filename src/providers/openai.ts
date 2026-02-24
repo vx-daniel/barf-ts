@@ -3,12 +3,14 @@ import { Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
+import { inferTier, prettifyModelId, OPENAI_TIERS } from '@/providers/model-tiers'
 import type { Config } from '@/types'
 import {
   DEFAULT_TEMPERATURE,
   toTokenUsage,
   type ChatResult,
   type ChatOptions,
+  type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage
@@ -106,6 +108,37 @@ export class OpenAIAuditProvider extends AuditProvider {
    */
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
     return ResultAsync.fromPromise(this.chatImpl(prompt, opts), toError)
+  }
+
+  private async listModelsImpl(): Promise<ModelInfo[]> {
+    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const models: ModelInfo[] = []
+    const excluded = /embed|whisper|tts|dall-e|image/
+    for await (const model of client.models.list()) {
+      const id = model.id
+      if (!(id.startsWith('gpt-') || id.startsWith('o'))) {
+        continue
+      }
+      if (excluded.test(id)) {
+        continue
+      }
+      models.push({ id, displayName: prettifyModelId(id), tier: inferTier(id, OPENAI_TIERS) })
+    }
+    return models
+  }
+
+  /**
+   * Lists available OpenAI chat models with tier annotations.
+   * Filters to `gpt-*` and `o*` models, excluding embedding/audio/image models.
+   * Tier classification uses {@link OPENAI_TIERS} with keyword fallback via {@link inferTier}.
+   *
+   * @returns `ok(ModelInfo[])` on success, `err(Error)` on API failure.
+   * @example
+   * const result = await provider.listModels()
+   * if (result.isOk()) console.log(result.value)
+   */
+  listModels(): ResultAsync<ModelInfo[], Error> {
+    return ResultAsync.fromPromise(this.listModelsImpl(), toError)
   }
 
   /**

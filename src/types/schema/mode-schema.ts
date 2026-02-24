@@ -23,11 +23,14 @@ export const LoopModeSchema = BarfModeSchema.extract(['plan', 'build', 'split'])
 export type LoopMode = z.infer<typeof LoopModeSchema>
 
 /**
- * Modes accepted by {@link resolvePromptTemplate} — all four barf modes.
+ * Modes accepted by {@link resolvePromptTemplate} — plan, build, split, audit, triage.
+ *
+ * Decoupled from {@link BarfModeSchema} so prompt resolution can support modes
+ * (audit, triage) that are not part of the batch orchestration loop.
  *
  * @category Modes
  */
-export const PromptModeSchema = BarfModeSchema
+export const PromptModeSchema = z.enum(['plan', 'build', 'split', 'audit', 'triage'])
 /** A prompt resolution mode. Derived from {@link PromptModeSchema}. */
 export type PromptMode = z.infer<typeof PromptModeSchema>
 

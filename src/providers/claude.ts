@@ -3,11 +3,13 @@ import { Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
+import { inferTier, CLAUDE_TIERS } from '@/providers/model-tiers'
 import type { Config } from '@/types'
 import {
   toTokenUsage,
   type ChatResult,
   type ChatOptions,
+  type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage
@@ -110,6 +112,37 @@ export class ClaudeAuditProvider extends AuditProvider {
    */
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
     return ResultAsync.fromPromise(this.chatImpl(prompt, opts), toError)
+  }
+
+  private async listModelsImpl(): Promise<ModelInfo[]> {
+    const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
+    const models: ModelInfo[] = []
+    for await (const model of client.models.list()) {
+      const id = model.id
+      if (!id.startsWith('claude-')) {
+        continue
+      }
+      models.push({
+        id,
+        displayName: (model as { display_name?: string }).display_name ?? id,
+        tier: inferTier(id, CLAUDE_TIERS)
+      })
+    }
+    return models
+  }
+
+  /**
+   * Lists available Anthropic Claude models with tier annotations.
+   * Filters to `claude-*` models only. `displayName` comes from the API's `display_name` field.
+   * Tier classification uses {@link CLAUDE_TIERS} with keyword fallback via {@link inferTier}.
+   *
+   * @returns `ok(ModelInfo[])` on success, `err(Error)` on API failure.
+   * @example
+   * const result = await provider.listModels()
+   * if (result.isOk()) console.log(result.value)
+   */
+  listModels(): ResultAsync<ModelInfo[], Error> {
+    return ResultAsync.fromPromise(this.listModelsImpl(), toError)
   }
 
   /**

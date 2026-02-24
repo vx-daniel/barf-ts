@@ -84,12 +84,20 @@ describe('resolvePromptTemplate', () => {
     expect(buildResult.length).toBeGreaterThan(0)
   })
 
-  it('resolves all three modes correctly', () => {
-    const modes: PromptMode[] = ['plan', 'build', 'split']
+  it('resolves all five modes correctly', () => {
+    const modes: PromptMode[] = ['plan', 'build', 'split', 'audit', 'triage']
     const config = makeConfig({ promptDir: '' })
     for (const mode of modes) {
       const result = resolvePromptTemplate(mode, config)
       expect(result.length).toBeGreaterThan(0)
     }
+  })
+
+  it('returns custom audit file when found in promptDir', () => {
+    const customContent = '# Custom Audit Prompt\nAudit everything.\n'
+    writeFileSync(join(tmpDir, 'PROMPT_audit.md'), customContent)
+    const config = makeConfig({ promptDir: tmpDir })
+    const result = resolvePromptTemplate('audit', config)
+    expect(result).toBe(customContent)
   })
 })
