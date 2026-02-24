@@ -25,5 +25,9 @@
   ],
   "theme": "typedoc-github-theme",
 
-  "resolveUtilityTypes": true
+  "resolveUtilityTypes": true,
+  "externalSymbolLinkMappings": {
+    "@anthropic-ai/claude-agent-sdk": { "Query": "#" },
+    "neverthrow": { "ResultAsync": "#" }
+  }
 }

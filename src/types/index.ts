@@ -195,7 +195,7 @@ export type ClaudeEvent = z.infer<typeof ClaudeEventSchema>
 
 /**
  * Contextual fields rendered in the 2-line sticky TTY header during a Claude iteration.
- * Passed to {@link runClaudeIteration} and {@link triageIssue} to identify what is running.
+ * Passed to `runClaudeIteration` and `triageIssue` to identify what is running.
  *
  * @category Display
  */

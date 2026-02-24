@@ -12,7 +12,7 @@ export const BarfModeSchema = z.enum(['plan', 'build', 'split'])
 export type BarfMode = z.infer<typeof BarfModeSchema>
 
 /**
- * Modes used by the batch orchestration loop ({@link runLoop}) and POSIX locking.
+ * Modes used by the batch orchestration loop (`runLoop`) and POSIX locking.
  *
  * `'split'` is used internally after an overflow decision.
  *
@@ -23,7 +23,7 @@ export const LoopModeSchema = BarfModeSchema.extract(['plan', 'build', 'split'])
 export type LoopMode = z.infer<typeof LoopModeSchema>
 
 /**
- * Modes accepted by {@link resolvePromptTemplate} — plan, build, split, audit, triage.
+ * Modes accepted by `resolvePromptTemplate` — plan, build, split, audit, triage.
  *
  * Decoupled from {@link BarfModeSchema} so prompt resolution can support modes
  * (audit, triage) that are not part of the batch orchestration loop.
@@ -35,7 +35,7 @@ export const PromptModeSchema = z.enum(['plan', 'build', 'split', 'audit', 'tria
 export type PromptMode = z.infer<typeof PromptModeSchema>
 
 /**
- * Modes used by {@link IssueProvider.autoSelect} to pick the next issue.
+ * Modes used by `IssueProvider.autoSelect` to pick the next issue.
  *
  * `'split'` is excluded because split issues are handled internally by the loop.
  *

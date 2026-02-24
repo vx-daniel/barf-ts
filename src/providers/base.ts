@@ -70,7 +70,7 @@ export abstract class AuditProvider {
   /**
    * Queries the provider's API for available models with tier annotations.
    * Implementations should filter to chat-capable models only and apply
-   * tier classification via {@link inferTier} from `@/providers/model-tiers`.
+   * tier classification via `inferTier` from `@/providers/model-tiers`.
    *
    * @returns `ok(ModelInfo[])` on success, `err(Error)` on API failure.
    * @example

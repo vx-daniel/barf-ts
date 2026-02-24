@@ -17,7 +17,7 @@ import {
 } from '@/types/schema/provider-schema'
 
 /** Factory that constructs an OpenAI SDK client given an API key. Injectable for tests. */
-type OpenAIFactory = (apiKey: string) => OpenAI
+export type OpenAIFactory = (apiKey: string) => OpenAI
 
 const logger = createLogger('openai')
 

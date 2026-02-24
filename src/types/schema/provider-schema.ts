@@ -68,7 +68,7 @@ export const ModelTierSchema = z.enum(['small', 'general', 'frontier'])
 export type ModelTier = z.infer<typeof ModelTierSchema>
 
 /**
- * Annotated model entry returned by {@link AuditProvider.listModels}.
+ * Annotated model entry returned by `AuditProvider.listModels`.
  *
  * @category Providers
  */

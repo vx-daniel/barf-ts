@@ -154,6 +154,7 @@ export class LocalIssueProvider extends IssueProvider {
         children: [],
         split_count: 0,
         force_split: false,
+        verify_count: 0,
         body: input.body ?? ''
       }
       return syncToResultAsync(() => {

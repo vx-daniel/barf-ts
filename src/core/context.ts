@@ -1,6 +1,6 @@
 /**
  * Thrown when cumulative token usage reaches the configured context threshold.
- * Caught and converted to an `'overflow'` outcome by {@link runClaudeIteration}.
+ * Caught and converted to an `'overflow'` outcome by `runClaudeIteration`.
  *
  * @category Claude Agent
  */
@@ -13,7 +13,7 @@ export class ContextOverflowError extends Error {
 
 /**
  * Thrown when Claude's API returns a rate-limit event during an iteration.
- * Caught and converted to a `'rate_limited'` outcome by {@link runClaudeIteration}.
+ * Caught and converted to a `'rate_limited'` outcome by `runClaudeIteration`.
  * `resetsAt` is a Unix timestamp (seconds) if provided by the API.
  *
  * @category Claude Agent

@@ -1,8 +1,11 @@
 import pino from 'pino'
 import type { Config } from '@/types/index'
 
-/** Subset of {@link Config} consumed by the logger. */
-type LoggerConfig = Pick<Config, 'logFile' | 'logLevel' | 'logPretty'>
+/**
+ * Subset of {@link Config} consumed by the logger.
+ * @category Utilities
+ */
+export type LoggerConfig = Pick<Config, 'logFile' | 'logLevel' | 'logPretty'>
 
 let _loggerConfig: LoggerConfig | null = null
 

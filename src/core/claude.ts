@@ -12,7 +12,7 @@ export type { IterationOutcome, IterationResult } from '@/types/schema/claude-sc
 
 const logger = createLogger('claude')
 
-/** Fallback context-window token limit for models not in {@link MODEL_CONTEXT_LIMITS}. */
+/** Fallback context-window token limit for models not in `MODEL_CONTEXT_LIMITS`. */
 export const DEFAULT_CONTEXT_LIMIT = 200_000
 
 // Context window limits per model (tokens)
@@ -57,7 +57,7 @@ export function getThreshold(model: string, contextUsagePercent: number): number
 
 /**
  * Iterates an SDK query stream, tracking token usage and tool calls.
- * Exported for direct testing with injected mock {@link Query} objects.
+ * Exported for direct testing with injected mock `Query` objects.
  *
  * Token counting uses all input tokens: base + cache_creation + cache_read —
  * more accurate than the previous cache-only approach. Only main-context
@@ -161,7 +161,7 @@ export async function consumeSDKQuery(
           return { outcome: 'success', tokens: lastTokens }
         }
         // Error subtypes — check errors array for rate limit keywords
-        if ('errors' in msg && msg.errors.some(e => /rate.?limit/i.test(e))) {
+        if ('errors' in msg && msg.errors.some((e: string) => /rate.?limit/i.test(e))) {
           throw new RateLimitError(undefined)
         }
         return { outcome: 'error', tokens: lastTokens }

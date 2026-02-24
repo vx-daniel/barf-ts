@@ -19,7 +19,8 @@ const STATE_TO_LABEL: Record<IssueState, string> = {
   IN_PROGRESS: 'barf:in-progress',
   STUCK: 'barf:stuck',
   SPLIT: 'barf:split',
-  COMPLETED: 'barf:completed'
+  COMPLETED: 'barf:completed',
+  VERIFIED: 'barf:verified'
 }
 const LABEL_TO_STATE: Record<string, IssueState> = Object.fromEntries(
   (Object.entries(STATE_TO_LABEL) as [IssueState, string][]).map(([s, l]) => [l, s])
@@ -50,6 +51,7 @@ function ghToIssue(gh: GHIssue): Issue {
     children: [],
     split_count: 0,
     force_split: false,
+    verify_count: 0,
     body: gh.body
   }
 }

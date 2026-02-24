@@ -19,7 +19,7 @@ import {
 const GEMINI_LIST_MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 /** Factory that constructs a GoogleGenerativeAI client given an API key. Injectable for tests. */
-type GeminiFactory = (apiKey: string) => GoogleGenerativeAI
+export type GeminiFactory = (apiKey: string) => GoogleGenerativeAI
 
 const logger = createLogger('gemini')
 

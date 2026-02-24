@@ -16,7 +16,7 @@ import {
 } from '@/types/schema/provider-schema'
 
 /** Factory that constructs an Anthropic SDK client given an API key. Injectable for tests. */
-type AnthropicFactory = (apiKey: string) => Anthropic
+export type AnthropicFactory = (apiKey: string) => Anthropic
 
 const logger = createLogger('claude')
 

@@ -109,7 +109,7 @@ export class CodexAuditProvider extends AuditProvider {
    * Token counts are always zero — the codex CLI does not expose them.
    *
    * @param prompt - Full prompt text.
-   * @param _opts - Ignored; temperature/maxTokens/jsonMode not applicable to the codex CLI.
+   * @param opts - Ignored; temperature/maxTokens/jsonMode not applicable to the codex CLI.
    * @returns `ok(ChatResult)` on success, `err(Error)` if the subprocess fails.
    */
   chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error> {
