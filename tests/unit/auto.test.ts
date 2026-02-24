@@ -1,21 +1,19 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { ResultAsync } from 'neverthrow'
 import { errAsync, okAsync } from 'neverthrow'
 
-// Mock the Claude subprocess layer so tests never spawn a real process
-mock.module('@/core/claude', () => ({
-  runClaudeIteration: () =>
-    ResultAsync.fromSafePromise(Promise.resolve({ outcome: 'success', tokens: 0 })),
-  getThreshold: () => 150_000
-}))
-
-// Mock triage so auto tests don't need a real claude binary
-mock.module('@/core/triage', () => ({
-  triageIssue: () => okAsync(undefined)
-}))
-
 import { autoCommand } from '@/cli/commands/auto'
 import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+
+const mockTriageIssue = () => okAsync(undefined)
+
+const mockRunClaudeIteration = () =>
+  ResultAsync.fromSafePromise(Promise.resolve({ outcome: 'success', tokens: 0 }))
+
+const deps = {
+  triageIssue: mockTriageIssue as never,
+  runClaudeIteration: mockRunClaudeIteration as never
+}
 
 describe('autoCommand', () => {
   beforeEach(() => {
@@ -31,7 +29,7 @@ describe('autoCommand', () => {
       listIssues: () => errAsync(new Error('gh: not authenticated'))
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(1)
   })
@@ -41,7 +39,7 @@ describe('autoCommand', () => {
       listIssues: () => okAsync([])
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(0)
   })
@@ -51,7 +49,7 @@ describe('autoCommand', () => {
       listIssues: () => okAsync([makeIssue({ state: 'COMPLETED' })])
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(0)
   })
@@ -62,7 +60,7 @@ describe('autoCommand', () => {
         okAsync([makeIssue({ id: '001', state: 'NEW', needs_interview: true })])
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     // No plannable work — exits cleanly (exitCode stays 0)
     expect(process.exitCode).toBe(0)
@@ -90,7 +88,7 @@ describe('autoCommand', () => {
       checkAcceptanceCriteria: () => okAsync(false)
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(lockCalls).toBeGreaterThanOrEqual(1)
   })
@@ -118,7 +116,7 @@ describe('autoCommand', () => {
       checkAcceptanceCriteria: () => okAsync(false)
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(lockCalls).toBeGreaterThanOrEqual(1)
   })
@@ -145,7 +143,7 @@ describe('autoCommand', () => {
       checkAcceptanceCriteria: () => okAsync(true)
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(lockCalls).toBeGreaterThanOrEqual(1)
   })
@@ -168,7 +166,7 @@ describe('autoCommand', () => {
       checkAcceptanceCriteria: () => okAsync(true)
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(callCount).toBeGreaterThanOrEqual(1)
   })
@@ -185,7 +183,7 @@ describe('autoCommand', () => {
       }
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig())
+    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(1)
   })

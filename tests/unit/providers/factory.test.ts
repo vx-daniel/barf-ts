@@ -7,9 +7,7 @@ import { AuditProvider } from '@/providers/base'
 import type { Config } from '@/types'
 import { defaultConfig } from '@tests/fixtures/provider'
 
-// Re-establish the real factory to guard against mock.module pollution from other test files.
-// Some test files in this suite mock @/providers/index; this ensures the real createAuditProvider
-// is used here regardless of worker-level mock state.
+// Inline the factory to ensure no module-level pollution can affect this test file.
 function createAuditProvider(config: Config): AuditProvider {
   switch (config.auditProvider) {
     case 'gemini': return new GeminiAuditProvider(config)

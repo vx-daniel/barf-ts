@@ -1,4 +1,7 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach } from 'bun:test'
+import type { ExecResult } from '@/utils/execFileNoThrow'
+import { CodexAuditProvider } from '@/providers/codex'
+import { defaultConfig } from '@tests/fixtures/provider'
 
 const mockState = {
   stdout: '{"pass":true}',
@@ -6,20 +9,17 @@ const mockState = {
   status: 0
 }
 
-mock.module('@/utils/execFileNoThrow', () => ({
-  execFileNoThrow: async (_file: string, _args: string[]) => ({
+function makeMockExecFn() {
+  return async (_file: string, _args: string[]): Promise<ExecResult> => ({
     stdout: mockState.stdout,
     stderr: mockState.stderr,
     status: mockState.status
   })
-}))
-
-import { CodexAuditProvider } from '@/providers/codex'
-import { defaultConfig } from '@tests/fixtures/provider'
+}
 
 describe('CodexAuditProvider.describe', () => {
   it('returns codex name and empty requiredConfigKeys', () => {
-    const provider = new CodexAuditProvider(defaultConfig())
+    const provider = new CodexAuditProvider(defaultConfig(), makeMockExecFn())
     const info = provider.describe()
     expect(info.name).toBe('codex')
     expect(info.displayName).toBe('OpenAI Codex (CLI)')
@@ -30,7 +30,7 @@ describe('CodexAuditProvider.describe', () => {
 
 describe('CodexAuditProvider.isConfigured', () => {
   it('always returns true regardless of config', () => {
-    const provider = new CodexAuditProvider(defaultConfig())
+    const provider = new CodexAuditProvider(defaultConfig(), makeMockExecFn())
     expect(provider.isConfigured(defaultConfig())).toBe(true)
   })
 })
@@ -43,7 +43,7 @@ describe('CodexAuditProvider.chat', () => {
   })
 
   it('returns ChatResult with stdout as content on success', async () => {
-    const provider = new CodexAuditProvider(defaultConfig())
+    const provider = new CodexAuditProvider(defaultConfig(), makeMockExecFn())
     const result = await provider.chat('test prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -57,7 +57,7 @@ describe('CodexAuditProvider.chat', () => {
   it('returns err when codex exits with non-zero status', async () => {
     mockState.status = 1
     mockState.stderr = 'authentication required'
-    const provider = new CodexAuditProvider(defaultConfig())
+    const provider = new CodexAuditProvider(defaultConfig(), makeMockExecFn())
     const result = await provider.chat('prompt')
     expect(result.isErr()).toBe(true)
     if (result.isErr()) {
@@ -68,7 +68,7 @@ describe('CodexAuditProvider.chat', () => {
 
   it('trims whitespace from stdout content', async () => {
     mockState.stdout = '  hello world  \n'
-    const provider = new CodexAuditProvider(defaultConfig())
+    const provider = new CodexAuditProvider(defaultConfig(), makeMockExecFn())
     const result = await provider.chat('prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) expect(result.value.content).toBe('hello world')
@@ -83,7 +83,7 @@ describe('CodexAuditProvider.ping', () => {
   })
 
   it('returns latencyMs and model on success', async () => {
-    const provider = new CodexAuditProvider(defaultConfig())
+    const provider = new CodexAuditProvider(defaultConfig(), makeMockExecFn())
     const result = await provider.ping()
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -95,7 +95,7 @@ describe('CodexAuditProvider.ping', () => {
   it('returns err when codex exits with non-zero status', async () => {
     mockState.status = 127
     mockState.stderr = 'codex: command not found'
-    const provider = new CodexAuditProvider(defaultConfig())
+    const provider = new CodexAuditProvider(defaultConfig(), makeMockExecFn())
     const result = await provider.ping()
     expect(result.isErr()).toBe(true)
     if (result.isErr()) {

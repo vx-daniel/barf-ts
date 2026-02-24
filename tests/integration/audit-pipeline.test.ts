@@ -1,13 +1,14 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { okAsync } from 'neverthrow'
+import type { ExecResult } from '@/utils/execFileNoThrow'
 
 /**
  * Integration tests for the full audit pipeline.
  *
- * Mock boundary: only execFileNoThrow. The real factory, real
+ * Mock boundary: only execFn (injected via AuditDeps). The real
  * CodexAuditProvider, real chatJSON chain, real loadRulesContext,
  * and real temp filesystem all run.
  */
@@ -19,23 +20,22 @@ const execState = {
   toolStatus: 0
 }
 
-mock.module('@/utils/execFileNoThrow', () => ({
-  execFileNoThrow: async (file: string, args: string[]) => {
-    if (file === 'codex') {
-      // Prompt is the last arg: codex exec --full-auto --ephemeral <prompt>
-      capturedCodexPrompts.push(args[args.length - 1])
-      return {
-        stdout: execState.codexStdout,
-        stderr: '',
-        status: execState.codexStatus
-      }
+async function mockExecFn(file: string, args: string[] = []): Promise<ExecResult> {
+  if (file === 'codex') {
+    // Prompt is the last arg: codex exec --full-auto --ephemeral <prompt>
+    capturedCodexPrompts.push(args[args.length - 1])
+    return {
+      stdout: execState.codexStdout,
+      stderr: '',
+      status: execState.codexStatus
     }
-    // bun run lint / bun run format:check / sh -c testCommand
-    return { stdout: '', stderr: '', status: execState.toolStatus }
   }
-}))
+  // bun run lint / bun run format:check / sh -c testCommand
+  return { stdout: '', stderr: '', status: execState.toolStatus }
+}
 
 import { auditCommand } from '@/cli/commands/audit'
+import { CodexAuditProvider } from '@/providers/codex'
 import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
 
 const originalCwd = process.cwd()
@@ -74,13 +74,21 @@ describe('audit-pipeline integration', () => {
     }
   }
 
+  function makeDeps(config: ReturnType<typeof makeConfig>) {
+    return {
+      execFn: mockExecFn,
+      provider: new CodexAuditProvider(config, mockExecFn)
+    }
+  }
+
   it('CLAUDE.md content appears in codex prompt', async () => {
     writeFileSync(join(tmpDir, 'CLAUDE.md'), '# Project Rules\n\nNo any types.\n')
 
+    const config = makeConfig()
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, makeConfig())
+    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('No any types.')
@@ -92,10 +100,11 @@ describe('audit-pipeline integration', () => {
       '# TypeScript Rules\n\nUse satisfies keyword.\n'
     )
 
+    const config = makeConfig()
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, makeConfig())
+    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('Use satisfies keyword.')
@@ -105,10 +114,11 @@ describe('audit-pipeline integration', () => {
     const planContent = '# Plan 001\n\nImplement user auth with JWT.\n'
     writeFileSync(join(tmpDir, 'plans', '001.md'), planContent)
 
+    const config = makeConfig()
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, makeConfig())
+    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('Implement user auth with JWT.')
@@ -117,10 +127,11 @@ describe('audit-pipeline integration', () => {
   it('missing plan file produces "(no plan file found)" in prompt', async () => {
     // No plan file written — plans dir is empty
 
+    const config = makeConfig()
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, makeConfig())
+    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('(no plan file found)')
@@ -145,6 +156,7 @@ describe('audit-pipeline integration', () => {
       ]
     })
 
+    const config = makeConfig()
     const issue = makeIssue({ id: '001', state: 'COMPLETED', title: 'Add feature' })
     let createdBody = ''
     const provider = makeProvider({
@@ -155,7 +167,7 @@ describe('audit-pipeline integration', () => {
       }
     })
 
-    await auditCommand(provider, { issue: '001', all: false }, makeConfig())
+    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
 
     expect(createdBody).toContain('Failing Checks')
     expect(createdBody).toContain('Tests broken')
@@ -174,12 +186,13 @@ describe('audit-pipeline integration', () => {
       '002': issue2
     }
 
+    const config = makeConfig()
     const provider = makeProvider({
       listIssues: () => okAsync([issue1, issue2]),
       fetchIssue: (id) => okAsync(issueMap[id]!)
     })
 
-    await auditCommand(provider, { all: true }, makeConfig())
+    await auditCommand(provider, { all: true }, config, makeDeps(config))
 
     // Both issues trigger a codex call
     expect(capturedCodexPrompts).toHaveLength(2)

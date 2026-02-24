@@ -1,21 +1,29 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { okAsync, errAsync } from 'neverthrow'
 import { mkdtempSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
-// Mock the provider factory so audit.ts never touches a real AI SDK
+import { auditCommand } from '@/cli/commands/audit'
+import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+
+// Mock audit provider injected via AuditDeps — no module mocking needed
 const mockState = {
   isConfigured: true,
   content: '{"pass":true,"findings":[]}',
   error: null as Error | null
 }
 
-mock.module('@/providers/index', () => ({
-  createAuditProvider: () => ({
+function makeMockAuditProvider() {
+  return {
     name: 'mock',
     isConfigured: () => mockState.isConfigured,
-    describe: () => ({ name: 'mock', displayName: 'Mock Provider', requiredConfigKeys: ['mockKey'], supportedModels: [] }),
+    describe: () => ({
+      name: 'mock',
+      displayName: 'Mock Provider',
+      requiredConfigKeys: ['mockKey'],
+      supportedModels: []
+    }),
     chatJSON: () => {
       if (mockState.error) return errAsync(mockState.error)
       try {
@@ -23,12 +31,9 @@ mock.module('@/providers/index', () => ({
       } catch {
         return errAsync(new Error('invalid JSON'))
       }
-    },
-  })
-}))
-
-import { auditCommand } from '@/cli/commands/audit'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+    }
+  }
+}
 
 describe('auditCommand (full flow)', () => {
   beforeEach(() => {
@@ -56,7 +61,9 @@ describe('auditCommand (full flow)', () => {
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, config)
+    await auditCommand(provider, { issue: '001', all: false }, config, {
+      provider: makeMockAuditProvider() as never
+    })
 
     expect(process.exitCode).toBe(0)
   })
@@ -72,14 +79,23 @@ describe('auditCommand (full flow)', () => {
       planDir: '/tmp/nonexistent-plans-' + Date.now()
     }
 
-    await auditCommand(provider, { issue: '001', all: false }, config)
+    await auditCommand(provider, { issue: '001', all: false }, config, {
+      provider: makeMockAuditProvider() as never
+    })
     expect(process.exitCode).toBe(1)
   })
 
   it('creates findings issue when audit returns pass=false', async () => {
     mockState.content = JSON.stringify({
       pass: false,
-      findings: [{ category: 'failing_check', severity: 'error', title: 'Tests failing', detail: '3 unit tests are broken' }]
+      findings: [
+        {
+          category: 'failing_check',
+          severity: 'error',
+          title: 'Tests failing',
+          detail: '3 unit tests are broken'
+        }
+      ]
     })
 
     const dirs = mkdtempSync(join(tmpdir(), 'barf-audit-findings-'))
@@ -102,7 +118,9 @@ describe('auditCommand (full flow)', () => {
       }
     })
 
-    await auditCommand(provider, { issue: '001', all: false }, config)
+    await auditCommand(provider, { issue: '001', all: false }, config, {
+      provider: makeMockAuditProvider() as never
+    })
 
     expect(process.exitCode).toBe(1)
     expect(createdIssue).not.toBeNull()
@@ -121,7 +139,9 @@ describe('auditCommand (full flow)', () => {
       planDir: '/tmp/nonexistent-plans-' + Date.now()
     }
 
-    await auditCommand(provider, { issue: '001', all: false }, config)
+    await auditCommand(provider, { issue: '001', all: false }, config, {
+      provider: makeMockAuditProvider() as never
+    })
     expect(process.exitCode).toBe(1)
   })
 
@@ -140,7 +160,9 @@ describe('auditCommand (full flow)', () => {
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, config)
+    await auditCommand(provider, { issue: '001', all: false }, config, {
+      provider: makeMockAuditProvider() as never
+    })
     expect(process.exitCode).toBe(1)
   })
 })

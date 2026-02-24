@@ -1,4 +1,6 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach } from 'bun:test'
+import { ClaudeAuditProvider } from '@/providers/claude'
+import { defaultConfig } from '@tests/fixtures/provider'
 
 const mockState = {
   error: null as Error | null,
@@ -8,20 +10,19 @@ const mockState = {
   } as unknown
 }
 
-mock.module('@anthropic-ai/sdk', () => ({
-  default: class MockAnthropic {
-    messages = {
+function makeMockClient() {
+  return {
+    messages: {
       create: async (_opts: unknown) => {
         if (mockState.error) throw mockState.error
         return mockState.response
       }
+    },
+    models: {
+      list: async function* () {}
     }
-    constructor(_opts: unknown) {}
   }
-}))
-
-import { ClaudeAuditProvider } from '@/providers/claude'
-import { defaultConfig } from '@tests/fixtures/provider'
+}
 
 const claudeConfig = () => ({
   ...defaultConfig(),
@@ -31,7 +32,7 @@ const claudeConfig = () => ({
 
 describe('ClaudeAuditProvider.describe', () => {
   it('returns claude name and requiredConfigKeys', () => {
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     const info = provider.describe()
     expect(info.name).toBe('claude')
     expect(info.requiredConfigKeys).toContain('anthropicApiKey')
@@ -40,13 +41,13 @@ describe('ClaudeAuditProvider.describe', () => {
 
 describe('ClaudeAuditProvider.isConfigured', () => {
   it('returns true when anthropicApiKey is set', () => {
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     expect(provider.isConfigured(claudeConfig())).toBe(true)
   })
 
   it('returns false when anthropicApiKey is empty', () => {
     const cfg = { ...claudeConfig(), anthropicApiKey: '' }
-    const provider = new ClaudeAuditProvider(cfg)
+    const provider = new ClaudeAuditProvider(cfg, () => makeMockClient() as never)
     expect(provider.isConfigured(cfg)).toBe(false)
   })
 })
@@ -61,7 +62,7 @@ describe('ClaudeAuditProvider.chat', () => {
   })
 
   it('returns ChatResult on success', async () => {
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     const result = await provider.chat('test prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -74,7 +75,7 @@ describe('ClaudeAuditProvider.chat', () => {
 
   it('returns err on API error', async () => {
     mockState.error = new Error('quota exceeded')
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     const result = await provider.chat('prompt')
     expect(result.isErr()).toBe(true)
     if (result.isErr()) expect(result.error.message).toBe('quota exceeded')
@@ -85,7 +86,7 @@ describe('ClaudeAuditProvider.chat', () => {
       content: [{ type: 'tool_use', id: 'tu_1' }],
       usage: { input_tokens: 5, output_tokens: 5 }
     }
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     const result = await provider.chat('prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) expect(result.value.content).toBe('')
@@ -96,7 +97,7 @@ describe('ClaudeAuditProvider.chat', () => {
       content: [{ type: 'text', text: 'hello' }],
       usage: {}
     }
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     const result = await provider.chat('prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) expect(result.value.totalTokens).toBe(0)
@@ -113,7 +114,7 @@ describe('ClaudeAuditProvider.ping', () => {
   })
 
   it('returns latencyMs and model on success', async () => {
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     const result = await provider.ping()
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -124,7 +125,7 @@ describe('ClaudeAuditProvider.ping', () => {
 
   it('returns err when API call fails', async () => {
     mockState.error = new Error('network failure')
-    const provider = new ClaudeAuditProvider(claudeConfig())
+    const provider = new ClaudeAuditProvider(claudeConfig(), () => makeMockClient() as never)
     const result = await provider.ping()
     expect(result.isErr()).toBe(true)
   })

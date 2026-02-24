@@ -18,6 +18,9 @@ import {
 
 const GEMINI_LIST_MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
+/** Factory that constructs a GoogleGenerativeAI client given an API key. Injectable for tests. */
+type GeminiFactory = (apiKey: string) => GoogleGenerativeAI
+
 const logger = createLogger('gemini')
 
 /**
@@ -29,10 +32,12 @@ const logger = createLogger('gemini')
 export class GeminiAuditProvider extends AuditProvider {
   readonly name = 'gemini'
   private readonly config: Config
+  private readonly clientFactory: GeminiFactory
 
-  constructor(config: Config) {
+  constructor(config: Config, clientFactory: GeminiFactory = k => new GoogleGenerativeAI(k)) {
     super()
     this.config = config
+    this.clientFactory = clientFactory
   }
 
   /**
@@ -61,7 +66,7 @@ export class GeminiAuditProvider extends AuditProvider {
   private async pingImpl(): Promise<PingResult> {
     const model = this.config.geminiModel
     const start = Date.now()
-    const client = new GoogleGenerativeAI(this.config.geminiApiKey)
+    const client = this.clientFactory(this.config.geminiApiKey)
     const genModel = client.getGenerativeModel({ model })
     await genModel.generateContent('ping')
     return { latencyMs: Date.now() - start, model }
@@ -77,7 +82,7 @@ export class GeminiAuditProvider extends AuditProvider {
   }
 
   private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
-    const client = new GoogleGenerativeAI(this.config.geminiApiKey)
+    const client = this.clientFactory(this.config.geminiApiKey)
     const genModel = client.getGenerativeModel({
       model: this.config.geminiModel,
       generationConfig: {

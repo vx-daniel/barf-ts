@@ -1,11 +1,15 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach } from 'bun:test'
+import type { ExecResult } from '@/utils/execFileNoThrow'
 import { AuditResponseSchema } from '@/types/schema/audit-schema'
+import { CodexAuditProvider } from '@/providers/codex'
+import { defaultConfig } from '@tests/fixtures/provider'
 
 /**
  * Integration tests for CodexAuditProvider.chatJSON.
  *
- * Mock boundary: only execFileNoThrow. The real CodexAuditProvider, real
- * AuditProvider.chatJSON chain, and real Zod schema validation all run.
+ * Mock boundary: only execFn (injected via constructor). The real
+ * CodexAuditProvider, real AuditProvider.chatJSON chain, and real Zod
+ * schema validation all run.
  */
 
 const execState = {
@@ -14,16 +18,13 @@ const execState = {
   status: 0
 }
 
-mock.module('@/utils/execFileNoThrow', () => ({
-  execFileNoThrow: async (_file: string, _args: string[]) => ({
+async function mockExecFn(_file: string, _args: string[] = []): Promise<ExecResult> {
+  return {
     stdout: execState.stdout,
     stderr: execState.stderr,
     status: execState.status
-  })
-}))
-
-import { CodexAuditProvider } from '@/providers/codex'
-import { defaultConfig } from '@tests/fixtures/provider'
+  }
+}
 
 describe('CodexAuditProvider.chatJSON (integration)', () => {
   let provider: CodexAuditProvider
@@ -32,7 +33,7 @@ describe('CodexAuditProvider.chatJSON (integration)', () => {
     execState.stdout = '{"pass":true}'
     execState.stderr = ''
     execState.status = 0
-    provider = new CodexAuditProvider(defaultConfig())
+    provider = new CodexAuditProvider(defaultConfig(), mockExecFn)
   })
 
   it('valid JSON → ok({pass:true})', async () => {

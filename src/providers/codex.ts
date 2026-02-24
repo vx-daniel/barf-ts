@@ -4,6 +4,12 @@ import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import type { Config } from '@/types'
+
+/**
+ * Injectable subprocess function — mirrors {@link execFileNoThrow}'s signature.
+ * Pass a mock in tests to avoid spawning a real codex process.
+ */
+export type ExecFn = typeof execFileNoThrow
 import {
   toTokenUsage,
   type ChatResult,
@@ -29,10 +35,12 @@ const logger = createLogger('codex')
 export class CodexAuditProvider extends AuditProvider {
   readonly name = 'codex'
   private readonly config: Config
+  private readonly execFn: ExecFn
 
-  constructor(config: Config) {
+  constructor(config: Config, execFn: ExecFn = execFileNoThrow) {
     super()
     this.config = config
+    this.execFn = execFn
   }
 
   /**
@@ -62,7 +70,7 @@ export class CodexAuditProvider extends AuditProvider {
 
   private async pingImpl(): Promise<PingResult> {
     const start = Date.now()
-    const result = await execFileNoThrow('codex', [
+    const result = await this.execFn('codex', [
       'exec',
       '--full-auto',
       '--ephemeral',
@@ -85,7 +93,7 @@ export class CodexAuditProvider extends AuditProvider {
 
   private async chatImpl(prompt: string, _opts?: ChatOptions): Promise<ChatResult> {
     logger.debug({ promptLen: prompt.length }, 'sending codex prompt')
-    const result = await execFileNoThrow('codex', ['exec', '--full-auto', '--ephemeral', prompt])
+    const result = await this.execFn('codex', ['exec', '--full-auto', '--ephemeral', prompt])
     if (result.status !== 0) {
       throw new Error(`codex exited with status ${result.status}: ${result.stderr}`)
     }

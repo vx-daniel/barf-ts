@@ -1,4 +1,6 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach } from 'bun:test'
+import { GeminiAuditProvider } from '@/providers/gemini'
+import { defaultConfig } from '@tests/fixtures/provider'
 
 const mockState = {
   error: null as Error | null,
@@ -6,8 +8,8 @@ const mockState = {
   usageMetadata: { promptTokenCount: 20, candidatesTokenCount: 10, totalTokenCount: 30 } as unknown
 }
 
-mock.module('@google/generative-ai', () => ({
-  GoogleGenerativeAI: class MockGoogleGenerativeAI {
+function makeMockClient() {
+  return {
     getGenerativeModel(_opts: unknown) {
       return {
         generateContent: async (_prompt: string) => {
@@ -15,28 +17,24 @@ mock.module('@google/generative-ai', () => ({
           return {
             response: {
               text: () => mockState.text,
-              usageMetadata: mockState.usageMetadata,
+              usageMetadata: mockState.usageMetadata
             }
           }
         }
       }
     }
-    constructor(_apiKey: string) {}
   }
-}))
-
-import { GeminiAuditProvider } from '@/providers/gemini'
-import { defaultConfig } from '@tests/fixtures/provider'
+}
 
 const geminiConfig = () => ({
   ...defaultConfig(),
   geminiApiKey: 'gm-test',
-  geminiModel: 'gemini-1.5-pro',
+  geminiModel: 'gemini-1.5-pro'
 })
 
 describe('GeminiAuditProvider.describe', () => {
   it('returns gemini name and requiredConfigKeys', () => {
-    const provider = new GeminiAuditProvider(geminiConfig())
+    const provider = new GeminiAuditProvider(geminiConfig(), () => makeMockClient() as never)
     const info = provider.describe()
     expect(info.name).toBe('gemini')
     expect(info.requiredConfigKeys).toContain('geminiApiKey')
@@ -45,12 +43,12 @@ describe('GeminiAuditProvider.describe', () => {
 
 describe('GeminiAuditProvider.isConfigured', () => {
   it('returns true when geminiApiKey is set', () => {
-    const provider = new GeminiAuditProvider(geminiConfig())
+    const provider = new GeminiAuditProvider(geminiConfig(), () => makeMockClient() as never)
     expect(provider.isConfigured(geminiConfig())).toBe(true)
   })
   it('returns false when geminiApiKey is empty', () => {
     const cfg = { ...geminiConfig(), geminiApiKey: '' }
-    const provider = new GeminiAuditProvider(cfg)
+    const provider = new GeminiAuditProvider(cfg, () => makeMockClient() as never)
     expect(provider.isConfigured(cfg)).toBe(false)
   })
 })
@@ -63,7 +61,7 @@ describe('GeminiAuditProvider.chat', () => {
   })
 
   it('returns ChatResult on success', async () => {
-    const provider = new GeminiAuditProvider(geminiConfig())
+    const provider = new GeminiAuditProvider(geminiConfig(), () => makeMockClient() as never)
     const result = await provider.chat('test prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -75,7 +73,7 @@ describe('GeminiAuditProvider.chat', () => {
 
   it('returns err on API error', async () => {
     mockState.error = new Error('quota exceeded')
-    const provider = new GeminiAuditProvider(geminiConfig())
+    const provider = new GeminiAuditProvider(geminiConfig(), () => makeMockClient() as never)
     const result = await provider.chat('prompt')
     expect(result.isErr()).toBe(true)
     if (result.isErr()) expect(result.error.message).toBe('quota exceeded')
@@ -83,7 +81,7 @@ describe('GeminiAuditProvider.chat', () => {
 
   it('handles missing usageMetadata gracefully', async () => {
     mockState.usageMetadata = undefined
-    const provider = new GeminiAuditProvider(geminiConfig())
+    const provider = new GeminiAuditProvider(geminiConfig(), () => makeMockClient() as never)
     const result = await provider.chat('prompt')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) expect(result.value.totalTokens).toBe(0)
@@ -98,7 +96,7 @@ describe('GeminiAuditProvider.ping', () => {
   })
 
   it('returns latencyMs and model on success', async () => {
-    const provider = new GeminiAuditProvider(geminiConfig())
+    const provider = new GeminiAuditProvider(geminiConfig(), () => makeMockClient() as never)
     const result = await provider.ping()
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -109,7 +107,7 @@ describe('GeminiAuditProvider.ping', () => {
 
   it('returns err when API call fails', async () => {
     mockState.error = new Error('network failure')
-    const provider = new GeminiAuditProvider(geminiConfig())
+    const provider = new GeminiAuditProvider(geminiConfig(), () => makeMockClient() as never)
     const result = await provider.ping()
     expect(result.isErr()).toBe(true)
   })

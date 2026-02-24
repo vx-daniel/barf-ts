@@ -15,6 +15,9 @@ import {
   type TokenUsage
 } from '@/types/schema/provider-schema'
 
+/** Factory that constructs an Anthropic SDK client given an API key. Injectable for tests. */
+type AnthropicFactory = (apiKey: string) => Anthropic
+
 const logger = createLogger('claude')
 
 /**
@@ -29,10 +32,12 @@ const logger = createLogger('claude')
 export class ClaudeAuditProvider extends AuditProvider {
   readonly name = 'claude'
   private readonly config: Config
+  private readonly clientFactory: AnthropicFactory
 
-  constructor(config: Config) {
+  constructor(config: Config, clientFactory: AnthropicFactory = k => new Anthropic({ apiKey: k })) {
     super()
     this.config = config
+    this.clientFactory = clientFactory
   }
 
   /**
@@ -61,7 +66,7 @@ export class ClaudeAuditProvider extends AuditProvider {
   private async pingImpl(): Promise<PingResult> {
     const model = this.config.claudeAuditModel
     const start = Date.now()
-    const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
+    const client = this.clientFactory(this.config.anthropicApiKey)
     await client.messages.create({
       model,
       max_tokens: 1,
@@ -80,7 +85,7 @@ export class ClaudeAuditProvider extends AuditProvider {
   }
 
   private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
-    const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
+    const client = this.clientFactory(this.config.anthropicApiKey)
     logger.debug(
       { model: this.config.claudeAuditModel, promptLen: prompt.length },
       'sending claude messages call'
@@ -115,7 +120,7 @@ export class ClaudeAuditProvider extends AuditProvider {
   }
 
   private async listModelsImpl(): Promise<ModelInfo[]> {
-    const client = new Anthropic({ apiKey: this.config.anthropicApiKey })
+    const client = this.clientFactory(this.config.anthropicApiKey)
     const models: ModelInfo[] = []
     for await (const model of client.models.list()) {
       const id = model.id

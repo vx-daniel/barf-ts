@@ -15,6 +15,11 @@ import { toError } from '@/utils/toError'
 export type { LoopMode } from '@/types/schema/mode-schema'
 export type { OverflowDecision } from '@/types/schema/batch-schema'
 
+/** Injectable deps for {@link runLoop}. Pass a mock `runClaudeIteration` in tests. */
+export type RunLoopDeps = {
+  runClaudeIteration?: typeof runClaudeIteration
+}
+
 const logger = createLogger('batch')
 
 /**
@@ -59,7 +64,8 @@ export function resolveIssueFile(issueId: string, config: Config): string {
 async function planSplitChildren(
   childIds: string[],
   config: Config,
-  provider: IssueProvider
+  provider: IssueProvider,
+  deps: RunLoopDeps
 ): Promise<void> {
   for (const childId of childIds) {
     const result = await provider.fetchIssue(childId)
@@ -72,7 +78,7 @@ async function planSplitChildren(
       continue
     }
     logger.info({ childId }, 'auto-planning split child')
-    const planResult = await runLoop(childId, 'plan', config, provider)
+    const planResult = await runLoop(childId, 'plan', config, provider, deps)
     if (planResult.isErr()) {
       logger.warn({ childId, error: planResult.error.message }, 'child plan failed')
     }
@@ -83,8 +89,10 @@ async function runLoopImpl(
   issueId: string,
   mode: LoopMode,
   config: Config,
-  provider: IssueProvider
+  provider: IssueProvider,
+  deps: RunLoopDeps
 ): Promise<void> {
+  const _runClaudeIteration = deps.runClaudeIteration ?? runClaudeIteration
   const lockResult = await provider.lockIssue(issueId, { mode })
   if (lockResult.isErr()) {
     throw lockResult.error
@@ -160,7 +168,7 @@ async function runLoopImpl(
         state: issueResult.value.state,
         title: issueResult.value.title
       }
-      const iterResult = await runClaudeIteration(
+      const iterResult = await _runClaudeIteration(
         prompt,
         model,
         effectiveConfig,
@@ -184,7 +192,7 @@ async function runLoopImpl(
         const fresh = await provider.fetchIssue(issueId)
         if (fresh.isOk() && fresh.value.children.length > 0) {
           await provider.unlockIssue(issueId)
-          await planSplitChildren(fresh.value.children, config, provider)
+          await planSplitChildren(fresh.value.children, config, provider, deps)
           return
         }
         break iterationLoop
@@ -278,6 +286,7 @@ async function runLoopImpl(
  * @param mode - `'plan'` runs one iteration then checks for a plan file; `'build'` loops until COMPLETED.
  * @param config - Loaded barf configuration.
  * @param provider - Issue provider used to lock, read, and write the issue.
+ * @param deps - Injectable dependencies; pass `{ runClaudeIteration: mockFn }` in tests.
  * @returns `ok(void)` when the loop exits cleanly, `err(Error)` if locking or a Claude iteration fails.
  * @category Orchestration
  */
@@ -285,7 +294,8 @@ export function runLoop(
   issueId: string,
   mode: LoopMode,
   config: Config,
-  provider: IssueProvider
+  provider: IssueProvider,
+  deps: RunLoopDeps = {}
 ): ResultAsync<void, Error> {
-  return ResultAsync.fromPromise(runLoopImpl(issueId, mode, config, provider), toError)
+  return ResultAsync.fromPromise(runLoopImpl(issueId, mode, config, provider, deps), toError)
 }

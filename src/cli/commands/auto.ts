@@ -1,10 +1,19 @@
 import type { Config, IssueState } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
-import { runLoop } from '@/core/batch'
+import { runLoop, type RunLoopDeps } from '@/core/batch'
 import { triageIssue } from '@/core/triage'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('auto')
+
+/**
+ * Injectable dependencies for {@link autoCommand}.
+ * Pass mocks in tests to avoid spawning real Claude processes.
+ */
+export type AutoDeps = {
+  triageIssue?: typeof triageIssue
+  runClaudeIteration?: RunLoopDeps['runClaudeIteration']
+}
 
 /** Issue states queued for planning on each {@link autoCommand} loop iteration. */
 const PLAN_STATES = new Set<IssueState>(['NEW'])
@@ -31,8 +40,12 @@ const BUILD_STATES = new Set<IssueState>(['PLANNED', 'IN_PROGRESS'])
 export async function autoCommand(
   provider: IssueProvider,
   opts: { batch: number; max: number },
-  config: Config
+  config: Config,
+  deps: AutoDeps = {}
 ): Promise<void> {
+  const _triageIssue = deps.triageIssue ?? triageIssue
+  const loopDeps: RunLoopDeps = { runClaudeIteration: deps.runClaudeIteration }
+
   while (true) {
     const listResult = await provider.listIssues()
     if (listResult.isErr()) {
@@ -46,7 +59,7 @@ export async function autoCommand(
     // ── Triage phase ───────────────────────────────────────────────────────────
     const toTriage = issues.filter(i => i.state === 'NEW' && i.needs_interview === undefined)
     for (const issue of toTriage) {
-      const result = await triageIssue(issue.id, config, provider, undefined, {
+      const result = await _triageIssue(issue.id, config, provider, undefined, {
         mode: 'triage',
         issueId: issue.id,
         state: issue.state,
@@ -106,7 +119,13 @@ export async function autoCommand(
     }
 
     for (const issue of toPlan) {
-      const result = await runLoop(issue.id, 'plan', config, provider)
+      if (issue.needs_interview === undefined) {
+        logger.info(
+          { issueId: issue.id },
+          'planning issue that was never triaged — run auto again to triage first'
+        )
+      }
+      const result = await runLoop(issue.id, 'plan', config, provider, loopDeps)
       if (result.isErr()) {
         logger.warn({ issueId: issue.id, err: result.error.message }, 'plan loop failed')
       }
@@ -115,7 +134,7 @@ export async function autoCommand(
     // ── Build phase ────────────────────────────────────────────────────────────
     if (toBuild.length > 0) {
       const results = await Promise.allSettled(
-        toBuild.map(i => runLoop(i.id, 'build', config, provider))
+        toBuild.map(i => runLoop(i.id, 'build', config, provider, loopDeps))
       )
       for (const r of results) {
         if (r.status === 'fulfilled' && r.value.isErr()) {

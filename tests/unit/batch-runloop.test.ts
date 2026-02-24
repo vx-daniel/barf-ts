@@ -1,9 +1,14 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach } from 'bun:test'
 import { ResultAsync } from 'neverthrow'
 import { okAsync, errAsync } from 'neverthrow'
-import { mkdtempSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { mkdtempSync, writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
+
+import { runLoop } from '@/core/batch'
+import type { Config, Issue } from '@/types'
+import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import { serializeIssue } from '@/core/issue'
 
 // Controllable mock: reassign `mockOutcomes` to control runClaudeIteration per-test
 // Each call pops the first element; once empty, repeats the last.
@@ -19,21 +24,12 @@ function nextOutcome(): { outcome: string; tokens: number; rateLimitResetsAt?: n
   return mockOutcomes[0]
 }
 
-mock.module('@/core/claude', () => ({
-  runClaudeIteration: () => {
-    if (mockIterationErr) {
-      return ResultAsync.fromPromise(Promise.reject(mockIterationErr), e => e as Error)
-    }
-    return ResultAsync.fromSafePromise(Promise.resolve(nextOutcome()))
-  },
-  getThreshold: () => 150_000
-}))
-
-import { runLoop } from '@/core/batch'
-import type { Config, Issue } from '@/types'
-import { ConfigSchema } from '@/types'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
-import { serializeIssue } from '@/core/issue'
+function mockRunClaudeIteration() {
+  if (mockIterationErr) {
+    return ResultAsync.fromPromise(Promise.reject(mockIterationErr), e => e as Error)
+  }
+  return ResultAsync.fromSafePromise(Promise.resolve(nextOutcome()))
+}
 
 function makeTmpDirs(): { issuesDir: string; barfDir: string; planDir: string } {
   const root = mkdtempSync(join(tmpdir(), 'barf-batch-'))
@@ -49,6 +45,8 @@ function makeTmpDirs(): { issuesDir: string; barfDir: string; planDir: string } 
 function writeIssueFile(issuesDir: string, issue: Issue): void {
   writeFileSync(join(issuesDir, `${issue.id}.md`), serializeIssue(issue))
 }
+
+const deps = { runClaudeIteration: mockRunClaudeIteration as never }
 
 describe('runLoop', () => {
   beforeEach(() => {
@@ -75,7 +73,7 @@ describe('runLoop', () => {
         fetchIssue: () => okAsync(issue)
       })
 
-      const result = await runLoop('001', 'plan', defaultConfig(), provider)
+      const result = await runLoop('001', 'plan', defaultConfig(), provider, deps)
 
       expect(result.isOk()).toBe(true)
       expect(lockCalls).toBe(1)
@@ -102,7 +100,7 @@ describe('runLoop', () => {
       })
 
       const config = { ...defaultConfig(), issuesDir: dirs.issuesDir, planDir: dirs.planDir }
-      const result = await runLoop('001', 'plan', config, provider)
+      const result = await runLoop('001', 'plan', config, provider, deps)
 
       expect(result.isOk()).toBe(true)
       expect(transitionTarget).toBe('PLANNED')
@@ -137,7 +135,7 @@ describe('runLoop', () => {
         return okAsync(makeIssue({ state: 'COMPLETED' }))
       }
 
-      const result = await runLoop('001', 'build', defaultConfig(), provider)
+      const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
       expect(result.isOk()).toBe(true)
       expect(transitionTargets).toContain('IN_PROGRESS')
     })
@@ -149,7 +147,7 @@ describe('runLoop', () => {
         fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' }))
       })
 
-      const result = await runLoop('001', 'build', defaultConfig(), provider)
+      const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
       expect(result.isOk()).toBe(true)
     })
 
@@ -161,7 +159,6 @@ describe('runLoop', () => {
         unlockIssue: () => okAsync(undefined),
         fetchIssue: () => {
           fetchCount++
-          // First 2 fetches: build mode setup. 3rd: iteration loop. Last: completion check
           if (fetchCount <= 3) {
             return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
           }
@@ -175,7 +172,7 @@ describe('runLoop', () => {
         writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
       })
 
-      const result = await runLoop('001', 'build', defaultConfig(), provider)
+      const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
       expect(result.isOk()).toBe(true)
       expect(transitionTargets).toContain('COMPLETED')
     })
@@ -195,7 +192,7 @@ describe('runLoop', () => {
         writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
       })
 
-      const result = await runLoop('001', 'build', config, provider)
+      const result = await runLoop('001', 'build', config, provider, deps)
       expect(result.isOk()).toBe(true)
       // Should have iterated (fetchCount > build-mode setup fetches)
       expect(fetchCount).toBeGreaterThan(2)
@@ -220,7 +217,7 @@ describe('runLoop', () => {
         writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
       })
 
-      const result = await runLoop('001', 'build', config, provider)
+      const result = await runLoop('001', 'build', config, provider, deps)
       expect(result.isOk()).toBe(true)
       expect(transitionTargets).toContain('COMPLETED')
     })
@@ -236,7 +233,7 @@ describe('runLoop', () => {
         writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
       })
 
-      const result = await runLoop('001', 'build', config, provider)
+      const result = await runLoop('001', 'build', config, provider, deps)
       expect(result.isOk()).toBe(true)
     })
   })
@@ -248,7 +245,7 @@ describe('runLoop', () => {
       lockIssue: () => errAsync(new Error('already locked'))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toBe('already locked')
   })
@@ -264,7 +261,7 @@ describe('runLoop', () => {
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isOk()).toBe(true) // error outcome breaks loop but doesn't fail
   })
 
@@ -279,7 +276,7 @@ describe('runLoop', () => {
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toContain('Rate limited')
   })
@@ -299,9 +296,6 @@ describe('runLoop', () => {
       unlockIssue: () => okAsync(undefined),
       fetchIssue: () => {
         fetchCount++
-        // 1-2: build setup, 3: iteration check, 4: overflow fetch, 5: iteration check (split mode)
-        // 6: splitPending reloaded (should NOT be SPLIT yet → triggers transition)
-        // 7: splitPending fresh (SPLIT with no children → break)
         if (fetchCount <= 5) {
           return okAsync(makeIssue({ state: 'IN_PROGRESS', split_count: 0 }))
         }
@@ -317,7 +311,7 @@ describe('runLoop', () => {
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS', split_count: 1 }))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isOk()).toBe(true)
     expect(transitionTargets).toContain('SPLIT')
   })
@@ -339,7 +333,7 @@ describe('runLoop', () => {
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
     })
 
-    const result = await runLoop('001', 'build', config, provider)
+    const result = await runLoop('001', 'build', config, provider, deps)
     expect(result.isOk()).toBe(true) // error outcome breaks loop gracefully
   })
 
@@ -361,7 +355,7 @@ describe('runLoop', () => {
         okAsync(makeIssue({ state: 'IN_PROGRESS', force_split: false, split_count: 1 }))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isOk()).toBe(true)
     expect(transitionTargets).toContain('SPLIT')
   })
@@ -380,9 +374,7 @@ describe('runLoop', () => {
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
     })
 
-    // force_split with split_count>=maxAutoSplits→escalate: changes model, no splitPending
-    // Then iteration runs normally and maxIterations=1 stops
-    const result = await runLoop('001', 'build', config, provider)
+    const result = await runLoop('001', 'build', config, provider, deps)
     expect(result.isOk()).toBe(true)
   })
 
@@ -391,7 +383,6 @@ describe('runLoop', () => {
   it('plans split children after split completes', async () => {
     mockOutcomes = [{ outcome: 'success', tokens: 100 }]
     let fetchCount = 0
-    let plannedChildren: string[] = []
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
@@ -416,7 +407,7 @@ describe('runLoop', () => {
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS', split_count: 1 }))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isOk()).toBe(true)
   })
 
@@ -431,7 +422,7 @@ describe('runLoop', () => {
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toBe('spawn failed')
   })
@@ -454,7 +445,7 @@ describe('runLoop', () => {
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' }))
     })
 
-    const result = await runLoop('001', 'build', defaultConfig(), provider)
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toBe('disk error')
   })

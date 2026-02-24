@@ -88,7 +88,9 @@ function readCodexToken(): string {
     const authPath = join(homedir(), '.codex', 'auth.json')
     const raw = readFileSync(authPath, 'utf8')
     const parsed = JSON.parse(raw) as unknown
-    if (typeof parsed !== 'object' || parsed === null) return ''
+    if (typeof parsed !== 'object' || parsed === null) {
+      return ''
+    }
     const auth = parsed as Record<string, unknown>
     if (typeof auth['OPENAI_API_KEY'] === 'string' && auth['OPENAI_API_KEY'].length > 0) {
       return auth['OPENAI_API_KEY']

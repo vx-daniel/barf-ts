@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'fs'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types'
 import type { ExecResult } from '@/types/schema/exec-schema'
-import { createAuditProvider } from '@/providers/index'
+import { createAuditProvider, type AuditProvider } from '@/providers/index'
 import { AuditResponseSchema, type AuditFinding } from '@/types/schema/audit-schema'
 import { injectTemplateVars } from '@/core/context'
 import { resolvePromptTemplate } from '@/core/prompts'
@@ -11,6 +11,17 @@ import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('audit')
+
+const MAX_RULES_CHARS = 50_000
+
+/**
+ * Injectable dependencies for {@link auditCommand}.
+ * Pass mocks in tests to control the audit provider and subprocess calls.
+ */
+export type AuditDeps = {
+  execFn?: typeof execFileNoThrow
+  provider?: AuditProvider
+}
 
 /**
  * Loads project rules from CLAUDE.md and `.claude/rules/` for inclusion in the audit prompt.
@@ -30,7 +41,16 @@ function loadRulesContext(): string {
     }
   }
 
-  return parts.length > 0 ? parts.join('\n\n---\n\n') : '(no project rules found)'
+  if (parts.length === 0) {
+    return '(no project rules found)'
+  }
+
+  let rulesContext = parts.join('\n\n---\n\n')
+  if (rulesContext.length > MAX_RULES_CHARS) {
+    logger.warn({ chars: rulesContext.length }, 'rules context truncated to avoid context overflow')
+    rulesContext = rulesContext.slice(0, MAX_RULES_CHARS) + '\n[... truncated ...]'
+  }
+  return rulesContext
 }
 
 /**
@@ -94,7 +114,12 @@ function formatFindings(findings: AuditFinding[]): string {
  * @param config - Loaded barf configuration.
  * @param provider - Issue provider for reading/creating issues.
  */
-async function auditIssue(issueId: string, config: Config, provider: IssueProvider): Promise<void> {
+async function auditIssue(
+  issueId: string,
+  config: Config,
+  provider: IssueProvider,
+  deps: AuditDeps
+): Promise<void> {
   const issueResult = await provider.fetchIssue(issueId)
   if (issueResult.isErr()) {
     logger.error({ issueId, err: issueResult.error.message }, 'could not fetch issue')
@@ -108,7 +133,8 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
     return
   }
 
-  const auditProvider = createAuditProvider(config)
+  const execFn = deps.execFn ?? execFileNoThrow
+  const auditProvider = deps.provider ?? createAuditProvider(config)
   if (!auditProvider.isConfigured(config)) {
     const info = auditProvider.describe()
     logger.error(
@@ -124,9 +150,9 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
   // ── Phase 1: deterministic checks ─────────────────────────────────────────
 
   const [testResult, lintResult, fmtResult] = await Promise.all([
-    config.testCommand ? execFileNoThrow('sh', ['-c', config.testCommand]) : Promise.resolve(null),
-    execFileNoThrow('bun', ['run', 'lint']),
-    execFileNoThrow('bun', ['run', 'format:check'])
+    config.testCommand ? execFn('sh', ['-c', config.testCommand]) : Promise.resolve(null),
+    execFn('bun', ['run', 'lint']),
+    execFn('bun', ['run', 'format:check'])
   ])
 
   // ── Phase 2: AI audit ──────────────────────────────────────────────────────
@@ -199,10 +225,11 @@ async function auditIssue(issueId: string, config: Config, provider: IssueProvid
 export async function auditCommand(
   provider: IssueProvider,
   opts: { issue?: string; all: boolean },
-  config: Config
+  config: Config,
+  deps: AuditDeps = {}
 ): Promise<void> {
   if (opts.issue) {
-    await auditIssue(opts.issue, config, provider)
+    await auditIssue(opts.issue, config, provider, deps)
     return
   }
 
@@ -223,6 +250,6 @@ export async function auditCommand(
   logger.info({ count: completed.length }, 'auditing COMPLETED issues')
 
   for (const issue of completed) {
-    await auditIssue(issue.id, config, provider)
+    await auditIssue(issue.id, config, provider, deps)
   }
 }

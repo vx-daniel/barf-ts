@@ -54,7 +54,7 @@ export const GEMINI_TIERS: Record<string, ModelTier> = {
  * Looks up `providerMap` first; falls back to keyword heuristics on the model ID.
  *
  * The keyword fallback covers:
- * - `small`: contains `mini`, `flash`, `haiku`, `lite`, `nano`, or `fast`
+ * - `small`: contains `\bmini`, `flash`, `haiku`, `lite`, `nano`, or `fast` (word-boundary before `mini` prevents false-matching `gemini`)
  * - `frontier`: matches `opus`, `ultra`, `o1` (not `o1-mini`), `o3` (not `o3-mini`), or `thinking`
  * - `general`: everything else
  *
@@ -67,7 +67,7 @@ export function inferTier(modelId: string, providerMap?: Record<string, ModelTie
     return providerMap[modelId]
   }
   const id = modelId.toLowerCase()
-  if (/mini|flash|haiku|lite|nano|fast/.test(id)) {
+  if (/\bmini|flash|haiku|lite|nano|fast/.test(id)) {
     return 'small'
   }
   if (/opus|ultra|o1(?!-mini)|o3(?!-mini)|thinking/.test(id)) {

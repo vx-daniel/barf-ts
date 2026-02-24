@@ -16,6 +16,9 @@ import {
   type TokenUsage
 } from '@/types/schema/provider-schema'
 
+/** Factory that constructs an OpenAI SDK client given an API key. Injectable for tests. */
+type OpenAIFactory = (apiKey: string) => OpenAI
+
 const logger = createLogger('openai')
 
 /**
@@ -27,10 +30,12 @@ const logger = createLogger('openai')
 export class OpenAIAuditProvider extends AuditProvider {
   readonly name = 'openai'
   private readonly config: Config
+  private readonly clientFactory: OpenAIFactory
 
-  constructor(config: Config) {
+  constructor(config: Config, clientFactory: OpenAIFactory = k => new OpenAI({ apiKey: k })) {
     super()
     this.config = config
+    this.clientFactory = clientFactory
   }
 
   /**
@@ -59,7 +64,7 @@ export class OpenAIAuditProvider extends AuditProvider {
   private async pingImpl(): Promise<PingResult> {
     const model = this.config.auditModel
     const start = Date.now()
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const client = this.clientFactory(this.config.openaiApiKey)
     await client.chat.completions.create({
       model,
       messages: [{ role: 'user', content: 'ping' }],
@@ -78,7 +83,7 @@ export class OpenAIAuditProvider extends AuditProvider {
   }
 
   private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const client = this.clientFactory(this.config.openaiApiKey)
     logger.debug(
       { model: this.config.auditModel, promptLen: prompt.length },
       'sending chat completion'
@@ -111,7 +116,7 @@ export class OpenAIAuditProvider extends AuditProvider {
   }
 
   private async listModelsImpl(): Promise<ModelInfo[]> {
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey })
+    const client = this.clientFactory(this.config.openaiApiKey)
     const models: ModelInfo[] = []
     const excluded = /embed|whisper|tts|dall-e|image/
     for await (const model of client.models.list()) {
