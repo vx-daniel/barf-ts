@@ -6,14 +6,14 @@ import { defaultConfig } from '@tests/fixtures/provider'
 const mockState = {
   stdout: '{"pass":true}',
   stderr: '',
-  status: 0
+  status: 0,
 }
 
 function makeMockExecFn() {
   return async (_file: string, _args: string[]): Promise<ExecResult> => ({
     stdout: mockState.stdout,
     stderr: mockState.stderr,
-    status: mockState.status
+    status: mockState.status,
   })
 }
 

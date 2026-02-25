@@ -15,14 +15,17 @@ import { defaultConfig } from '@tests/fixtures/provider'
 const execState = {
   stdout: '{"pass":true}',
   stderr: '',
-  status: 0
+  status: 0,
 }
 
-async function mockExecFn(_file: string, _args: string[] = []): Promise<ExecResult> {
+async function mockExecFn(
+  _file: string,
+  _args: string[] = [],
+): Promise<ExecResult> {
   return {
     stdout: execState.stdout,
     stderr: execState.stderr,
-    status: execState.status
+    status: execState.status,
   }
 }
 
@@ -55,9 +58,9 @@ describe('CodexAuditProvider.chatJSON (integration)', () => {
           category: 'failing_check',
           severity: 'error',
           title: 'Tests broken',
-          detail: '2 unit tests fail'
-        }
-      ]
+          detail: '2 unit tests fail',
+        },
+      ],
     })
 
     const result = await provider.chatJSON('audit this', AuditResponseSchema)

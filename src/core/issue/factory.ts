@@ -1,6 +1,6 @@
-import { Result, ok, err } from 'neverthrow'
+import { type Result, ok, err } from 'neverthrow'
 import type { Config } from '@/types'
-import { IssueProvider } from '@/core/issue/base'
+import type { IssueProvider } from '@/core/issue/base'
 import { LocalIssueProvider } from '@/core/issue/providers/local'
 import { GitHubIssueProvider } from '@/core/issue/providers/github'
 
@@ -12,14 +12,15 @@ import { GitHubIssueProvider } from '@/core/issue/providers/github'
  *   and `githubRepo` is not set.
  * @category Issue Providers
  */
-export function createIssueProvider(config: Config): Result<IssueProvider, Error> {
+export function createIssueProvider(
+  config: Config,
+): Result<IssueProvider, Error> {
   switch (config.issueProvider) {
     case 'github':
       if (!config.githubRepo) {
         return err(new Error('GITHUB_REPO required when ISSUE_PROVIDER=github'))
       }
       return ok(new GitHubIssueProvider(config.githubRepo))
-    case 'local':
     default:
       return ok(new LocalIssueProvider(config.issuesDir, config.barfDir))
   }

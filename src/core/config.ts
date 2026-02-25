@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Result, ok, err } from 'neverthrow'
+import { type Result, ok, err } from 'neverthrow'
 import { ConfigSchema, type Config } from '@/types/index'
 import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
@@ -33,7 +33,7 @@ const KEY_MAP: Record<string, keyof Config> = {
   PROMPT_DIR: 'promptDir',
   LOG_FILE: 'logFile',
   LOG_LEVEL: 'logLevel',
-  LOG_PRETTY: 'logPretty'
+  LOG_PRETTY: 'logPretty',
 }
 
 // Zod schema that coerces string values (all .barfrc values are strings)
@@ -43,7 +43,9 @@ const RawConfigSchema = ConfigSchema.extend({
   maxIterations: z.coerce.number().int().default(0),
   claudeTimeout: z.coerce.number().int().default(3600),
   streamLogDir: z.coerce.string().default(''),
-  logPretty: z.preprocess(v => v === '1' || v === 'true' || v === true, z.boolean()).default(false)
+  logPretty: z
+    .preprocess((v) => v === '1' || v === 'true' || v === true, z.boolean())
+    .default(false),
 })
 
 /**
@@ -92,14 +94,20 @@ function readCodexToken(): string {
       return ''
     }
     const auth = parsed as Record<string, unknown>
-    if (typeof auth['OPENAI_API_KEY'] === 'string' && auth['OPENAI_API_KEY'].length > 0) {
-      return auth['OPENAI_API_KEY']
+    if (
+      typeof auth.OPENAI_API_KEY === 'string' &&
+      auth.OPENAI_API_KEY.length > 0
+    ) {
+      return auth.OPENAI_API_KEY
     }
-    const tokens = auth['tokens']
+    const tokens = auth.tokens
     if (typeof tokens === 'object' && tokens !== null) {
       const t = tokens as Record<string, unknown>
-      if (typeof t['access_token'] === 'string' && t['access_token'].length > 0) {
-        return t['access_token']
+      if (
+        typeof t.access_token === 'string' &&
+        t.access_token.length > 0
+      ) {
+        return t.access_token
       }
     }
     return ''
@@ -123,8 +131,8 @@ export function loadConfig(rcPath?: string): Config {
   try {
     const content = readFileSync(filePath, 'utf8')
     config = parseBarfrc(content).match(
-      c => c,
-      () => RawConfigSchema.parse({})
+      (c) => c,
+      () => RawConfigSchema.parse({}),
     )
   } catch {
     config = RawConfigSchema.parse({})

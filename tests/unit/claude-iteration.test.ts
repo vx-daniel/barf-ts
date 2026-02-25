@@ -9,11 +9,14 @@ import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk'
  * Builds a mock Query (AsyncGenerator + interrupt()) from a list of messages.
  * When interrupt() is called, the generator exits after the current yield point.
  */
-function makeQuery(messages: SDKMessage[]): { q: Query; interrupt: ReturnType<typeof mock> } {
+function makeQuery(messages: SDKMessage[]): {
+  q: Query
+  interrupt: ReturnType<typeof mock>
+} {
   let interrupted = false
   const interrupt = mock(async () => {
     interrupted = true
-    return new Promise<void>(r => queueMicrotask(r))
+    return new Promise<void>((r) => queueMicrotask(r))
   })
 
   async function* gen() {
@@ -34,12 +37,12 @@ function makeQuery(messages: SDKMessage[]): { q: Query; interrupt: ReturnType<ty
  */
 function makeBlockingQuery(): { q: Query; interrupt: ReturnType<typeof mock> } {
   let resolveBlock: () => void = () => {}
-  const blockUntilInterrupt = new Promise<void>(r => {
+  const blockUntilInterrupt = new Promise<void>((r) => {
     resolveBlock = r
   })
   const interrupt = mock(async () => {
     resolveBlock()
-    return new Promise<void>(r => queueMicrotask(r))
+    return new Promise<void>((r) => queueMicrotask(r))
   })
 
   async function* gen() {
@@ -64,7 +67,11 @@ function defaultOpts() {
 
 // ── SDKMessage fixtures ───────────────────────────────────────────────────────
 
-function makeAssistantMsg(inputTokens: number, cacheCreate = 0, cacheRead = 0): SDKMessage {
+function makeAssistantMsg(
+  inputTokens: number,
+  cacheCreate = 0,
+  cacheRead = 0,
+): SDKMessage {
   return {
     type: 'assistant',
     parent_tool_use_id: null,
@@ -125,7 +132,12 @@ function makeAssistantRateLimitMsg(): SDKMessage {
       model: 'claude-sonnet-4-6',
       stop_reason: null,
       stop_sequence: null,
-      usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+      usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+      },
     },
     uuid: '00000000-0000-0000-0000-000000000003' as `${string}-${string}-${string}-${string}-${string}`,
     session_id: 'test',
@@ -143,7 +155,12 @@ function makeResultSuccess(): SDKMessage {
     result: 'done',
     stop_reason: 'end_turn',
     total_cost_usd: 0.001,
-    usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    usage: {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+    },
     modelUsage: {},
     permission_denials: [],
     uuid: '00000000-0000-0000-0000-000000000004' as `${string}-${string}-${string}-${string}-${string}`,
@@ -161,7 +178,12 @@ function makeResultError(errors: string[] = []): SDKMessage {
     num_turns: 1,
     stop_reason: null,
     total_cost_usd: 0,
-    usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    usage: {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+    },
     modelUsage: {},
     permission_denials: [],
     errors,
@@ -174,7 +196,10 @@ function makeResultError(errors: string[] = []): SDKMessage {
 
 describe('consumeSDKQuery', () => {
   it('returns success when stream completes with result message', async () => {
-    const { q } = makeQuery([makeAssistantMsg(800, 100, 100), makeResultSuccess()])
+    const { q } = makeQuery([
+      makeAssistantMsg(800, 100, 100),
+      makeResultSuccess(),
+    ])
     const opts = defaultOpts()
 
     const result = await consumeSDKQuery(
@@ -184,7 +209,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('success')
@@ -192,7 +217,10 @@ describe('consumeSDKQuery', () => {
   })
 
   it('counts input_tokens + cache_creation + cache_read for total token count', async () => {
-    const { q } = makeQuery([makeAssistantMsg(500, 200, 300), makeResultSuccess()])
+    const { q } = makeQuery([
+      makeAssistantMsg(500, 200, 300),
+      makeResultSuccess(),
+    ])
     const opts = defaultOpts()
 
     const result = await consumeSDKQuery(
@@ -202,7 +230,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.tokens).toBe(1000) // 500 + 200 + 300
@@ -218,7 +246,7 @@ describe('consumeSDKQuery', () => {
       undefined,
       false,
       () => {},
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('overflow')
@@ -227,7 +255,10 @@ describe('consumeSDKQuery', () => {
   })
 
   it('returns rate_limited when assistant message has rate_limit error', async () => {
-    const { q } = makeQuery([makeAssistantMsg(100), makeAssistantRateLimitMsg()])
+    const { q } = makeQuery([
+      makeAssistantMsg(100),
+      makeAssistantRateLimitMsg(),
+    ])
     const opts = defaultOpts()
 
     const result = await consumeSDKQuery(
@@ -237,7 +268,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('rate_limited')
@@ -245,7 +276,10 @@ describe('consumeSDKQuery', () => {
   })
 
   it('returns rate_limited when result error message contains rate limit keyword', async () => {
-    const { q } = makeQuery([makeAssistantMsg(100), makeResultError(['rate_limit exceeded'])])
+    const { q } = makeQuery([
+      makeAssistantMsg(100),
+      makeResultError(['rate_limit exceeded']),
+    ])
     const opts = defaultOpts()
 
     const result = await consumeSDKQuery(
@@ -255,7 +289,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('rate_limited')
@@ -263,7 +297,10 @@ describe('consumeSDKQuery', () => {
   })
 
   it('returns error when result message has non-rate-limit error', async () => {
-    const { q } = makeQuery([makeAssistantMsg(100), makeResultError(['some other error'])])
+    const { q } = makeQuery([
+      makeAssistantMsg(100),
+      makeResultError(['some other error']),
+    ])
     const opts = defaultOpts()
 
     const result = await consumeSDKQuery(
@@ -273,7 +310,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('error')
@@ -291,7 +328,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('success')
@@ -314,7 +351,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('success')
@@ -332,7 +369,7 @@ describe('consumeSDKQuery', () => {
       opts.streamLogFile,
       opts.isTTY,
       opts.stderrWrite,
-      AbortSignal.abort()
+      AbortSignal.abort(),
     )
 
     expect(result.outcome).toBe('error')
@@ -357,7 +394,7 @@ describe('consumeSDKQuery', () => {
       (data: string) => {
         stderrOutput += data
       },
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('success')
@@ -388,7 +425,11 @@ describe('consumeSDKQuery', () => {
       session_id: 'test',
     } as SDKMessage
 
-    const { q } = makeQuery([subAgentMsg, makeAssistantMsg(100), makeResultSuccess()])
+    const { q } = makeQuery([
+      subAgentMsg,
+      makeAssistantMsg(100),
+      makeResultSuccess(),
+    ])
 
     const result = await consumeSDKQuery(
       q,
@@ -397,7 +438,7 @@ describe('consumeSDKQuery', () => {
       undefined,
       false,
       () => {},
-      new AbortController().signal
+      new AbortController().signal,
     )
 
     expect(result.outcome).toBe('success')

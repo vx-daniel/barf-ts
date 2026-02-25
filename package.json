@@ -13,10 +13,10 @@
     "test": "bun test",
     "build": "bun build --compile --outfile=dist/barf src/index.ts",
     "docs": "typedoc",
-    "format": "oxfmt --write src/ ",
-    "format:check": "oxfmt --check src/ ",
-    "lint": "oxlint src/ ",
-    "lint:fix": "oxlint --fix src/ ",
+    "format": "npx @biomejs/biome format --check  ./src/ ",
+    "format:fix": "npx @biomejs/biome format --write ./src/ ",
+    "lint": "npx @biomejs/biome lint ./src/ ",
+    "lint:fix": "npx @biomejs/biome lint --fix ./src/ ",
     "check": "bun run format:check && bun run lint",
     "playground": "bun tools/playground-server.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project "
   },
@@ -32,10 +32,9 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.4",
     "@boneskull/typedoc-plugin-mermaid": "^0.2.1",
     "@types/bun": "latest",
-    "oxfmt": "latest",
-    "oxlint": "^1.48.0",
     "pino-pretty": "^13.0.0",
     "typedoc": "^0.28.17",
     "typedoc-github-theme": "^0.4.0",

@@ -1,6 +1,6 @@
+import { runLoop } from '@/core/batch'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types/index'
-import { runLoop } from '@/core/batch'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('plan')
@@ -19,7 +19,7 @@ const logger = createLogger('plan')
 export async function planCommand(
   provider: IssueProvider,
   opts: { issue?: string },
-  config: Config
+  config: Config,
 ): Promise<void> {
   let issueId = opts.issue
 

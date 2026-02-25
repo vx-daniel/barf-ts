@@ -1,4 +1,4 @@
-import { ok, okAsync, Result, ResultAsync } from 'neverthrow'
+import { ok, okAsync, type Result, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
@@ -17,7 +17,7 @@ import {
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
-  type TokenUsage
+  type TokenUsage,
 } from '@/types/schema/provider-schema'
 
 const logger = createLogger('codex')
@@ -34,12 +34,10 @@ const logger = createLogger('codex')
  */
 export class CodexAuditProvider extends AuditProvider {
   readonly name = 'codex'
-  private readonly config: Config
   private readonly execFn: ExecFn
 
-  constructor(config: Config, execFn: ExecFn = execFileNoThrow) {
+  constructor(_config: Config, execFn: ExecFn = execFileNoThrow) {
     super()
-    this.config = config
     this.execFn = execFn
   }
 
@@ -54,7 +52,7 @@ export class CodexAuditProvider extends AuditProvider {
       name: 'codex',
       displayName: 'OpenAI Codex (CLI)',
       requiredConfigKeys: [],
-      supportedModels: ['codex']
+      supportedModels: ['codex'],
     }
   }
 
@@ -74,10 +72,12 @@ export class CodexAuditProvider extends AuditProvider {
       'exec',
       '--full-auto',
       '--ephemeral',
-      'Say only the word "pong".'
+      'Say only the word "pong".',
     ])
     if (result.status !== 0) {
-      throw new Error(`codex ping failed (exit ${result.status}): ${result.stderr}`)
+      throw new Error(
+        `codex ping failed (exit ${result.status}): ${result.stderr}`,
+      )
     }
     return { latencyMs: Date.now() - start, model: 'codex' }
   }
@@ -91,11 +91,21 @@ export class CodexAuditProvider extends AuditProvider {
     return ResultAsync.fromPromise(this.pingImpl(), toError)
   }
 
-  private async chatImpl(prompt: string, _opts?: ChatOptions): Promise<ChatResult> {
+  private async chatImpl(
+    prompt: string,
+    _opts?: ChatOptions,
+  ): Promise<ChatResult> {
     logger.debug({ promptLen: prompt.length }, 'sending codex prompt')
-    const result = await this.execFn('codex', ['exec', '--full-auto', '--ephemeral', prompt])
+    const result = await this.execFn('codex', [
+      'exec',
+      '--full-auto',
+      '--ephemeral',
+      prompt,
+    ])
     if (result.status !== 0) {
-      throw new Error(`codex exited with status ${result.status}: ${result.stderr}`)
+      throw new Error(
+        `codex exited with status ${result.status}: ${result.stderr}`,
+      )
     }
     const parsed = this.parseResponse({ content: result.stdout })
     if (parsed.isErr()) {
@@ -126,7 +136,9 @@ export class CodexAuditProvider extends AuditProvider {
    * if (result.isOk()) console.log(result.value)
    */
   listModels(): ResultAsync<ModelInfo[], Error> {
-    return okAsync([{ id: 'codex', displayName: 'Codex CLI', tier: 'general' as const }])
+    return okAsync([
+      { id: 'codex', displayName: 'Codex CLI', tier: 'general' as const },
+    ])
   }
 
   /**
@@ -136,7 +148,9 @@ export class CodexAuditProvider extends AuditProvider {
    * @param raw - Object with a `content` field (the subprocess stdout).
    * @returns `ok({ content, usage })` always.
    */
-  protected parseResponse(raw: unknown): Result<{ content: string; usage: TokenUsage }, Error> {
+  protected parseResponse(
+    raw: unknown,
+  ): Result<{ content: string; usage: TokenUsage }, Error> {
     const r = raw as { content?: string }
     const content = r.content ?? ''
     const usage = toTokenUsage(0, 0, 0)

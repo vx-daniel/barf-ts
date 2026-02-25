@@ -26,7 +26,7 @@ export const IssueStateSchema = z.enum([
   'STUCK',
   'SPLIT',
   'COMPLETED',
-  'VERIFIED'
+  'VERIFIED',
 ])
 /**
  * A barf issue state. Derived from {@link IssueStateSchema}.
@@ -68,7 +68,7 @@ export const IssueSchema = z.object({
   is_verify_fix: z.boolean().optional(),
   /** When `true`, `verify_count` exceeded `maxVerifyRetries`; issue is left as COMPLETED without VERIFIED. */
   verify_exhausted: z.boolean().optional(),
-  body: z.string()
+  body: z.string(),
 })
 /**
  * A validated barf work item. Derived from {@link IssueSchema}.
@@ -106,7 +106,7 @@ export const LockInfoSchema = z.object({
   pid: z.number().int().positive(),
   acquiredAt: z.string().datetime(),
   state: IssueStateSchema,
-  mode: LockModeSchema
+  mode: LockModeSchema,
 })
 /**
  * Parsed lock file contents. Derived from {@link LockInfoSchema}.
@@ -139,7 +139,9 @@ export const ConfigSchema = z.object({
   triageModel: z.string().default('claude-haiku-4-5-20251001'),
   auditModel: z.string().default('gpt-4o'),
   openaiApiKey: z.string().default(''),
-  auditProvider: z.enum(['openai', 'gemini', 'claude', 'codex']).default('openai'),
+  auditProvider: z
+    .enum(['openai', 'gemini', 'claude', 'codex'])
+    .default('openai'),
   geminiApiKey: z.string().default(''),
   geminiModel: z.string().default('gemini-1.5-pro'),
   anthropicApiKey: z.string().default(''),
@@ -148,7 +150,9 @@ export const ConfigSchema = z.object({
   buildModel: z.string().default('claude-sonnet-4-6'),
   splitModel: z.string().default('claude-sonnet-4-6'),
   extendedContextModel: z.string().default('claude-opus-4-6'),
-  pushStrategy: z.enum(['iteration', 'on_complete', 'manual']).default('iteration'),
+  pushStrategy: z
+    .enum(['iteration', 'on_complete', 'manual'])
+    .default('iteration'),
   issueProvider: z.enum(['local', 'github']).default('local'),
   githubRepo: z.string().default(''),
   streamLogDir: z.string().default(''),
@@ -156,7 +160,7 @@ export const ConfigSchema = z.object({
   promptDir: z.string().default(''),
   logFile: z.string().default('barf.log'),
   logLevel: z.string().default('info'),
-  logPretty: z.boolean().default(false)
+  logPretty: z.boolean().default(false),
 })
 /**
  * Validated barf runtime configuration. Derived from {@link ConfigSchema}.
@@ -181,7 +185,7 @@ export type Config = z.infer<typeof ConfigSchema>
  */
 export const ClaudeEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('usage'), tokens: z.number() }),
-  z.object({ type: z.literal('tool'), name: z.string() })
+  z.object({ type: z.literal('tool'), name: z.string() }),
 ])
 /**
  * A parsed Claude stream event. Derived from {@link ClaudeEventSchema}.
@@ -234,7 +238,7 @@ export class InvalidTransitionError extends Error {
 export class ProviderError extends Error {
   constructor(
     message: string,
-    public readonly cause?: unknown
+    public readonly cause?: unknown,
   ) {
     super(message)
     this.name = 'ProviderError'

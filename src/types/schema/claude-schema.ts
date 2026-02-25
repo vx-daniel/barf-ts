@@ -9,7 +9,12 @@ import { z } from 'zod'
  *
  * @category Claude Agent
  */
-export const IterationOutcomeSchema = z.enum(['success', 'overflow', 'error', 'rate_limited'])
+export const IterationOutcomeSchema = z.enum([
+  'success',
+  'overflow',
+  'error',
+  'rate_limited',
+])
 /** An iteration outcome. Derived from {@link IterationOutcomeSchema}. */
 export type IterationOutcome = z.infer<typeof IterationOutcomeSchema>
 
@@ -24,7 +29,7 @@ export type IterationOutcome = z.infer<typeof IterationOutcomeSchema>
 export const IterationResultSchema = z.object({
   outcome: IterationOutcomeSchema,
   tokens: z.number(),
-  rateLimitResetsAt: z.number().optional()
+  rateLimitResetsAt: z.number().optional(),
 })
 /** A validated iteration result. Derived from {@link IterationResultSchema}. */
 export type IterationResult = z.infer<typeof IterationResultSchema>

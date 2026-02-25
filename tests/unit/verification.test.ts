@@ -5,9 +5,13 @@ import {
   runVerification,
   verifyIssue,
   type ExecFn,
-  type VerifyCheck
+  type VerifyCheck,
 } from '@/core/verification'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import {
+  defaultConfig,
+  makeIssue,
+  makeProvider,
+} from '@tests/fixtures/provider'
 
 /** Returns an ExecFn that always exits with status 0. */
 function okExec(): ExecFn {
@@ -23,12 +27,12 @@ function failExec(stderr = 'error output'): ExecFn {
 function selectiveExec(failNames: string[], checks: VerifyCheck[]): ExecFn {
   return (_file, args = []) => {
     // Match check by looking up which check's args match
-    const check = checks.find(c => c.args.join(' ') === args.join(' '))
+    const check = checks.find((c) => c.args.join(' ') === args.join(' '))
     const shouldFail = check ? failNames.includes(check.name) : false
     return Promise.resolve({
       stdout: '',
       stderr: shouldFail ? `${check?.name} failed` : '',
-      status: shouldFail ? 1 : 0
+      status: shouldFail ? 1 : 0,
     })
   }
 }
@@ -36,7 +40,7 @@ function selectiveExec(failNames: string[], checks: VerifyCheck[]): ExecFn {
 const THREE_CHECKS: VerifyCheck[] = [
   { name: 'build', command: 'bun', args: ['run', 'build'] },
   { name: 'check', command: 'bun', args: ['run', 'check'] },
-  { name: 'test', command: 'bun', args: ['test'] }
+  { name: 'test', command: 'bun', args: ['test'] },
 ]
 
 describe('runVerification', () => {
@@ -77,12 +81,15 @@ describe('runVerification', () => {
   })
 
   it('includes check name in failure', async () => {
-    const result = await runVerification(THREE_CHECKS, selectiveExec(['build'], THREE_CHECKS))
+    const result = await runVerification(
+      THREE_CHECKS,
+      selectiveExec(['build'], THREE_CHECKS),
+    )
     const outcome = result._unsafeUnwrap()
     expect(outcome.passed).toBe(false)
     if (!outcome.passed) {
       expect(outcome.failures[0].check).toBe('build')
-      expect(outcome.failures.some(f => f.check === 'check')).toBe(false)
+      expect(outcome.failures.some((f) => f.check === 'check')).toBe(false)
     }
   })
 
@@ -96,17 +103,23 @@ describe('runVerification', () => {
 
 describe('verifyIssue', () => {
   it('skips issue with is_verify_fix=true', async () => {
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', is_verify_fix: true })
+    const issue = makeIssue({
+      id: '001',
+      state: 'COMPLETED',
+      is_verify_fix: true,
+    })
     let transitionCalled = false
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       transition: () => {
         transitionCalled = true
         return okAsync(issue)
-      }
+      },
     })
 
-    const result = await verifyIssue('001', defaultConfig(), provider, { execFn: okExec() })
+    const result = await verifyIssue('001', defaultConfig(), provider, {
+      execFn: okExec(),
+    })
     expect(result.isOk()).toBe(true)
     expect(transitionCalled).toBe(false)
   })
@@ -119,10 +132,12 @@ describe('verifyIssue', () => {
       transition: (_id, to) => {
         transitionTarget = to
         return okAsync(makeIssue({ state: to }))
-      }
+      },
     })
 
-    const result = await verifyIssue('001', defaultConfig(), provider, { execFn: okExec() })
+    const result = await verifyIssue('001', defaultConfig(), provider, {
+      execFn: okExec(),
+    })
     expect(result.isOk()).toBe(true)
     expect(transitionTarget).toBe('VERIFIED')
   })
@@ -150,10 +165,12 @@ describe('verifyIssue', () => {
         }
         wroteOnParent = fields
         return okAsync({ ...issue, ...fields })
-      }
+      },
     })
 
-    const result = await verifyIssue('001', defaultConfig(), provider, { execFn: failExec() })
+    const result = await verifyIssue('001', defaultConfig(), provider, {
+      execFn: failExec(),
+    })
     expect(result.isOk()).toBe(true)
     expect(createdIssueTitle).toContain('001')
     expect(wroteOnChild).toMatchObject({ is_verify_fix: true })
@@ -169,7 +186,7 @@ describe('verifyIssue', () => {
         createInput = input
         return okAsync(makeIssue({ id: '999', state: 'NEW' }))
       },
-      writeIssue: () => okAsync(issue)
+      writeIssue: () => okAsync(issue),
     })
 
     await verifyIssue('001', defaultConfig(), provider, { execFn: failExec() })
@@ -191,10 +208,12 @@ describe('verifyIssue', () => {
       writeIssue: (_id, fields) => {
         wroteFields = fields
         return okAsync({ ...issue, ...fields })
-      }
+      },
     })
 
-    const result = await verifyIssue('001', config, provider, { execFn: failExec() })
+    const result = await verifyIssue('001', config, provider, {
+      execFn: failExec(),
+    })
     expect(result.isOk()).toBe(true)
     expect(createdIssue).toBe(false)
     expect(wroteFields).toMatchObject({ verify_exhausted: true })
@@ -202,10 +221,12 @@ describe('verifyIssue', () => {
 
   it('returns err when fetchIssue fails', async () => {
     const provider = makeProvider({
-      fetchIssue: () => errAsync(new Error('disk read error'))
+      fetchIssue: () => errAsync(new Error('disk read error')),
     })
 
-    const result = await verifyIssue('001', defaultConfig(), provider, { execFn: okExec() })
+    const result = await verifyIssue('001', defaultConfig(), provider, {
+      execFn: okExec(),
+    })
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toContain('disk read error')
   })
@@ -214,10 +235,12 @@ describe('verifyIssue', () => {
     const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 0 })
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
-      transition: () => errAsync(new Error('transition blocked'))
+      transition: () => errAsync(new Error('transition blocked')),
     })
 
-    const result = await verifyIssue('001', defaultConfig(), provider, { execFn: okExec() })
+    const result = await verifyIssue('001', defaultConfig(), provider, {
+      execFn: okExec(),
+    })
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toContain('transition blocked')
   })
@@ -226,10 +249,12 @@ describe('verifyIssue', () => {
     const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 0 })
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
-      createIssue: () => errAsync(new Error('cannot create'))
+      createIssue: () => errAsync(new Error('cannot create')),
     })
 
-    const result = await verifyIssue('001', defaultConfig(), provider, { execFn: failExec() })
+    const result = await verifyIssue('001', defaultConfig(), provider, {
+      execFn: failExec(),
+    })
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toContain('cannot create')
   })

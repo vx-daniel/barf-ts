@@ -9,7 +9,7 @@ import {
   buildCommand,
   initCommand,
   planCommand,
-  statusCommand
+  statusCommand,
 } from '@/cli/commands'
 
 /**
@@ -23,11 +23,11 @@ import {
  */
 function getProvider(config: ReturnType<typeof loadConfig>) {
   return createIssueProvider(config).match(
-    p => p,
-    e => {
+    (p) => p,
+    (e) => {
       logger.error({ err: e }, e.message)
       process.exit(1)
-    }
+    },
   )
 }
 
@@ -37,7 +37,10 @@ program
   .description('AI issue orchestration CLI')
   .version('2.0.0')
   .option('--cwd <path>', 'Project directory (default: current directory)')
-  .option('--config <path>', 'Path to .barfrc config file (default: <cwd>/.barfrc)')
+  .option(
+    '--config <path>',
+    'Path to .barfrc config file (default: <cwd>/.barfrc)',
+  )
   .hook('preAction', () => {
     const opts = program.opts()
     // Resolve --config to absolute before chdir so it isn't re-interpreted
@@ -55,8 +58,11 @@ program
   .command('init')
   .description('Initialize barf in current project')
   .option('--provider <type>', 'Issue provider: local | github', 'local')
-  .option('--repo <owner/repo>', 'GitHub repo (required when --provider=github)')
-  .action(async opts => {
+  .option(
+    '--repo <owner/repo>',
+    'GitHub repo (required when --provider=github)',
+  )
+  .action(async (opts) => {
     const config = loadConfig(program.opts().config)
     if (opts.provider) {
       config.issueProvider = opts.provider
@@ -72,7 +78,7 @@ program
   .command('status')
   .description('List all issues and their states')
   .option('--format <fmt>', 'Output format: text | json', 'text')
-  .action(async opts => {
+  .action(async (opts) => {
     const config = loadConfig(program.opts().config)
     const issues = getProvider(config)
     await statusCommand(issues, { format: opts.format })
@@ -81,8 +87,11 @@ program
 program
   .command('plan')
   .description('Plan an issue with Claude AI (NEW → PLANNED)')
-  .option('--issue <id>', 'Issue ID to plan (auto-selects INTERVIEWING issue if omitted)')
-  .action(async opts => {
+  .option(
+    '--issue <id>',
+    'Issue ID to plan (auto-selects INTERVIEWING issue if omitted)',
+  )
+  .action(async (opts) => {
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
     await planCommand(provider, { issue: opts.issue }, config)
@@ -94,25 +103,31 @@ program
   .option('--issue <id>', 'Issue ID to build (auto-selects if omitted)')
   .option('--batch <n>', 'Number of issues to build concurrently', parseInt)
   .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
-  .action(async opts => {
+  .action(async (opts) => {
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
     await buildCommand(
       provider,
       { issue: opts.issue, batch: opts.batch ?? 1, max: opts.max ?? 0 },
-      config
+      config,
     )
   })
 
 program
   .command('auto')
-  .description('Auto-orchestrate: triage NEW, plan triaged, build PLANNED/IN_PROGRESS')
+  .description(
+    'Auto-orchestrate: triage NEW, plan triaged, build PLANNED/IN_PROGRESS',
+  )
   .option('--batch <n>', 'Max concurrent builds', parseInt)
   .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
-  .action(async opts => {
+  .action(async (opts) => {
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
-    await autoCommand(provider, { batch: opts.batch ?? 1, max: opts.max ?? 0 }, config)
+    await autoCommand(
+      provider,
+      { batch: opts.batch ?? 1, max: opts.max ?? 0 },
+      config,
+    )
   })
 
 program
@@ -120,7 +135,7 @@ program
   .description('Audit completed issues for quality and rule compliance')
   .option('--issue <id>', 'Issue ID to audit (default: all COMPLETED issues)')
   .option('--all', 'Audit all COMPLETED issues (default behaviour)', false)
-  .action(async opts => {
+  .action(async (opts) => {
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
     await auditCommand(provider, { issue: opts.issue, all: opts.all }, config)

@@ -9,7 +9,7 @@ export const AuditCategorySchema = z.enum([
   'failing_check',
   'unmet_criteria',
   'rule_violation',
-  'production_readiness'
+  'production_readiness',
 ])
 /** A finding category. Derived from {@link AuditCategorySchema}. */
 export type AuditCategory = z.infer<typeof AuditCategorySchema>
@@ -32,7 +32,7 @@ export const AuditFindingSchema = z.object({
   category: AuditCategorySchema,
   severity: AuditSeveritySchema,
   title: z.string(),
-  detail: z.string()
+  detail: z.string(),
 })
 /** A validated audit finding. Derived from {@link AuditFindingSchema}. */
 export type AuditFinding = z.infer<typeof AuditFindingSchema>
@@ -50,8 +50,8 @@ export const AuditResponseSchema = z.discriminatedUnion('pass', [
   z.object({ pass: z.literal(true) }),
   z.object({
     pass: z.literal(false),
-    findings: z.array(AuditFindingSchema).min(1)
-  })
+    findings: z.array(AuditFindingSchema).min(1),
+  }),
 ])
 /** A validated audit response. Derived from {@link AuditResponseSchema}. */
 export type AuditResponse = z.infer<typeof AuditResponseSchema>

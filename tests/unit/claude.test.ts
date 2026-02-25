@@ -1,5 +1,10 @@
 import { describe, it, expect, afterEach } from 'bun:test'
-import { getThreshold, getContextLimit, setContextLimit, DEFAULT_CONTEXT_LIMIT } from '@/core/claude'
+import {
+  getThreshold,
+  getContextLimit,
+  setContextLimit,
+  DEFAULT_CONTEXT_LIMIT,
+} from '@/core/claude'
 
 // runClaudeIteration spawns a real subprocess — tested in tests/integration/
 // getThreshold, getContextLimit, and setContextLimit are the pure functions tested here.
@@ -53,6 +58,8 @@ describe('setContextLimit', () => {
     expect(getContextLimit('claude-haiku-4-5-20251001')).toBe(100_000)
     // Restore
     setContextLimit('claude-haiku-4-5-20251001', DEFAULT_CONTEXT_LIMIT)
-    expect(getContextLimit('claude-haiku-4-5-20251001')).toBe(DEFAULT_CONTEXT_LIMIT)
+    expect(getContextLimit('claude-haiku-4-5-20251001')).toBe(
+      DEFAULT_CONTEXT_LIMIT,
+    )
   })
 })

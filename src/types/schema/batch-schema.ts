@@ -9,7 +9,7 @@ import { z } from 'zod'
  */
 export const OverflowDecisionSchema = z.object({
   action: z.enum(['split', 'escalate']),
-  nextModel: z.string().min(1)
+  nextModel: z.string().min(1),
 })
 /** A validated overflow decision. Derived from {@link OverflowDecisionSchema}. */
 export type OverflowDecision = z.infer<typeof OverflowDecisionSchema>

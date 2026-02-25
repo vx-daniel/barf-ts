@@ -46,7 +46,7 @@ describe('handleOverflow', () => {
     const config = {
       ...defaultConfig(),
       maxAutoSplits: 1,
-      extendedContextModel: 'claude-opus-4-6'
+      extendedContextModel: 'claude-opus-4-6',
     }
     expect(handleOverflow(1, config).nextModel).toBe('claude-opus-4-6')
   })

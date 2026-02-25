@@ -3,11 +3,11 @@ import {
   BarfModeSchema,
   LoopModeSchema,
   PromptModeSchema,
-  AutoSelectModeSchema
+  AutoSelectModeSchema,
 } from '@/types/schema/mode-schema'
 
 describe('BarfModeSchema', () => {
-  it.each(['plan', 'build', 'split'])('accepts "%s"', mode => {
+  it.each(['plan', 'build', 'split'])('accepts "%s"', (mode) => {
     expect(BarfModeSchema.safeParse(mode).success).toBe(true)
   })
 
@@ -21,7 +21,7 @@ describe('BarfModeSchema', () => {
 })
 
 describe('LoopModeSchema', () => {
-  it.each(['plan', 'build', 'split'])('accepts "%s"', mode => {
+  it.each(['plan', 'build', 'split'])('accepts "%s"', (mode) => {
     expect(LoopModeSchema.safeParse(mode).success).toBe(true)
   })
 
@@ -31,7 +31,13 @@ describe('LoopModeSchema', () => {
 })
 
 describe('PromptModeSchema', () => {
-  it.each(['plan', 'build', 'split', 'audit', 'triage'])('accepts "%s"', mode => {
+  it.each([
+    'plan',
+    'build',
+    'split',
+    'audit',
+    'triage',
+  ])('accepts "%s"', (mode) => {
     expect(PromptModeSchema.safeParse(mode).success).toBe(true)
   })
 
@@ -45,7 +51,7 @@ describe('PromptModeSchema', () => {
 })
 
 describe('AutoSelectModeSchema', () => {
-  it.each(['plan', 'build'])('accepts "%s"', mode => {
+  it.each(['plan', 'build'])('accepts "%s"', (mode) => {
     expect(AutoSelectModeSchema.safeParse(mode).success).toBe(true)
   })
 

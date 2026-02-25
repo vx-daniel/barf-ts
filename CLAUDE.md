@@ -2,63 +2,50 @@
 
 TypeScript/Bun rewrite of the bash `barf` CLI — an issue/work management system that orchestrates Claude AI agent work on projects.
 
-## Commands
+See README.md for installation, setup, and usage documentation.
 
-```bash
-bun install              # install deps
-bun run dev <cmd>        # run from source (no compile step)
-bun test                 # run tests (413 tests across 38 files)
-bun run build            # compile binary to dist/barf
-bun run format           # format with oxfmt (in-place)
-bun run format:check     # check formatting (CI)
-bun run lint             # lint with oxlint
-bun run lint:fix         # auto-fix lint violations
-bun run check            # format:check + lint (CI gate)
-bun run docs             # generate API docs to docs/api/
-./dist/barf <command>    # run compiled binary
-```
-
-## Architecture
+### Project layout
 
 ```
 src/
-  index.ts              # CLI entry (commander)
-  cli/commands/         # init  status  plan  build  auto  audit
+  index.ts                    CLI entry (commander)
+  cli/commands/               init  status  plan  build  auto  audit
   core/
     issue/
-      index.ts          # Frontmatter parser, typed state machine, VALID_TRANSITIONS
-      base.ts           # Abstract IssueProvider base class
-      factory.ts        # Provider factory
+      index.ts                frontmatter parser, state machine
+      base.ts                 abstract IssueProvider
+      factory.ts              provider factory
       providers/
-        local.ts        # File-system provider (POSIX mkdir locking)
-        github.ts       # GitHub Issues provider (gh CLI)
-    config.ts           # .barfrc KEY=VALUE parser
-    context.ts          # Async stream parser, SIGTERM on context overflow
-    claude.ts           # Claude subprocess wrapper
-    prompts.ts          # Runtime prompt template resolution
-    batch.ts            # Orchestration loop (plan/build/split/verify)
-    triage.ts           # One-shot triage call (NEW issues → needs_interview flag)
-    verification.ts     # Post-COMPLETED verification (build/check/test → VERIFIED)
-    openai.ts           # OpenAI API client (for audit)
-    audit-schema.ts     # Audit result Zod schemas
+        local.ts              file-system provider (POSIX mkdir locking)
+        github.ts             GitHub Issues provider (gh CLI)
+    config.ts                 .barfrc parser
+    context.ts                Claude stream parser, prompt injection
+    claude.ts                 Claude subprocess wrapper
+    prompts.ts                runtime prompt template resolution (plan/build/split/audit/triage)
+    batch.ts                  orchestration loop (plan/build/split/verify)
+    triage.ts                 one-shot triage call (NEW issues → needs_interview flag)
+    verification.ts           post-COMPLETED verification (build/check/test → VERIFIED)
+    openai.ts                 OpenAI API client
+    audit-schema.ts           audit result Zod schemas
+  providers/                  pluggable audit providers (openai, gemini, claude)
   types/
-    index.ts            # Zod schemas + inferred types (Issue, Config, ClaudeEvent)
-    assets.d.ts         # .md text import declaration for Bun
+    index.ts                  Zod schemas + inferred types
+    assets.d.ts               .md text import declaration for Bun
   utils/
-    execFileNoThrow.ts  # Shell-injection-safe subprocess helper
-    logger.ts           # Pino logger (JSON stderr; LOG_PRETTY=1 for dev)
-    toError.ts          # unknown → Error coercion
-    syncToResultAsync.ts # sync Result → ResultAsync bridge
+    execFileNoThrow.ts        shell-injection-safe subprocess
+    logger.ts                 pino logger
+    toError.ts                unknown → Error coercion
+    syncToResultAsync.ts      sync Result → ResultAsync bridge
   prompts/
-    PROMPT_plan.md      # Planning prompt template
-    PROMPT_build.md     # Build prompt template
-    PROMPT_split.md     # Split prompt template
-    PROMPT_audit.md     # Audit prompt template
-    PROMPT_triage.md    # Triage prompt template
+    PROMPT_plan.md            planning prompt template
+    PROMPT_build.md           build prompt template
+    PROMPT_split.md           split prompt template
+    PROMPT_audit.md           audit prompt template
+    PROMPT_triage.md          triage prompt template
 tests/
-  unit/                 # 413 tests across 38 files
-  fixtures/             # Test helpers (mock provider, etc.)
-  sample-project/       # Sample project for manual testing (barf --cwd tests/sample-project)
+  unit/                       413 tests across 38 files
+  fixtures/                   test helpers (mock provider, etc.)
+  sample-project/             sample project for manual testing (barf --cwd tests/sample-project)
 ```
 
 

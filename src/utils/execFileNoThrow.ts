@@ -9,12 +9,15 @@ export type { ExecResult } from '@/types/schema/exec-schema'
  *
  * @category Utilities
  */
-export async function execFileNoThrow(file: string, args: string[] = []): Promise<ExecResult> {
+export async function execFileNoThrow(
+  file: string,
+  args: string[] = [],
+): Promise<ExecResult> {
   const proc = spawn({ cmd: [file, ...args], stdout: 'pipe', stderr: 'pipe' })
   const [stdout, stderr, status] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
-    proc.exited
+    proc.exited,
   ])
   return { stdout, stderr, status }
 }

@@ -1,12 +1,12 @@
 import type { ResultAsync } from 'neverthrow'
 import { IssueProvider } from '@/core/issue/base'
 import {
-  LockInfo,
+  type LockInfo,
   LockInfoSchema,
   IssueStateSchema,
   type LockMode,
   type Issue,
-  type IssueState
+  type IssueState,
 } from '@/types'
 import { parseIssue, serializeIssue } from '@/core/issue'
 import { syncToResultAsync } from '@/utils/syncToResultAsync'
@@ -21,7 +21,7 @@ import {
   openSync,
   writeSync,
   closeSync,
-  constants
+  constants,
 } from 'fs'
 import { join } from 'path'
 
@@ -40,7 +40,7 @@ import { join } from 'path'
 export class LocalIssueProvider extends IssueProvider {
   constructor(
     private issuesDir: string,
-    private barfDir: string
+    private barfDir: string,
   ) {
     super()
     mkdirSync(barfDir, { recursive: true })
@@ -100,10 +100,10 @@ export class LocalIssueProvider extends IssueProvider {
     return syncToResultAsync(() => {
       const content = readFileSync(this.issuePath(id), 'utf8')
       return parseIssue(content).match(
-        issue => issue,
-        e => {
+        (issue) => issue,
+        (e) => {
           throw e
-        }
+        },
       )
     })
   }
@@ -137,10 +137,14 @@ export class LocalIssueProvider extends IssueProvider {
     })
   }
 
-  createIssue(input: { title: string; body?: string; parent?: string }): ResultAsync<Issue, Error> {
-    return this.listIssues().andThen(existing => {
+  createIssue(input: {
+    title: string
+    body?: string
+    parent?: string
+  }): ResultAsync<Issue, Error> {
+    return this.listIssues().andThen((existing) => {
       const maxId = existing
-        .map(i => {
+        .map((i) => {
           const num = parseInt(i.id.split('-')[0], 10)
           return Number.isFinite(num) ? num : 0
         })
@@ -155,7 +159,7 @@ export class LocalIssueProvider extends IssueProvider {
         split_count: 0,
         force_split: false,
         verify_count: 0,
-        body: input.body ?? ''
+        body: input.body ?? '',
       }
       return syncToResultAsync(() => {
         writeFileSync(join(this.issuesDir, `${id}.md`), serializeIssue(issue))
@@ -164,8 +168,11 @@ export class LocalIssueProvider extends IssueProvider {
     })
   }
 
-  writeIssue(id: string, fields: Partial<Omit<Issue, 'id'>>): ResultAsync<Issue, Error> {
-    return this.fetchIssue(id).andThen(current =>
+  writeIssue(
+    id: string,
+    fields: Partial<Omit<Issue, 'id'>>,
+  ): ResultAsync<Issue, Error> {
+    return this.fetchIssue(id).andThen((current) =>
       syncToResultAsync(() => {
         const updated = { ...current, ...fields }
         const target = this.issuePath(id)
@@ -173,7 +180,7 @@ export class LocalIssueProvider extends IssueProvider {
         writeFileSync(tmp, serializeIssue(updated))
         renameSync(tmp, target)
         return updated
-      })
+      }),
     )
   }
 
@@ -193,14 +200,14 @@ export class LocalIssueProvider extends IssueProvider {
         pid: process.pid,
         acquiredAt: new Date().toISOString(),
         state,
-        mode: meta?.mode ?? 'build'
+        mode: meta?.mode ?? 'build',
       }
 
       const writelock = () => {
         // O_CREAT | O_EXCL: atomic, throws EEXIST if another process holds the lock
         const fd = openSync(
           this.lockPath(id),
-          constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
+          constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY,
         )
         try {
           writeSync(fd, JSON.stringify(lockData))
@@ -213,7 +220,10 @@ export class LocalIssueProvider extends IssueProvider {
         writelock()
       } catch (e) {
         // On EEXIST, check if the existing lock belongs to a dead process
-        if (e instanceof Error && (e as NodeJS.ErrnoException).code === 'EEXIST') {
+        if (
+          e instanceof Error &&
+          (e as NodeJS.ErrnoException).code === 'EEXIST'
+        ) {
           if (this.readLockIfAlive(this.lockPath(id)) === null) {
             writelock() // stale lock cleared — retry once
             return

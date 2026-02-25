@@ -36,7 +36,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     logFile: 'barf.log',
     logLevel: 'info',
     logPretty: false,
-    ...overrides
+    ...overrides,
   }
 }
 

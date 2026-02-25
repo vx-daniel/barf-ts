@@ -26,10 +26,10 @@ const TriageResultSchema = z.union([
     questions: z.array(
       z.object({
         question: z.string(),
-        options: z.array(z.string()).optional()
-      })
-    )
-  })
+        options: z.array(z.string()).optional(),
+      }),
+    ),
+  }),
 ])
 
 type TriageResult = z.infer<typeof TriageResultSchema>
@@ -38,11 +38,15 @@ type TriageResult = z.infer<typeof TriageResultSchema>
  * Formats the questions from a triage result as a numbered markdown list
  * suitable for appending to an issue body under `## Interview Questions`.
  */
-function formatQuestionsSection(result: TriageResult & { needs_interview: true }): string {
+function formatQuestionsSection(
+  result: TriageResult & { needs_interview: true },
+): string {
   const items = result.questions
     .map((q, i) => {
-      const opts = q.options?.map(o => `   - ${o}`).join('\n') ?? ''
-      return opts ? `${i + 1}. ${q.question}\n${opts}` : `${i + 1}. ${q.question}`
+      const opts = q.options?.map((o) => `   - ${o}`).join('\n') ?? ''
+      return opts
+        ? `${i + 1}. ${q.question}\n${opts}`
+        : `${i + 1}. ${q.question}`
     })
     .join('\n')
   return `\n\n## Interview Questions\n\n${items}`
@@ -77,7 +81,7 @@ async function triageIssueImpl(
   config: Config,
   provider: IssueProvider,
   execFn: ExecFn,
-  displayContext: DisplayContext | undefined
+  displayContext: DisplayContext | undefined,
 ): Promise<void> {
   const fetchResult = await provider.fetchIssue(issueId)
   if (fetchResult.isErr()) {
@@ -95,16 +99,17 @@ async function triageIssueImpl(
   const issueFile = resolveIssueFilePath(issueId, config)
   const prompt = injectTemplateVars(resolvePromptTemplate('triage', config), {
     BARF_ISSUE_ID: issueId,
-    BARF_ISSUE_FILE: issueFile
+    BARF_ISSUE_FILE: issueFile,
   })
 
   logger.info({ issueId, model: config.triageModel }, 'triaging issue')
 
   if (displayContext && process.stderr.isTTY) {
     const rawTitle = displayContext.title
-    const title = rawTitle.length > 50 ? rawTitle.slice(0, 47) + '...' : rawTitle
+    const title =
+      rawTitle.length > 50 ? `${rawTitle.slice(0, 47)}...` : rawTitle
     process.stderr.write(
-      `▶ ${displayContext.mode}  ${displayContext.issueId}  ${displayContext.state}  ${title}\n`
+      `▶ ${displayContext.mode}  ${displayContext.issueId}  ${displayContext.state}  ${title}\n`,
     )
   }
 
@@ -116,7 +121,7 @@ async function triageIssueImpl(
       '--model',
       config.triageModel,
       '--output-format',
-      'text'
+      'text',
     ])
   } finally {
     if (displayContext && process.stderr.isTTY) {
@@ -125,7 +130,9 @@ async function triageIssueImpl(
   }
 
   if (execResult.status !== 0) {
-    throw new Error(`Claude triage failed (exit ${execResult.status}): ${execResult.stderr.trim()}`)
+    throw new Error(
+      `Claude triage failed (exit ${execResult.status}): ${execResult.stderr.trim()}`,
+    )
   }
 
   let parsed: TriageResult
@@ -137,7 +144,9 @@ async function triageIssueImpl(
       .trim()
     const parseResult = TriageResultSchema.safeParse(JSON.parse(raw))
     if (!parseResult.success) {
-      throw new Error(`Unexpected triage JSON shape: ${JSON.stringify(parseResult.error.issues)}`)
+      throw new Error(
+        `Unexpected triage JSON shape: ${JSON.stringify(parseResult.error.issues)}`,
+      )
     }
     parsed = parseResult.data
   } catch (e) {
@@ -145,7 +154,9 @@ async function triageIssueImpl(
   }
 
   if (!parsed.needs_interview) {
-    const writeResult = await provider.writeIssue(issueId, { needs_interview: false })
+    const writeResult = await provider.writeIssue(issueId, {
+      needs_interview: false,
+    })
     if (writeResult.isErr()) {
       throw writeResult.error
     }
@@ -157,13 +168,16 @@ async function triageIssueImpl(
   const questionsSection = formatQuestionsSection(parsed)
   const writeResult = await provider.writeIssue(issueId, {
     needs_interview: true,
-    body: issue.body + questionsSection
+    body: issue.body + questionsSection,
   })
   if (writeResult.isErr()) {
     throw writeResult.error
   }
 
-  logger.info({ issueId, questions: parsed.questions.length }, 'triage: issue needs interview')
+  logger.info(
+    { issueId, questions: parsed.questions.length },
+    'triage: issue needs interview',
+  )
 }
 
 /**
@@ -186,10 +200,10 @@ export function triageIssue(
   config: Config,
   provider: IssueProvider,
   execFn: ExecFn = execFileNoThrow,
-  displayContext?: DisplayContext
+  displayContext?: DisplayContext,
 ): ResultAsync<void, Error> {
   return ResultAsync.fromPromise(
     triageIssueImpl(issueId, config, provider, execFn, displayContext),
-    toError
+    toError,
   )
 }

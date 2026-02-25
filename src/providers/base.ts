@@ -1,4 +1,4 @@
-import { Result, ResultAsync, errAsync } from 'neverthrow'
+import { type Result, ResultAsync, errAsync } from 'neverthrow'
 import type { ZodType } from 'zod'
 import { toError } from '@/utils/toError'
 import { createLogger } from '@/utils/logger'
@@ -9,10 +9,17 @@ import type {
   PingResult,
   ProviderInfo,
   TokenUsage,
-  ModelInfo
+  ModelInfo,
 } from '@/types/schema/provider-schema'
 
-export type { ChatResult, ChatOptions, PingResult, ProviderInfo, TokenUsage, ModelInfo }
+export type {
+  ChatResult,
+  ChatOptions,
+  PingResult,
+  ProviderInfo,
+  TokenUsage,
+  ModelInfo,
+}
 
 const logger = createLogger('providers')
 
@@ -65,7 +72,10 @@ export abstract class AuditProvider {
    * @param opts - Optional temperature, max tokens, and JSON mode flag.
    * @returns `ok(ChatResult)` on success, `err(Error)` on API failure.
    */
-  abstract chat(prompt: string, opts?: ChatOptions): ResultAsync<ChatResult, Error>
+  abstract chat(
+    prompt: string,
+    opts?: ChatOptions,
+  ): ResultAsync<ChatResult, Error>
 
   /**
    * Queries the provider's API for available models with tier annotations.
@@ -89,7 +99,7 @@ export abstract class AuditProvider {
    * @returns `ok({ content, usage })` on success, `err(Error)` if the response shape is unexpected.
    */
   protected abstract parseResponse(
-    raw: unknown
+    raw: unknown,
   ): Result<{ content: string; usage: TokenUsage }, Error>
 
   /**
@@ -99,12 +109,15 @@ export abstract class AuditProvider {
    * @param raw - Intermediate shape returned by `parseResponse`.
    * @returns Canonical `ChatResult`.
    */
-  protected normalizeResponse(raw: { content: string; usage: TokenUsage }): ChatResult {
+  protected normalizeResponse(raw: {
+    content: string
+    usage: TokenUsage
+  }): ChatResult {
     return {
       content: raw.content.trim(),
       promptTokens: raw.usage.promptTokens,
       completionTokens: raw.usage.completionTokens,
-      totalTokens: raw.usage.totalTokens
+      totalTokens: raw.usage.totalTokens,
     }
   }
 
@@ -117,15 +130,19 @@ export abstract class AuditProvider {
    * @param opts - Optional chat options.
    * @returns `ok(T)` on success, `err(Error)` if the call fails, JSON is invalid, or schema validation fails.
    */
-  chatJSON<T>(prompt: string, schema: ZodType<T>, opts?: ChatOptions): ResultAsync<T, Error> {
-    return this.chat(prompt, opts).andThen(result => {
+  chatJSON<T>(
+    prompt: string,
+    schema: ZodType<T>,
+    opts?: ChatOptions,
+  ): ResultAsync<T, Error> {
+    return this.chat(prompt, opts).andThen((result) => {
       let parsed: unknown
       try {
         parsed = JSON.parse(result.content)
       } catch {
         logger.debug(
           { provider: this.name, content: result.content.slice(0, 100) },
-          'response is not valid JSON'
+          'response is not valid JSON',
         )
         return errAsync(new Error(`${this.name} returned invalid JSON`))
       }
@@ -133,10 +150,12 @@ export abstract class AuditProvider {
       if (!validation.success) {
         logger.debug(
           { provider: this.name, issues: validation.error.issues },
-          'response failed schema validation'
+          'response failed schema validation',
         )
         return errAsync(
-          new Error(`${this.name} response failed schema validation: ${validation.error.message}`)
+          new Error(
+            `${this.name} response failed schema validation: ${validation.error.message}`,
+          ),
         )
       }
       return ResultAsync.fromPromise(Promise.resolve(validation.data), toError)

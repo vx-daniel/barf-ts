@@ -2,25 +2,41 @@ import { describe, it, expect, beforeEach } from 'bun:test'
 import { okAsync, errAsync } from 'neverthrow'
 import type { ExecFn } from '@/core/triage'
 import { triageIssue } from '@/core/triage'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import {
+  defaultConfig,
+  makeIssue,
+  makeProvider,
+} from '@tests/fixtures/provider'
 
 /** Creates an ExecFn that returns the given result synchronously. */
-function mockExec(result: { stdout: string; stderr: string; status: number }): ExecFn {
+function mockExec(result: {
+  stdout: string
+  stderr: string
+  status: number
+}): ExecFn {
   return () => Promise.resolve(result)
 }
 
-const okExec = mockExec({ stdout: JSON.stringify({ needs_interview: false }), stderr: '', status: 0 })
+const okExec = mockExec({
+  stdout: JSON.stringify({ needs_interview: false }),
+  stderr: '',
+  status: 0,
+})
 
 describe('triageIssue', () => {
   it('skips issue already triaged (needs_interview=false)', async () => {
-    const issue = makeIssue({ id: '001', state: 'NEW', needs_interview: false })
+    const issue = makeIssue({
+      id: '001',
+      state: 'NEW',
+      needs_interview: false,
+    })
     let writeIssueCallCount = 0
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       writeIssue: () => {
         writeIssueCallCount++
         return okAsync(issue)
-      }
+      },
     })
 
     const result = await triageIssue('001', defaultConfig(), provider, okExec)
@@ -37,7 +53,7 @@ describe('triageIssue', () => {
       writeIssue: () => {
         writeIssueCallCount++
         return okAsync(issue)
-      }
+      },
     })
 
     const result = await triageIssue('001', defaultConfig(), provider, okExec)
@@ -47,15 +63,23 @@ describe('triageIssue', () => {
   })
 
   it('sets needs_interview=false for well-specified issue', async () => {
-    const exec = mockExec({ stdout: JSON.stringify({ needs_interview: false }), stderr: '', status: 0 })
-    const issue = makeIssue({ id: '001', state: 'NEW', body: 'Well-specified body' })
+    const exec = mockExec({
+      stdout: JSON.stringify({ needs_interview: false }),
+      stderr: '',
+      status: 0,
+    })
+    const issue = makeIssue({
+      id: '001',
+      state: 'NEW',
+      body: 'Well-specified body',
+    })
     let writtenFields: Record<string, unknown> = {}
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       writeIssue: (_id, fields) => {
         writtenFields = fields
         return okAsync({ ...issue, ...fields })
-      }
+      },
     })
 
     const result = await triageIssue('001', defaultConfig(), provider, exec)
@@ -70,21 +94,25 @@ describe('triageIssue', () => {
         needs_interview: true,
         questions: [
           { question: 'What is the scope?', options: ['Small', 'Large'] },
-          { question: 'Any deadlines?' }
-        ]
+          { question: 'Any deadlines?' },
+        ],
       }),
       stderr: '',
-      status: 0
+      status: 0,
     })
 
-    const issue = makeIssue({ id: '002', state: 'NEW', body: 'Vague description' })
+    const issue = makeIssue({
+      id: '002',
+      state: 'NEW',
+      body: 'Vague description',
+    })
     let writtenFields: Record<string, unknown> = {}
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       writeIssue: (_id, fields) => {
         writtenFields = fields
         return okAsync({ ...issue, ...fields })
-      }
+      },
     })
 
     const result = await triageIssue('002', defaultConfig(), provider, exec)
@@ -102,7 +130,7 @@ describe('triageIssue', () => {
 
   it('returns err when fetchIssue fails', async () => {
     const provider = makeProvider({
-      fetchIssue: () => errAsync(new Error('not found'))
+      fetchIssue: () => errAsync(new Error('not found')),
     })
 
     const result = await triageIssue('999', defaultConfig(), provider, okExec)
@@ -112,10 +140,14 @@ describe('triageIssue', () => {
   })
 
   it('returns err when claude exits with non-zero status', async () => {
-    const exec = mockExec({ stdout: '', stderr: 'command not found', status: 127 })
+    const exec = mockExec({
+      stdout: '',
+      stderr: 'command not found',
+      status: 127,
+    })
     const issue = makeIssue({ id: '003', state: 'NEW' })
     const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
+      fetchIssue: () => okAsync(issue),
     })
 
     const result = await triageIssue('003', defaultConfig(), provider, exec)
@@ -128,7 +160,7 @@ describe('triageIssue', () => {
     const exec = mockExec({ stdout: 'not json at all', stderr: '', status: 0 })
     const issue = makeIssue({ id: '004', state: 'NEW' })
     const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
+      fetchIssue: () => okAsync(issue),
     })
 
     const result = await triageIssue('004', defaultConfig(), provider, exec)
@@ -138,10 +170,14 @@ describe('triageIssue', () => {
   })
 
   it('returns err when claude outputs unexpected JSON shape', async () => {
-    const exec = mockExec({ stdout: JSON.stringify({ unexpected: 'shape' }), stderr: '', status: 0 })
+    const exec = mockExec({
+      stdout: JSON.stringify({ unexpected: 'shape' }),
+      stderr: '',
+      status: 0,
+    })
     const issue = makeIssue({ id: '005', state: 'NEW' })
     const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
+      fetchIssue: () => okAsync(issue),
     })
 
     const result = await triageIssue('005', defaultConfig(), provider, exec)
@@ -154,7 +190,7 @@ describe('triageIssue', () => {
     const issue = makeIssue({ id: '006', state: 'NEW' })
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
-      writeIssue: () => errAsync(new Error('disk full'))
+      writeIssue: () => errAsync(new Error('disk full')),
     })
 
     const result = await triageIssue('006', defaultConfig(), provider, okExec)

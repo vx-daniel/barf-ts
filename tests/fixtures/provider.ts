@@ -18,12 +18,14 @@ export function makeIssue(overrides: Partial<Issue> = {}): Issue {
     force_split: false,
     verify_count: 0,
     body: '',
-    ...overrides
+    ...overrides,
   }
 }
 
 /** Stub provider where every method returns `err('not implemented')` by default. */
-export function makeProvider(overrides: Partial<IssueProvider> = {}): IssueProvider {
+export function makeProvider(
+  overrides: Partial<IssueProvider> = {},
+): IssueProvider {
   return {
     listIssues: () => errAsync(new Error('not implemented')),
     fetchIssue: () => errAsync(new Error('not implemented')),
@@ -36,6 +38,6 @@ export function makeProvider(overrides: Partial<IssueProvider> = {}): IssueProvi
     transition: () => errAsync(new Error('not implemented')),
     autoSelect: () => errAsync(new Error('not implemented')),
     checkAcceptanceCriteria: () => errAsync(new Error('not implemented')),
-    ...overrides
+    ...overrides,
   } as unknown as IssueProvider
 }

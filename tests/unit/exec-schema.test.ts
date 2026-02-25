@@ -21,14 +21,14 @@ describe('ExecResultSchema', () => {
   })
 
   it('rejects missing stdout', () => {
-    expect(
-      ExecResultSchema.safeParse({ stderr: '', status: 0 }).success
-    ).toBe(false)
+    expect(ExecResultSchema.safeParse({ stderr: '', status: 0 }).success).toBe(
+      false,
+    )
   })
 
   it('rejects missing status', () => {
-    expect(
-      ExecResultSchema.safeParse({ stdout: '', stderr: '' }).success
-    ).toBe(false)
+    expect(ExecResultSchema.safeParse({ stdout: '', stderr: '' }).success).toBe(
+      false,
+    )
   })
 })

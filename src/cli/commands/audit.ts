@@ -1,12 +1,15 @@
+import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { existsSync, readFileSync, readdirSync } from 'fs'
-import type { IssueProvider } from '@/core/issue/base'
-import type { Config } from '@/types'
-import type { ExecResult } from '@/types/schema/exec-schema'
-import { createAuditProvider, type AuditProvider } from '@/providers/index'
-import { AuditResponseSchema, type AuditFinding } from '@/types/schema/audit-schema'
 import { injectTemplateVars } from '@/core/context'
+import type { IssueProvider } from '@/core/issue/base'
 import { resolvePromptTemplate } from '@/core/prompts'
+import { type AuditProvider, createAuditProvider } from '@/providers/index'
+import type { Config } from '@/types'
+import {
+  type AuditFinding,
+  AuditResponseSchema,
+} from '@/types/schema/audit-schema'
+import type { ExecResult } from '@/types/schema/exec-schema'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 
@@ -35,7 +38,9 @@ function loadRulesContext(): string {
   }
 
   if (existsSync('.claude/rules')) {
-    for (const file of readdirSync('.claude/rules').filter(f => f.endsWith('.md'))) {
+    for (const file of readdirSync('.claude/rules').filter((f) =>
+      f.endsWith('.md'),
+    )) {
       const content = readFileSync(join('.claude/rules', file), 'utf-8')
       parts.push(`## ${file}\n\n${content}`)
     }
@@ -47,8 +52,12 @@ function loadRulesContext(): string {
 
   let rulesContext = parts.join('\n\n---\n\n')
   if (rulesContext.length > MAX_RULES_CHARS) {
-    logger.warn({ chars: rulesContext.length }, 'rules context truncated to avoid context overflow')
-    rulesContext = rulesContext.slice(0, MAX_RULES_CHARS) + '\n[... truncated ...]'
+    logger.warn(
+      { chars: rulesContext.length },
+      'rules context truncated to avoid context overflow',
+    )
+    rulesContext =
+      `${rulesContext.slice(0, MAX_RULES_CHARS)}\n[... truncated ...]`
   }
   return rulesContext
 }
@@ -88,13 +97,15 @@ function formatFindings(findings: AuditFinding[]): string {
     failing_check: 'Failing Checks',
     unmet_criteria: 'Unmet Criteria',
     rule_violation: 'Rule Violations',
-    production_readiness: 'Production Readiness'
+    production_readiness: 'Production Readiness',
   }
 
   const sections: string[] = []
   for (const [category, items] of grouped) {
     const label = categoryLabels[category] ?? category
-    const lines = items.map(f => `- **[${f.severity.toUpperCase()}]** ${f.title}\n  ${f.detail}`)
+    const lines = items.map(
+      (f) => `- **[${f.severity.toUpperCase()}]** ${f.title}\n  ${f.detail}`,
+    )
     sections.push(`### ${label}\n\n${lines.join('\n\n')}`)
   }
 
@@ -118,18 +129,24 @@ async function auditIssue(
   issueId: string,
   config: Config,
   provider: IssueProvider,
-  deps: AuditDeps
+  deps: AuditDeps,
 ): Promise<void> {
   const issueResult = await provider.fetchIssue(issueId)
   if (issueResult.isErr()) {
-    logger.error({ issueId, err: issueResult.error.message }, 'could not fetch issue')
+    logger.error(
+      { issueId, err: issueResult.error.message },
+      'could not fetch issue',
+    )
     process.exitCode = 1
     return
   }
 
   const issue = issueResult.value
   if (issue.state !== 'COMPLETED') {
-    logger.warn({ issueId, state: issue.state }, 'skipping — issue is not COMPLETED')
+    logger.warn(
+      { issueId, state: issue.state },
+      'skipping — issue is not COMPLETED',
+    )
     return
   }
 
@@ -139,7 +156,7 @@ async function auditIssue(
     const info = auditProvider.describe()
     logger.error(
       { provider: auditProvider.name, requiredKeys: info.requiredConfigKeys },
-      `${info.displayName} is not configured — check .barfrc`
+      `${info.displayName} is not configured — check .barfrc`,
     )
     process.exitCode = 1
     return
@@ -150,9 +167,11 @@ async function auditIssue(
   // ── Phase 1: deterministic checks ─────────────────────────────────────────
 
   const [testResult, lintResult, fmtResult] = await Promise.all([
-    config.testCommand ? execFn('sh', ['-c', config.testCommand]) : Promise.resolve(null),
+    config.testCommand
+      ? execFn('sh', ['-c', config.testCommand])
+      : Promise.resolve(null),
     execFn('bun', ['run', 'lint']),
-    execFn('bun', ['run', 'format:check'])
+    execFn('bun', ['run', 'format:check']),
   ])
 
   // ── Phase 2: AI audit ──────────────────────────────────────────────────────
@@ -172,19 +191,31 @@ async function auditIssue(
     TEST_RESULTS: formatCheckResult(testResult),
     LINT_RESULTS: formatCheckResult(lintResult),
     FORMAT_RESULTS: formatCheckResult(fmtResult),
-    RULES_CONTEXT: rulesContext
+    RULES_CONTEXT: rulesContext,
   })
 
-  const auditResult = await auditProvider.chatJSON(prompt, AuditResponseSchema, { jsonMode: true })
+  const auditResult = await auditProvider.chatJSON(
+    prompt,
+    AuditResponseSchema,
+    {
+      jsonMode: true,
+    },
+  )
 
   if (auditResult.isErr()) {
-    logger.error({ issueId, err: auditResult.error.message }, 'audit call failed')
+    logger.error(
+      { issueId, err: auditResult.error.message },
+      'audit call failed',
+    )
     process.exitCode = 1
     return
   }
 
   const auditResponse = auditResult.value
-  logger.debug({ issueId, provider: auditProvider.name }, 'audit response received')
+  logger.debug(
+    { issueId, provider: auditProvider.name },
+    'audit response received',
+  )
 
   if (auditResponse.pass) {
     process.stdout.write(`\u2713 Issue #${issueId} passes audit\n`)
@@ -197,18 +228,26 @@ async function auditIssue(
   const createResult = await provider.createIssue({
     title: `Audit findings: ${issue.title}`,
     body: findingsBody,
-    parent: issueId
+    parent: issueId,
   })
 
   if (createResult.isErr()) {
-    logger.error({ issueId, err: createResult.error.message }, 'failed to create findings issue')
+    logger.error(
+      { issueId, err: createResult.error.message },
+      'failed to create findings issue',
+    )
     process.exitCode = 1
     return
   }
 
   const findingsIssue = createResult.value
-  logger.warn({ issueId, findingsIssueId: findingsIssue.id }, 'audit found issues')
-  process.stdout.write(`\u2717 Issue #${issueId}: findings written to #${findingsIssue.id}\n`)
+  logger.warn(
+    { issueId, findingsIssueId: findingsIssue.id },
+    'audit found issues',
+  )
+  process.stdout.write(
+    `\u2717 Issue #${issueId}: findings written to #${findingsIssue.id}\n`,
+  )
   process.exitCode = 1
 }
 
@@ -226,7 +265,7 @@ export async function auditCommand(
   provider: IssueProvider,
   opts: { issue?: string; all: boolean },
   config: Config,
-  deps: AuditDeps = {}
+  deps: AuditDeps = {},
 ): Promise<void> {
   if (opts.issue) {
     await auditIssue(opts.issue, config, provider, deps)

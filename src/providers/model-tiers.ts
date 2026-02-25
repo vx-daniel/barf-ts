@@ -15,7 +15,7 @@ export const OPENAI_TIERS: Record<string, ModelTier> = {
   'gpt-4-turbo': 'frontier',
   o1: 'frontier',
   o3: 'frontier',
-  'gpt-4.5': 'frontier'
+  'gpt-4.5': 'frontier',
 }
 
 /**
@@ -30,7 +30,7 @@ export const CLAUDE_TIERS: Record<string, ModelTier> = {
   'claude-sonnet-4-5': 'general',
   'claude-sonnet-4-6': 'general',
   'claude-opus-4-5': 'frontier',
-  'claude-opus-4-6': 'frontier'
+  'claude-opus-4-6': 'frontier',
 }
 
 /**
@@ -46,7 +46,7 @@ export const GEMINI_TIERS: Record<string, ModelTier> = {
   'gemini-2.0-flash': 'general',
   'gemini-2.0-flash-lite': 'small',
   'gemini-2.5-pro': 'frontier',
-  'gemini-2.5-flash': 'frontier'
+  'gemini-2.5-flash': 'frontier',
 }
 
 /**
@@ -62,7 +62,10 @@ export const GEMINI_TIERS: Record<string, ModelTier> = {
  * @param providerMap - Optional per-provider lookup table (e.g. {@link OPENAI_TIERS}).
  * @returns The inferred tier for the model.
  */
-export function inferTier(modelId: string, providerMap?: Record<string, ModelTier>): ModelTier {
+export function inferTier(
+  modelId: string,
+  providerMap?: Record<string, ModelTier>,
+): ModelTier {
   if (providerMap?.[modelId]) {
     return providerMap[modelId]
   }

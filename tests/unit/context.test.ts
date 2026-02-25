@@ -8,7 +8,7 @@ describe('injectTemplateVars', () => {
     BARF_MODE: 'build',
     BARF_ITERATION: 2,
     ISSUES_DIR: 'issues',
-    PLAN_DIR: 'plans'
+    PLAN_DIR: 'plans',
   }
 
   it('replaces $BARF_ISSUE_ID', () => {
@@ -22,11 +22,16 @@ describe('injectTemplateVars', () => {
   })
 
   it('replaces all six variables', () => {
-    const t = '$BARF_ISSUE_ID $BARF_ISSUE_FILE $BARF_MODE $BARF_ITERATION $ISSUES_DIR $PLAN_DIR'
-    expect(injectTemplateVars(t, vars)).toBe('001 issues/001.md.working build 2 issues plans')
+    const t =
+      '$BARF_ISSUE_ID $BARF_ISSUE_FILE $BARF_MODE $BARF_ITERATION $ISSUES_DIR $PLAN_DIR'
+    expect(injectTemplateVars(t, vars)).toBe(
+      '001 issues/001.md.working build 2 issues plans',
+    )
   })
 
   it('replaces multiple occurrences of the same variable', () => {
-    expect(injectTemplateVars('$BARF_ISSUE_ID $BARF_ISSUE_ID', vars)).toBe('001 001')
+    expect(injectTemplateVars('$BARF_ISSUE_ID $BARF_ISSUE_ID', vars)).toBe(
+      '001 001',
+    )
   })
 })

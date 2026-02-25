@@ -20,7 +20,9 @@ export class ContextOverflowError extends Error {
  */
 export class RateLimitError extends Error {
   constructor(public readonly resetsAt?: number) {
-    const resetStr = resetsAt ? new Date(resetsAt * 1000).toLocaleTimeString() : 'soon'
+    const resetStr = resetsAt
+      ? new Date(resetsAt * 1000).toLocaleTimeString()
+      : 'soon'
     super(`Rate limited until ${resetStr}`)
     this.name = 'RateLimitError'
   }
@@ -40,7 +42,7 @@ export class RateLimitError extends Error {
  */
 export function injectTemplateVars(
   template: string,
-  vars: Record<string, string | number>
+  vars: Record<string, string | number>,
 ): string {
   let result = template
   for (const [key, value] of Object.entries(vars)) {

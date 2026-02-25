@@ -8,7 +8,10 @@ import { ContextOverflowError, RateLimitError } from '@/core/context'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 
-export type { IterationOutcome, IterationResult } from '@/types/schema/claude-schema'
+export type {
+  IterationOutcome,
+  IterationResult,
+} from '@/types/schema/claude-schema'
 
 const logger = createLogger('claude')
 
@@ -19,7 +22,7 @@ export const DEFAULT_CONTEXT_LIMIT = 200_000
 const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'claude-opus-4-6': DEFAULT_CONTEXT_LIMIT,
   'claude-sonnet-4-6': DEFAULT_CONTEXT_LIMIT,
-  'claude-haiku-4-5-20251001': DEFAULT_CONTEXT_LIMIT
+  'claude-haiku-4-5-20251001': DEFAULT_CONTEXT_LIMIT,
 }
 
 /**
@@ -50,7 +53,10 @@ export function setContextLimit(model: string, limit: number): void {
  *
  * @category Claude Agent
  */
-export function getThreshold(model: string, contextUsagePercent: number): number {
+export function getThreshold(
+  model: string,
+  contextUsagePercent: number,
+): number {
   const limit = getContextLimit(model)
   return Math.floor((contextUsagePercent / 100) * limit)
 }
@@ -83,7 +89,7 @@ export async function consumeSDKQuery(
   isTTY: boolean,
   stderrWrite: (data: string) => void,
   signal: AbortSignal,
-  displayContext?: DisplayContext
+  displayContext?: DisplayContext,
 ): Promise<IterationResult> {
   let lastTokens = 0
   let lastTool = ''
@@ -102,15 +108,16 @@ export async function consumeSDKQuery(
 
   if (displayContext && isTTY) {
     const rawTitle = displayContext.title
-    const title = rawTitle.length > 50 ? rawTitle.slice(0, 47) + '...' : rawTitle
+    const title =
+      rawTitle.length > 50 ? `${rawTitle.slice(0, 47)}...` : rawTitle
     stderrWrite(
-      `▶ ${displayContext.mode}  ${displayContext.issueId}  ${displayContext.state}  ${title}\n`
+      `▶ ${displayContext.mode}  ${displayContext.issueId}  ${displayContext.state}  ${title}\n`,
     )
   }
 
   try {
     for await (const msg of q) {
-      logStream?.write(JSON.stringify(msg) + '\n')
+      logStream?.write(`${JSON.stringify(msg)}\n`)
 
       if (msg.type === 'assistant') {
         // Rate limit reported on the assistant message itself
@@ -132,7 +139,7 @@ export async function consumeSDKQuery(
               const pct = Math.round((tokens / contextLimit) * 100)
               const toolPart = lastTool ? `  |  ${lastTool}` : ''
               stderrWrite(
-                `\r\x1b[K  context: ${tokens.toLocaleString()} / ${contextLimit.toLocaleString()} (${pct}%)${toolPart}`
+                `\r\x1b[K  context: ${tokens.toLocaleString()} / ${contextLimit.toLocaleString()} (${pct}%)${toolPart}`,
               )
             }
             if (tokens >= threshold) {
@@ -145,7 +152,7 @@ export async function consumeSDKQuery(
         // Tool name from content blocks
         const content = msg.message.content
         if (Array.isArray(content)) {
-          const toolBlock = content.find(c => c.type === 'tool_use')
+          const toolBlock = content.find((c) => c.type === 'tool_use')
           if (toolBlock && 'name' in toolBlock) {
             lastTool = toolBlock.name as string
             logger.debug({ tool: lastTool }, 'tool call')
@@ -161,7 +168,10 @@ export async function consumeSDKQuery(
           return { outcome: 'success', tokens: lastTokens }
         }
         // Error subtypes — check errors array for rate limit keywords
-        if ('errors' in msg && msg.errors.some((e: string) => /rate.?limit/i.test(e))) {
+        if (
+          'errors' in msg &&
+          msg.errors.some((e: string) => /rate.?limit/i.test(e))
+        ) {
           throw new RateLimitError(undefined)
         }
         return { outcome: 'error', tokens: lastTokens }
@@ -185,7 +195,7 @@ export async function consumeSDKQuery(
       return {
         outcome: 'rate_limited',
         tokens: lastTokens,
-        rateLimitResetsAt: e.resetsAt
+        rateLimitResetsAt: e.resetsAt,
       }
     }
     throw e
@@ -218,7 +228,7 @@ export function runClaudeIteration(
   model: string,
   config: Config,
   issueId?: string,
-  displayContext?: DisplayContext
+  displayContext?: DisplayContext,
 ): ResultAsync<IterationResult, Error> {
   return ResultAsync.fromPromise(
     (async (): Promise<IterationResult> => {
@@ -246,8 +256,8 @@ export function runClaudeIteration(
           settingSources: [],
           abortController: controller,
           cwd: process.cwd(),
-          env: { ...process.env, CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '100' }
-        }
+          env: { ...process.env, CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '100' },
+        },
       })
 
       try {
@@ -259,7 +269,7 @@ export function runClaudeIteration(
           process.stderr.isTTY ?? false,
           (data: string) => process.stderr.write(data),
           controller.signal,
-          displayContext
+          displayContext,
         )
       } finally {
         if (timeoutHandle) {
@@ -267,6 +277,6 @@ export function runClaudeIteration(
         }
       }
     })(),
-    toError
+    toError,
   )
 }

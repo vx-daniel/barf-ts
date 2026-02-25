@@ -17,14 +17,19 @@ import { IssueStateSchema } from '../src/types'
 
 // ── CLI arg parsing ────────────────────────────────────────────────────────────
 
-function parseArgs(): { projectCwd: string; configPath: string | undefined; port: number } {
+function parseArgs(): {
+  projectCwd: string
+  configPath: string | undefined
+  port: number
+} {
   const args = process.argv.slice(2)
   let cwd = process.cwd()
   let configPath: string | undefined
   let port = 3333
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--cwd' && args[i + 1]) cwd = resolve(args[++i])
-    else if (args[i] === '--config' && args[i + 1]) configPath = resolve(args[++i])
+    else if (args[i] === '--config' && args[i + 1])
+      configPath = resolve(args[++i])
     else if (args[i] === '--port' && args[i + 1]) port = parseInt(args[++i], 10)
   }
   return { projectCwd: resolve(cwd), configPath, port }
@@ -71,7 +76,10 @@ async function handleCreateIssue(req: Request): Promise<Response> {
     return jsonError('Invalid JSON body')
   }
   if (!body.title?.trim()) return jsonError('title is required')
-  const result = await provider.createIssue({ title: body.title.trim(), body: body.body })
+  const result = await provider.createIssue({
+    title: body.title.trim(),
+    body: body.body,
+  })
   if (result.isErr()) return jsonError(result.error.message, 500)
   return json(result.value, 201)
 }
@@ -112,17 +120,27 @@ function handleRunCommand(id: string, command: AllowedCommand): Response {
 
       const configArgs = configPath ? ['--config', configPath] : []
       const proc = Bun.spawn(
-        [process.execPath, 'run', srcIndex, '--cwd', projectCwd, ...configArgs, command, '--issue', id],
+        [
+          process.execPath,
+          'run',
+          srcIndex,
+          '--cwd',
+          projectCwd,
+          ...configArgs,
+          command,
+          '--issue',
+          id,
+        ],
         {
           stdout: 'pipe',
           stderr: 'pipe',
           env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
-        }
+        },
       )
 
       async function pipeStream(
         readable: ReadableStream<Uint8Array>,
-        streamName: 'stdout' | 'stderr'
+        streamName: 'stdout' | 'stderr',
       ) {
         const reader = readable.getReader()
         const dec = new TextDecoder()
@@ -141,20 +159,26 @@ function handleRunCommand(id: string, command: AllowedCommand): Response {
             }
           }
           if (buf) {
-            send({ type: streamName, line: buf.replace(/\x1b\[[0-9;]*m/g, '') })
+            send({
+              type: streamName,
+              line: buf.replace(/\x1b\[[0-9;]*m/g, ''),
+            })
           }
         } finally {
           reader.releaseLock()
         }
       }
 
-      Promise.all([pipeStream(proc.stdout, 'stdout'), pipeStream(proc.stderr, 'stderr')])
+      Promise.all([
+        pipeStream(proc.stdout, 'stdout'),
+        pipeStream(proc.stderr, 'stderr'),
+      ])
         .then(async () => {
           const exitCode = await proc.exited
           send({ type: 'done', exitCode })
           controller.close()
         })
-        .catch(e => {
+        .catch((e) => {
           send({ type: 'error', message: String(e) })
           controller.close()
         })
@@ -195,13 +219,16 @@ async function router(req: Request): Promise<Response> {
   }
 
   const transitionMatch = path.match(/^\/api\/issues\/([^/]+)\/transition$/)
-  if (transitionMatch && method === 'PUT') return handleTransition(transitionMatch[1], req)
+  if (transitionMatch && method === 'PUT')
+    return handleTransition(transitionMatch[1], req)
 
   const runMatch = path.match(/^\/api\/issues\/([^/]+)\/run\/([^/]+)$/)
   if (runMatch && (method === 'GET' || method === 'POST')) {
     const [, id, command] = runMatch
     if (!ALLOWED_COMMANDS.includes(command as AllowedCommand)) {
-      return jsonError(`Unknown command: ${command}. Allowed: ${ALLOWED_COMMANDS.join(', ')}`)
+      return jsonError(
+        `Unknown command: ${command}. Allowed: ${ALLOWED_COMMANDS.join(', ')}`,
+      )
     }
     return handleRunCommand(id, command as AllowedCommand)
   }
@@ -213,26 +240,46 @@ async function router(req: Request): Promise<Response> {
 
 const wsProcs = new Map<object, ReturnType<typeof Bun.spawn>>()
 
-function startInterviewProc(ws: { send(data: string): void }, issueId: string): void {
+function startInterviewProc(
+  ws: { send(data: string): void },
+  issueId: string,
+): void {
   const srcIndex = join(import.meta.dir, '..', 'src', 'index.ts')
   const configArgs = configPath ? ['--config', configPath] : []
 
   const proc = Bun.spawn(
-    [process.execPath, 'run', srcIndex, '--cwd', projectCwd, ...configArgs, 'interview', '--issue', issueId],
+    [
+      process.execPath,
+      'run',
+      srcIndex,
+      '--cwd',
+      projectCwd,
+      ...configArgs,
+      'interview',
+      '--issue',
+      issueId,
+    ],
     {
       stdout: 'pipe',
       stderr: 'pipe',
       stdin: 'pipe',
       env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
-    }
+    },
   )
   wsProcs.set(ws, proc)
 
   function send(data: object) {
-    try { ws.send(JSON.stringify(data)) } catch { /* ws already closed */ }
+    try {
+      ws.send(JSON.stringify(data))
+    } catch {
+      /* ws already closed */
+    }
   }
 
-  async function pipeStream(readable: ReadableStream<Uint8Array>, streamName: 'stdout' | 'stderr') {
+  async function pipeStream(
+    readable: ReadableStream<Uint8Array>,
+    streamName: 'stdout' | 'stderr',
+  ) {
     const reader = readable.getReader()
     const dec = new TextDecoder()
     let buf = ''
@@ -247,19 +294,23 @@ function startInterviewProc(ws: { send(data: string): void }, issueId: string): 
           send({ type: streamName, line: line.replace(/\x1b\[[0-9;]*m/g, '') })
         }
       }
-      if (buf) send({ type: streamName, line: buf.replace(/\x1b\[[0-9;]*m/g, '') })
+      if (buf)
+        send({ type: streamName, line: buf.replace(/\x1b\[[0-9;]*m/g, '') })
     } finally {
       reader.releaseLock()
     }
   }
 
-  Promise.all([pipeStream(proc.stdout, 'stdout'), pipeStream(proc.stderr, 'stderr')])
+  Promise.all([
+    pipeStream(proc.stdout, 'stdout'),
+    pipeStream(proc.stderr, 'stderr'),
+  ])
     .then(async () => {
       const exitCode = await proc.exited
       send({ type: 'done', exitCode })
       wsProcs.delete(ws)
     })
-    .catch(e => {
+    .catch((e) => {
       send({ type: 'error', message: String(e) })
       wsProcs.delete(ws)
     })
@@ -915,7 +966,9 @@ Bun.serve({
   port,
   fetch(req, server) {
     const url = new URL(req.url)
-    const wsMatch = url.pathname.match(/^\/api\/issues\/([^/]+)\/run\/interview$/)
+    const wsMatch = url.pathname.match(
+      /^\/api\/issues\/([^/]+)\/run\/interview$/,
+    )
     if (wsMatch && req.headers.get('upgrade') === 'websocket') {
       const upgraded = server.upgrade(req, { data: { issueId: wsMatch[1] } })
       if (upgraded) return undefined
@@ -930,14 +983,20 @@ Bun.serve({
     message(ws, message) {
       const proc = wsProcs.get(ws)
       if (proc?.stdin) {
-        const line = typeof message === 'string' ? message : new TextDecoder().decode(message)
+        const line =
+          typeof message === 'string'
+            ? message
+            : new TextDecoder().decode(message)
         proc.stdin.write(line + '\n')
         proc.stdin.flush()
       }
     },
     close(ws) {
       const proc = wsProcs.get(ws)
-      if (proc) { proc.kill(); wsProcs.delete(ws) }
+      if (proc) {
+        proc.kill()
+        wsProcs.delete(ws)
+      }
     },
   },
 })

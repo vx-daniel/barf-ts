@@ -7,7 +7,7 @@ export type { AutoSelectMode } from '@/types/schema/mode-schema'
 
 const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
   plan: ['NEW'],
-  build: ['IN_PROGRESS', 'PLANNED']
+  build: ['IN_PROGRESS', 'PLANNED'],
 }
 
 /**
@@ -46,7 +46,9 @@ export abstract class IssueProvider {
    * if (result.isOk()) result.value.forEach(i => logger.info({ id: i.id }, 'found'));
    * @group I/O — Override in Provider
    */
-  abstract listIssues(filter?: { state?: IssueState }): ResultAsync<Issue[], Error>
+  abstract listIssues(filter?: {
+    state?: IssueState
+  }): ResultAsync<Issue[], Error>
 
   /**
    * Creates a new issue with state `NEW`.
@@ -76,7 +78,10 @@ export abstract class IssueProvider {
    * if (result.isErr()) logger.error({ err: result.error }, 'write failed');
    * @group I/O — Override in Provider
    */
-  abstract writeIssue(id: string, fields: Partial<Omit<Issue, 'id'>>): ResultAsync<Issue, Error>
+  abstract writeIssue(
+    id: string,
+    fields: Partial<Omit<Issue, 'id'>>,
+  ): ResultAsync<Issue, Error>
 
   /**
    * Permanently deletes an issue.
@@ -105,7 +110,10 @@ export abstract class IssueProvider {
    * if (result.isErr()) throw new Error('Already locked by another process');
    * @group I/O — Override in Provider
    */
-  abstract lockIssue(id: string, meta?: { mode?: LockMode }): ResultAsync<void, Error>
+  abstract lockIssue(
+    id: string,
+    meta?: { mode?: LockMode },
+  ): ResultAsync<void, Error>
 
   /**
    * Releases the lock acquired by {@link lockIssue}. Safe to call if not locked.
@@ -145,7 +153,7 @@ export abstract class IssueProvider {
    * @group Derived
    */
   transition(id: string, to: IssueState): ResultAsync<Issue, Error> {
-    return this.fetchIssue(id).andThen(issue => {
+    return this.fetchIssue(id).andThen((issue) => {
       const validation = validateTransition(issue.state, to)
       if (validation.isErr()) {
         return errAsync(validation.error)
@@ -167,14 +175,16 @@ export abstract class IssueProvider {
    * @group Derived
    */
   autoSelect(mode: AutoSelectMode): ResultAsync<Issue | null, Error> {
-    return this.listIssues().andThen(issues => {
-      const lockChecks = issues.map(issue =>
-        this.isLocked(issue.id).map(locked => ({ issue, locked }))
+    return this.listIssues().andThen((issues) => {
+      const lockChecks = issues.map((issue) =>
+        this.isLocked(issue.id).map((locked) => ({ issue, locked })),
       )
-      return ResultAsync.combine(lockChecks).map(entries => {
-        const available = entries.filter(({ locked }) => !locked).map(({ issue }) => issue)
+      return ResultAsync.combine(lockChecks).map((entries) => {
+        const available = entries
+          .filter(({ locked }) => !locked)
+          .map(({ issue }) => issue)
         for (const priority of AUTO_SELECT_PRIORITY[mode]) {
-          const match = available.find(i => i.state === priority)
+          const match = available.find((i) => i.state === priority)
           if (match) {
             return match
           }
@@ -194,6 +204,8 @@ export abstract class IssueProvider {
    * @group Derived
    */
   checkAcceptanceCriteria(id: string): ResultAsync<boolean, Error> {
-    return this.fetchIssue(id).map(issue => parseAcceptanceCriteria(issue.body))
+    return this.fetchIssue(id).map((issue) =>
+      parseAcceptanceCriteria(issue.body),
+    )
   }
 }

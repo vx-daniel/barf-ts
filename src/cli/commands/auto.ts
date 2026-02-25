@@ -1,8 +1,8 @@
-import type { Config, IssueState, Issue } from '@/types'
+import { type RunLoopDeps, runLoop } from '@/core/batch'
 import type { IssueProvider } from '@/core/issue/base'
-import { runLoop, type RunLoopDeps } from '@/core/batch'
 import { triageIssue } from '@/core/triage'
 import { verifyIssue } from '@/core/verification'
+import type { Config, Issue, IssueState } from '@/types'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('auto')
@@ -43,13 +43,13 @@ export async function autoCommand(
   provider: IssueProvider,
   opts: { batch: number; max: number },
   config: Config,
-  deps: AutoDeps = {}
+  deps: AutoDeps = {},
 ): Promise<void> {
   const _triageIssue = deps.triageIssue ?? triageIssue
   const _verifyIssue = deps.verifyIssue ?? verifyIssue
   const loopDeps: RunLoopDeps = {
     runClaudeIteration: deps.runClaudeIteration,
-    verifyIssue: deps.verifyIssue
+    verifyIssue: deps.verifyIssue,
   }
 
   while (true) {
@@ -63,16 +63,21 @@ export async function autoCommand(
     const issues = listResult.value
 
     // ── Triage phase ───────────────────────────────────────────────────────────
-    const toTriage = issues.filter(i => i.state === 'NEW' && i.needs_interview === undefined)
+    const toTriage = issues.filter(
+      (i) => i.state === 'NEW' && i.needs_interview === undefined,
+    )
     for (const issue of toTriage) {
       const result = await _triageIssue(issue.id, config, provider, undefined, {
         mode: 'triage',
         issueId: issue.id,
         state: issue.state,
-        title: issue.title
+        title: issue.title,
       })
       if (result.isErr()) {
-        logger.warn({ issueId: issue.id, err: result.error.message }, 'triage failed')
+        logger.warn(
+          { issueId: issue.id, err: result.error.message },
+          'triage failed',
+        )
       }
     }
 
@@ -86,42 +91,53 @@ export async function autoCommand(
     const refreshed = refreshResult.value
 
     // ── Gate check ─────────────────────────────────────────────────────────────
-    const needsInterview = refreshed.filter(i => i.state === 'NEW' && i.needs_interview === true)
+    const needsInterview = refreshed.filter(
+      (i) => i.state === 'NEW' && i.needs_interview === true,
+    )
     for (const issue of needsInterview) {
       logger.warn(
         { issueId: issue.id, title: issue.title },
-        `issue needs refinement — run /barf-interview in Claude Code`
+        `issue needs refinement — run /barf-interview in Claude Code`,
       )
     }
 
     // Migration guard: legacy INTERVIEWING state from pre-triage data
     const legacyInterviewing = refreshed.filter(
-      i => (i.state as unknown as string) === 'INTERVIEWING'
+      (i) => (i.state as unknown as string) === 'INTERVIEWING',
     )
     for (const issue of legacyInterviewing) {
       logger.warn(
         { issueId: issue.id },
-        'issue is in legacy INTERVIEWING state — manually set state=NEW to reprocess'
+        'issue is in legacy INTERVIEWING state — manually set state=NEW to reprocess',
       )
     }
 
     // ── Plan phase ─────────────────────────────────────────────────────────────
     // Plan NEW issues where needs_interview is false (triaged, ready) or undefined (backward compat)
-    const toPlan = refreshed.filter(i => PLAN_STATES.has(i.state) && i.needs_interview !== true)
-    const toBuild = refreshed.filter(i => BUILD_STATES.has(i.state)).slice(0, opts.batch)
+    const toPlan = refreshed.filter(
+      (i) => PLAN_STATES.has(i.state) && i.needs_interview !== true,
+    )
+    const toBuild = refreshed
+      .filter((i) => BUILD_STATES.has(i.state))
+      .slice(0, opts.batch)
 
     // COMPLETED issues that still need verification (not fix-children, not exhausted)
     const toVerify = refreshed.filter(
-      i => i.state === 'COMPLETED' && !i.is_verify_fix && i.verify_count > 0 && !i.verify_exhausted
+      (i) =>
+        i.state === 'COMPLETED' &&
+        !i.is_verify_fix &&
+        i.verify_count > 0 &&
+        !i.verify_exhausted,
     )
 
-    const hasWork = toPlan.length > 0 || toBuild.length > 0 || toVerify.length > 0
+    const hasWork =
+      toPlan.length > 0 || toBuild.length > 0 || toVerify.length > 0
 
     if (!hasWork) {
       if (needsInterview.length > 0) {
         logger.info(
           { count: needsInterview.length },
-          'no plannable work — some issues are awaiting interview'
+          'no plannable work — some issues are awaiting interview',
         )
       } else {
         logger.info('no actionable issues — done')
@@ -133,19 +149,22 @@ export async function autoCommand(
       if (issue.needs_interview === undefined) {
         logger.info(
           { issueId: issue.id },
-          'planning issue that was never triaged — run auto again to triage first'
+          'planning issue that was never triaged — run auto again to triage first',
         )
       }
       const result = await runLoop(issue.id, 'plan', config, provider, loopDeps)
       if (result.isErr()) {
-        logger.warn({ issueId: issue.id, err: result.error.message }, 'plan loop failed')
+        logger.warn(
+          { issueId: issue.id, err: result.error.message },
+          'plan loop failed',
+        )
       }
     }
 
     // ── Build phase ────────────────────────────────────────────────────────────
     if (toBuild.length > 0) {
       const results = await Promise.allSettled(
-        toBuild.map(i => runLoop(i.id, 'build', config, provider, loopDeps))
+        toBuild.map((i) => runLoop(i.id, 'build', config, provider, loopDeps)),
       )
       for (const r of results) {
         if (r.status === 'fulfilled' && r.value.isErr()) {
@@ -157,20 +176,30 @@ export async function autoCommand(
     // ── Verify phase ────────────────────────────────────────────────────────────
     for (const issue of toVerify) {
       // Only re-verify once all fix-children are done
-      const childResults = await Promise.all(issue.children.map(id => provider.fetchIssue(id)))
+      const childResults = await Promise.all(
+        issue.children.map((id) => provider.fetchIssue(id)),
+      )
       const fixChildren = childResults
-        .filter(r => r.isOk())
-        .map(r => (r as { isOk: () => true; value: Issue }).value)
-        .filter(c => c.is_verify_fix === true)
-      const allDone = fixChildren.every(c => c.state === 'COMPLETED' || c.state === 'VERIFIED')
+        .filter((r) => r.isOk())
+        .map((r) => (r as { isOk: () => true; value: Issue }).value)
+        .filter((c) => c.is_verify_fix === true)
+      const allDone = fixChildren.every(
+        (c) => c.state === 'COMPLETED' || c.state === 'VERIFIED',
+      )
       if (!allDone) {
-        logger.debug({ issueId: issue.id }, 'verify phase: fix children still in progress')
+        logger.debug(
+          { issueId: issue.id },
+          'verify phase: fix children still in progress',
+        )
         continue
       }
 
       const result = await _verifyIssue(issue.id, config, provider)
       if (result.isErr()) {
-        logger.warn({ issueId: issue.id, err: result.error.message }, 'verify phase failed')
+        logger.warn(
+          { issueId: issue.id, err: result.error.message },
+          'verify phase failed',
+        )
       }
     }
   }

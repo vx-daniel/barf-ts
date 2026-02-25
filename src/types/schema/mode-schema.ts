@@ -30,7 +30,13 @@ export type LoopMode = z.infer<typeof LoopModeSchema>
  *
  * @category Modes
  */
-export const PromptModeSchema = z.enum(['plan', 'build', 'split', 'audit', 'triage'])
+export const PromptModeSchema = z.enum([
+  'plan',
+  'build',
+  'split',
+  'audit',
+  'triage',
+])
 /** A prompt resolution mode. Derived from {@link PromptModeSchema}. */
 export type PromptMode = z.infer<typeof PromptModeSchema>
 

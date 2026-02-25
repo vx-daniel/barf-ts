@@ -1,7 +1,9 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test'
 import { GitHubIssueProvider } from '@/core/issue/providers/github'
 
-const mockSpawn = mock(() => Promise.resolve({ stdout: '', stderr: '', status: 0 }))
+const mockSpawn = mock(() =>
+  Promise.resolve({ stdout: '', stderr: '', status: 0 }),
+)
 
 const GH_ISSUE_NEW = {
   number: 1,
@@ -9,7 +11,7 @@ const GH_ISSUE_NEW = {
   body: '## Description\nTest issue',
   state: 'open',
   labels: [{ name: 'barf:new' }],
-  milestone: null
+  milestone: null,
 }
 
 const GH_ISSUE_PLANNED = {
@@ -18,14 +20,18 @@ const GH_ISSUE_PLANNED = {
   body: 'planned body',
   state: 'open',
   labels: [{ name: 'barf:planned' }],
-  milestone: null
+  milestone: null,
 }
 
 /** Helper: mock auth + one API call */
 function authThen(response: object) {
   mockSpawn
     .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
-    .mockResolvedValueOnce({ stdout: JSON.stringify(response), stderr: '', status: 0 })
+    .mockResolvedValueOnce({
+      stdout: JSON.stringify(response),
+      stderr: '',
+      status: 0,
+    })
 }
 
 describe('GitHubIssueProvider', () => {
@@ -46,7 +52,11 @@ describe('GitHubIssueProvider', () => {
   })
 
   it('maps closed issue to COMPLETED', async () => {
-    const closed = { ...GH_ISSUE_NEW, state: 'closed', labels: [{ name: 'barf:completed' }] }
+    const closed = {
+      ...GH_ISSUE_NEW,
+      state: 'closed',
+      labels: [{ name: 'barf:completed' }],
+    }
     authThen(closed)
     const result = await provider.fetchIssue('1')
     expect(result._unsafeUnwrap().state).toBe('COMPLETED')
@@ -71,7 +81,11 @@ describe('GitHubIssueProvider', () => {
   })
 
   it('returns Err when gh auth fails', async () => {
-    mockSpawn.mockResolvedValueOnce({ stdout: '', stderr: 'not logged in', status: 1 })
+    mockSpawn.mockResolvedValueOnce({
+      stdout: '',
+      stderr: 'not logged in',
+      status: 1,
+    })
     const result = await provider.fetchIssue('1')
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toContain('gh auth')
@@ -94,7 +108,7 @@ describe('GitHubIssueProvider', () => {
     mockSpawn.mockResolvedValueOnce({
       stdout: JSON.stringify(GH_ISSUE_NEW),
       stderr: '',
-      status: 0
+      status: 0,
     })
     await provider.fetchIssue('1')
 
@@ -135,9 +149,12 @@ describe('GitHubIssueProvider', () => {
       .mockResolvedValueOnce({
         stdout: JSON.stringify(GH_ISSUE_NEW),
         stderr: '',
-        status: 0
+        status: 0,
       })
-    const result = await provider.createIssue({ title: 'New', body: 'body text' })
+    const result = await provider.createIssue({
+      title: 'New',
+      body: 'body text',
+    })
     expect(result.isOk()).toBe(true)
     expect(result._unsafeUnwrap().title).toBe('First Issue')
   })
@@ -148,7 +165,7 @@ describe('GitHubIssueProvider', () => {
       .mockResolvedValueOnce({
         stdout: JSON.stringify(GH_ISSUE_NEW),
         stderr: '',
-        status: 0
+        status: 0,
       })
     const result = await provider.createIssue({ title: 'Minimal' })
     expect(result.isOk()).toBe(true)
@@ -160,7 +177,9 @@ describe('GitHubIssueProvider', () => {
       .mockResolvedValueOnce({ stdout: '', stderr: 'rate limit', status: 1 })
     const result = await provider.createIssue({ title: 'Fail' })
     expect(result.isErr()).toBe(true)
-    expect(result._unsafeUnwrapErr().message).toContain('Failed to create issue')
+    expect(result._unsafeUnwrapErr().message).toContain(
+      'Failed to create issue',
+    )
   })
 
   // ── writeIssue ────────────────────────────────────────────────────────────
@@ -169,11 +188,15 @@ describe('GitHubIssueProvider', () => {
     // auth + fetchIssue + patch
     mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
-      .mockResolvedValueOnce({ stdout: JSON.stringify(GH_ISSUE_NEW), stderr: '', status: 0 })
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify(GH_ISSUE_NEW),
+        stderr: '',
+        status: 0,
+      })
       .mockResolvedValueOnce({
         stdout: JSON.stringify({ ...GH_ISSUE_NEW, title: 'Updated' }),
         stderr: '',
-        status: 0
+        status: 0,
       })
     const result = await provider.writeIssue('1', { title: 'Updated' })
     expect(result.isOk()).toBe(true)
@@ -182,11 +205,15 @@ describe('GitHubIssueProvider', () => {
   it('patches body via API', async () => {
     mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
-      .mockResolvedValueOnce({ stdout: JSON.stringify(GH_ISSUE_NEW), stderr: '', status: 0 })
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify(GH_ISSUE_NEW),
+        stderr: '',
+        status: 0,
+      })
       .mockResolvedValueOnce({
         stdout: JSON.stringify({ ...GH_ISSUE_NEW, body: 'new body' }),
         stderr: '',
-        status: 0
+        status: 0,
       })
     const result = await provider.writeIssue('1', { body: 'new body' })
     expect(result.isOk()).toBe(true)
@@ -196,13 +223,20 @@ describe('GitHubIssueProvider', () => {
     // auth + fetchIssue + DELETE label + POST label + PATCH
     mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
-      .mockResolvedValueOnce({ stdout: JSON.stringify(GH_ISSUE_NEW), stderr: '', status: 0 })
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify(GH_ISSUE_NEW),
+        stderr: '',
+        status: 0,
+      })
       .mockResolvedValueOnce({ stdout: '', stderr: '', status: 0 }) // DELETE old label
       .mockResolvedValueOnce({ stdout: '', stderr: '', status: 0 }) // POST new label
       .mockResolvedValueOnce({
-        stdout: JSON.stringify({ ...GH_ISSUE_NEW, labels: [{ name: 'barf:planned' }] }),
+        stdout: JSON.stringify({
+          ...GH_ISSUE_NEW,
+          labels: [{ name: 'barf:planned' }],
+        }),
         stderr: '',
-        status: 0
+        status: 0,
       })
     const result = await provider.writeIssue('1', { state: 'PLANNED' })
     expect(result.isOk()).toBe(true)
@@ -211,13 +245,17 @@ describe('GitHubIssueProvider', () => {
   it('closes issue when state set to COMPLETED', async () => {
     mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
-      .mockResolvedValueOnce({ stdout: JSON.stringify(GH_ISSUE_NEW), stderr: '', status: 0 })
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify(GH_ISSUE_NEW),
+        stderr: '',
+        status: 0,
+      })
       .mockResolvedValueOnce({ stdout: '', stderr: '', status: 0 }) // DELETE old label
       .mockResolvedValueOnce({ stdout: '', stderr: '', status: 0 }) // POST new label
       .mockResolvedValueOnce({
         stdout: JSON.stringify({ ...GH_ISSUE_NEW, state: 'closed' }),
         stderr: '',
-        status: 0
+        status: 0,
       })
     const result = await provider.writeIssue('1', { state: 'COMPLETED' })
     expect(result.isOk()).toBe(true)

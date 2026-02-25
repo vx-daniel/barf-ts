@@ -9,7 +9,11 @@ import {
 
 describe('TokenUsageSchema', () => {
   it('parses full usage', () => {
-    const result = TokenUsageSchema.safeParse({ promptTokens: 10, completionTokens: 5, totalTokens: 15 })
+    const result = TokenUsageSchema.safeParse({
+      promptTokens: 10,
+      completionTokens: 5,
+      totalTokens: 15,
+    })
     expect(result.success).toBe(true)
   })
   it('defaults all counts to 0 when missing', () => {
@@ -26,12 +30,21 @@ describe('TokenUsageSchema', () => {
 describe('ChatResultSchema', () => {
   it('parses valid result', () => {
     const result = ChatResultSchema.safeParse({
-      content: 'hello', promptTokens: 5, completionTokens: 3, totalTokens: 8
+      content: 'hello',
+      promptTokens: 5,
+      completionTokens: 3,
+      totalTokens: 8,
     })
     expect(result.success).toBe(true)
   })
   it('rejects missing content', () => {
-    expect(ChatResultSchema.safeParse({ promptTokens: 5, completionTokens: 3, totalTokens: 8 }).success).toBe(false)
+    expect(
+      ChatResultSchema.safeParse({
+        promptTokens: 5,
+        completionTokens: 3,
+        totalTokens: 8,
+      }).success,
+    ).toBe(false)
   })
 })
 
@@ -40,14 +53,21 @@ describe('ChatOptionsSchema', () => {
     expect(ChatOptionsSchema.safeParse({}).success).toBe(true)
   })
   it('parses temperature, maxTokens, jsonMode', () => {
-    const result = ChatOptionsSchema.safeParse({ temperature: 0.5, maxTokens: 500, jsonMode: true })
+    const result = ChatOptionsSchema.safeParse({
+      temperature: 0.5,
+      maxTokens: 500,
+      jsonMode: true,
+    })
     expect(result.success).toBe(true)
   })
 })
 
 describe('PingResultSchema', () => {
   it('parses latencyMs and model', () => {
-    const result = PingResultSchema.safeParse({ latencyMs: 120, model: 'gpt-4o' })
+    const result = PingResultSchema.safeParse({
+      latencyMs: 120,
+      model: 'gpt-4o',
+    })
     expect(result.success).toBe(true)
   })
   it('rejects missing latencyMs', () => {
@@ -66,6 +86,12 @@ describe('ProviderInfoSchema', () => {
     expect(result.success).toBe(true)
   })
   it('rejects missing requiredConfigKeys', () => {
-    expect(ProviderInfoSchema.safeParse({ name: 'openai', displayName: 'OpenAI', supportedModels: [] }).success).toBe(false)
+    expect(
+      ProviderInfoSchema.safeParse({
+        name: 'openai',
+        displayName: 'OpenAI',
+        supportedModels: [],
+      }).success,
+    ).toBe(false)
   })
 })

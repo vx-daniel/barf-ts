@@ -25,13 +25,17 @@ export function setLoggerConfig(config: LoggerConfig): void {
 function buildLogger(name: string): pino.Logger {
   const level = _loggerConfig?.logLevel ?? process.env.LOG_LEVEL ?? 'info'
   const pretty = _loggerConfig?.logPretty ?? process.env.LOG_PRETTY === '1'
-  const logFile = _loggerConfig?.logFile ?? process.env.BARF_LOG_FILE ?? 'barf.log'
+  const logFile =
+    _loggerConfig?.logFile ?? process.env.BARF_LOG_FILE ?? 'barf.log'
 
   if (pretty) {
     try {
       return pino(
         { name, level },
-        pino.transport({ target: 'pino-pretty', options: { colorize: true, destination: 2 } })
+        pino.transport({
+          target: 'pino-pretty',
+          options: { colorize: true, destination: 2 },
+        }),
       )
     } catch {
       // pino-pretty not available in compiled binary — fall through
@@ -39,7 +43,7 @@ function buildLogger(name: string): pino.Logger {
   }
 
   const destinations: Parameters<typeof pino.multistream>[0] = [
-    { stream: pino.destination(logFile) }
+    { stream: pino.destination(logFile) },
   ]
   if (!process.stderr.isTTY) {
     destinations.unshift({ stream: pino.destination(2) })
@@ -63,8 +67,8 @@ export function createLogger(name: string): pino.Logger {
   return new Proxy({} as pino.Logger, {
     get: (_t, prop) => {
       const val = get()[prop as keyof pino.Logger]
-      return typeof val === 'function' ? (val as Function).bind(get()) : val
-    }
+      return typeof val === 'function' ? (val as CallableFunction).bind(get()) : val
+    },
   })
 }
 

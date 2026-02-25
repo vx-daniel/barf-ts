@@ -16,7 +16,7 @@ const logger = createLogger('status')
  */
 export async function statusCommand(
   provider: IssueProvider,
-  opts: { format: 'text' | 'json' }
+  opts: { format: 'text' | 'json' },
 ): Promise<void> {
   const result = await provider.listIssues()
   if (result.isErr()) {
@@ -33,6 +33,9 @@ export async function statusCommand(
     return
   }
   for (const issue of issues) {
-    logger.info({ state: issue.state, id: issue.id, title: issue.title }, 'Issue')
+    logger.info(
+      { state: issue.state, id: issue.id, title: issue.title },
+      'Issue',
+    )
   }
 }

@@ -1,9 +1,13 @@
 import OpenAI from 'openai'
-import { Result, ok, ResultAsync } from 'neverthrow'
+import { type Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
-import { inferTier, prettifyModelId, OPENAI_TIERS } from '@/providers/model-tiers'
+import {
+  inferTier,
+  prettifyModelId,
+  OPENAI_TIERS,
+} from '@/providers/model-tiers'
 import type { Config } from '@/types'
 import {
   DEFAULT_TEMPERATURE,
@@ -13,7 +17,7 @@ import {
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
-  type TokenUsage
+  type TokenUsage,
 } from '@/types/schema/provider-schema'
 
 /** Factory that constructs an OpenAI SDK client given an API key. Injectable for tests. */
@@ -32,7 +36,10 @@ export class OpenAIAuditProvider extends AuditProvider {
   private readonly config: Config
   private readonly clientFactory: OpenAIFactory
 
-  constructor(config: Config, clientFactory: OpenAIFactory = k => new OpenAI({ apiKey: k })) {
+  constructor(
+    config: Config,
+    clientFactory: OpenAIFactory = (k) => new OpenAI({ apiKey: k }),
+  ) {
     super()
     this.config = config
     this.clientFactory = clientFactory
@@ -48,7 +55,7 @@ export class OpenAIAuditProvider extends AuditProvider {
       name: 'openai',
       displayName: 'OpenAI',
       requiredConfigKeys: ['openaiApiKey'],
-      supportedModels: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo']
+      supportedModels: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
     }
   }
 
@@ -68,7 +75,7 @@ export class OpenAIAuditProvider extends AuditProvider {
     await client.chat.completions.create({
       model,
       messages: [{ role: 'user', content: 'ping' }],
-      max_tokens: 1
+      max_tokens: 1,
     })
     return { latencyMs: Date.now() - start, model }
   }
@@ -82,11 +89,14 @@ export class OpenAIAuditProvider extends AuditProvider {
     return ResultAsync.fromPromise(this.pingImpl(), toError)
   }
 
-  private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
+  private async chatImpl(
+    prompt: string,
+    opts?: ChatOptions,
+  ): Promise<ChatResult> {
     const client = this.clientFactory(this.config.openaiApiKey)
     logger.debug(
       { model: this.config.auditModel, promptLen: prompt.length },
-      'sending chat completion'
+      'sending chat completion',
     )
 
     const response = await client.chat.completions.create({
@@ -94,10 +104,15 @@ export class OpenAIAuditProvider extends AuditProvider {
       messages: [{ role: 'user', content: prompt }],
       temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
       max_tokens: opts?.maxTokens,
-      ...(opts?.jsonMode ? { response_format: { type: 'json_object' as const } } : {})
+      ...(opts?.jsonMode
+        ? { response_format: { type: 'json_object' as const } }
+        : {}),
     })
 
-    const parsed = this.parseResponse({ choices: response.choices, usage: response.usage })
+    const parsed = this.parseResponse({
+      choices: response.choices,
+      usage: response.usage,
+    })
     if (parsed.isErr()) {
       throw parsed.error
     }
@@ -127,7 +142,11 @@ export class OpenAIAuditProvider extends AuditProvider {
       if (excluded.test(id)) {
         continue
       }
-      models.push({ id, displayName: prettifyModelId(id), tier: inferTier(id, OPENAI_TIERS) })
+      models.push({
+        id,
+        displayName: prettifyModelId(id),
+        tier: inferTier(id, OPENAI_TIERS),
+      })
     }
     return models
   }
@@ -152,20 +171,26 @@ export class OpenAIAuditProvider extends AuditProvider {
    * @param raw - Raw response object from the OpenAI SDK.
    * @returns `ok({ content, usage })` on success, `err(Error)` if shape is unexpected.
    */
-  protected parseResponse(raw: unknown): Result<{ content: string; usage: TokenUsage }, Error> {
+  protected parseResponse(
+    raw: unknown,
+  ): Result<{ content: string; usage: TokenUsage }, Error> {
     const r = raw as {
       choices?: Array<{ message?: { content?: string | null } }>
-      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+      usage?: {
+        prompt_tokens?: number
+        completion_tokens?: number
+        total_tokens?: number
+      }
     }
     const content = r.choices?.[0]?.message?.content ?? ''
     const usage = toTokenUsage(
       r.usage?.prompt_tokens,
       r.usage?.completion_tokens,
-      r.usage?.total_tokens
+      r.usage?.total_tokens,
     )
     logger.debug(
       { promptTokens: usage.promptTokens, totalTokens: usage.totalTokens },
-      'chat completion done'
+      'chat completion done',
     )
     return ok({ content, usage })
   }

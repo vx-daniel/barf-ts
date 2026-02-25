@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'bun:test'
-import { inferTier, prettifyModelId, OPENAI_TIERS, CLAUDE_TIERS, GEMINI_TIERS } from '@/providers/model-tiers'
+import {
+  inferTier,
+  prettifyModelId,
+  OPENAI_TIERS,
+  CLAUDE_TIERS,
+  GEMINI_TIERS,
+} from '@/providers/model-tiers'
 
 describe('inferTier - provider map lookup', () => {
   it('returns small for gpt-4o-mini via OPENAI_TIERS', () => {

@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { Result, ok, ResultAsync } from 'neverthrow'
+import { type Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
@@ -12,7 +12,7 @@ import {
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
-  type TokenUsage
+  type TokenUsage,
 } from '@/types/schema/provider-schema'
 
 /** Factory that constructs an Anthropic SDK client given an API key. Injectable for tests. */
@@ -34,7 +34,10 @@ export class ClaudeAuditProvider extends AuditProvider {
   private readonly config: Config
   private readonly clientFactory: AnthropicFactory
 
-  constructor(config: Config, clientFactory: AnthropicFactory = k => new Anthropic({ apiKey: k })) {
+  constructor(
+    config: Config,
+    clientFactory: AnthropicFactory = (k) => new Anthropic({ apiKey: k }),
+  ) {
     super()
     this.config = config
     this.clientFactory = clientFactory
@@ -50,7 +53,11 @@ export class ClaudeAuditProvider extends AuditProvider {
       name: 'claude',
       displayName: 'Anthropic Claude',
       requiredConfigKeys: ['anthropicApiKey'],
-      supportedModels: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
+      supportedModels: [
+        'claude-opus-4-6',
+        'claude-sonnet-4-6',
+        'claude-haiku-4-5-20251001',
+      ],
     }
   }
 
@@ -70,7 +77,7 @@ export class ClaudeAuditProvider extends AuditProvider {
     await client.messages.create({
       model,
       max_tokens: 1,
-      messages: [{ role: 'user', content: 'ping' }]
+      messages: [{ role: 'user', content: 'ping' }],
     })
     return { latencyMs: Date.now() - start, model }
   }
@@ -84,17 +91,20 @@ export class ClaudeAuditProvider extends AuditProvider {
     return ResultAsync.fromPromise(this.pingImpl(), toError)
   }
 
-  private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
+  private async chatImpl(
+    prompt: string,
+    opts?: ChatOptions,
+  ): Promise<ChatResult> {
     const client = this.clientFactory(this.config.anthropicApiKey)
     logger.debug(
       { model: this.config.claudeAuditModel, promptLen: prompt.length },
-      'sending claude messages call'
+      'sending claude messages call',
     )
 
     const response = await client.messages.create({
       model: this.config.claudeAuditModel,
       max_tokens: opts?.maxTokens ?? 4096,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: prompt }],
     })
 
     const parsed = this.parseResponse(response)
@@ -130,7 +140,7 @@ export class ClaudeAuditProvider extends AuditProvider {
       models.push({
         id,
         displayName: (model as { display_name?: string }).display_name ?? id,
-        tier: inferTier(id, CLAUDE_TIERS)
+        tier: inferTier(id, CLAUDE_TIERS),
       })
     }
     return models
@@ -156,7 +166,9 @@ export class ClaudeAuditProvider extends AuditProvider {
    * @param raw - Raw response object from the Anthropic SDK.
    * @returns `ok({ content, usage })` on success, `err(Error)` if shape is unexpected.
    */
-  protected parseResponse(raw: unknown): Result<{ content: string; usage: TokenUsage }, Error> {
+  protected parseResponse(
+    raw: unknown,
+  ): Result<{ content: string; usage: TokenUsage }, Error> {
     const r = raw as {
       content?: Array<{ type?: string; text?: string }>
       usage?: { input_tokens?: number; output_tokens?: number }
@@ -166,7 +178,7 @@ export class ClaudeAuditProvider extends AuditProvider {
     const usage = toTokenUsage(r.usage?.input_tokens, r.usage?.output_tokens)
     logger.debug(
       { promptTokens: usage.promptTokens, totalTokens: usage.totalTokens },
-      'claude messages call done'
+      'claude messages call done',
     )
     return ok({ content, usage })
   }

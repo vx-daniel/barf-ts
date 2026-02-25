@@ -8,10 +8,18 @@ export type { PromptMode } from '@/types/schema/mode-schema'
 
 // Built-in prompt templates — embedded at compile time via Bun import attributes
 import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
-import buildPromptTemplate from '@/prompts/PROMPT_build.md' with { type: 'text' }
-import splitPromptTemplate from '@/prompts/PROMPT_split.md' with { type: 'text' }
-import auditPromptTemplate from '@/prompts/PROMPT_audit.md' with { type: 'text' }
-import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with { type: 'text' }
+import buildPromptTemplate from '@/prompts/PROMPT_build.md' with {
+  type: 'text',
+}
+import splitPromptTemplate from '@/prompts/PROMPT_split.md' with {
+  type: 'text',
+}
+import auditPromptTemplate from '@/prompts/PROMPT_audit.md' with {
+  type: 'text',
+}
+import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with {
+  type: 'text',
+}
 
 const logger = createLogger('prompts')
 
@@ -20,7 +28,7 @@ const BUILTIN_TEMPLATES: Record<PromptMode, string> = {
   build: buildPromptTemplate,
   split: splitPromptTemplate,
   audit: auditPromptTemplate,
-  triage: triagePromptTemplate
+  triage: triagePromptTemplate,
 }
 
 /**
@@ -36,14 +44,20 @@ const BUILTIN_TEMPLATES: Record<PromptMode, string> = {
  * @returns The prompt template string.
  * @category Prompts
  */
-export function resolvePromptTemplate(mode: PromptMode, config: Config): string {
+export function resolvePromptTemplate(
+  mode: PromptMode,
+  config: Config,
+): string {
   if (config.promptDir) {
     const customPath = join(config.promptDir, `PROMPT_${mode}.md`)
     if (existsSync(customPath)) {
       logger.info({ mode, path: customPath }, 'using custom prompt template')
       return readFileSync(customPath, 'utf-8')
     }
-    logger.info({ mode, path: customPath }, 'custom prompt not found — using built-in')
+    logger.info(
+      { mode, path: customPath },
+      'custom prompt not found — using built-in',
+    )
   }
   return BUILTIN_TEMPLATES[mode]
 }

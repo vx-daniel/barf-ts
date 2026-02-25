@@ -21,10 +21,11 @@ const logger = createLogger('build')
 export async function buildCommand(
   provider: IssueProvider,
   opts: { issue?: string; batch: number; max: number },
-  config: Config
+  config: Config,
 ): Promise<void> {
   // --max overrides config.maxIterations for this invocation only
-  const effectiveConfig = opts.max > 0 ? { ...config, maxIterations: opts.max } : config
+  const effectiveConfig =
+    opts.max > 0 ? { ...config, maxIterations: opts.max } : config
 
   if (opts.issue) {
     logger.info({ issueId: opts.issue }, 'Building issue')
@@ -46,7 +47,9 @@ export async function buildCommand(
 
   /** Issue states eligible for the build loop. */
   const BUILDABLE = new Set<IssueState>(['IN_PROGRESS', 'PLANNED', 'NEW'])
-  const candidates = listResult.value.filter(i => BUILDABLE.has(i.state)).slice(0, opts.batch)
+  const candidates = listResult.value
+    .filter((i) => BUILDABLE.has(i.state))
+    .slice(0, opts.batch)
 
   if (candidates.length === 0) {
     logger.info('No issues available for building.')
@@ -56,12 +59,14 @@ export async function buildCommand(
   logger.info({ count: candidates.length }, 'Building issues concurrently')
 
   const results = await Promise.allSettled(
-    candidates.map(issue => runLoop(issue.id, 'build', effectiveConfig, provider))
+    candidates.map((issue) =>
+      runLoop(issue.id, 'build', effectiveConfig, provider),
+    ),
   )
 
   let failures = 0
   for (const [i, r] of results.entries()) {
-    const id = candidates[i]!.id
+    const id = candidates[i]?.id
     if (r.status === 'rejected') {
       logger.error({ issueId: id, reason: r.reason }, 'Build rejected')
       failures++

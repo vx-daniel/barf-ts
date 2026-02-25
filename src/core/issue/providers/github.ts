@@ -20,10 +20,13 @@ const STATE_TO_LABEL: Record<IssueState, string> = {
   STUCK: 'barf:stuck',
   SPLIT: 'barf:split',
   COMPLETED: 'barf:completed',
-  VERIFIED: 'barf:verified'
+  VERIFIED: 'barf:verified',
 }
 const LABEL_TO_STATE: Record<string, IssueState> = Object.fromEntries(
-  (Object.entries(STATE_TO_LABEL) as [IssueState, string][]).map(([s, l]) => [l, s])
+  (Object.entries(STATE_TO_LABEL) as [IssueState, string][]).map(([s, l]) => [
+    l,
+    s,
+  ]),
 )
 
 const GHIssueSchema = z.object({
@@ -32,17 +35,21 @@ const GHIssueSchema = z.object({
   body: z
     .string()
     .nullable()
-    .transform(v => v ?? ''),
+    .transform((v) => v ?? ''),
   state: z.enum(['open', 'closed']),
   labels: z.array(z.object({ name: z.string() })),
-  milestone: z.object({ number: z.number(), title: z.string() }).nullable()
+  milestone: z.object({ number: z.number(), title: z.string() }).nullable(),
 })
 type GHIssue = z.infer<typeof GHIssueSchema>
 
 function ghToIssue(gh: GHIssue): Issue {
-  const stateLabel = gh.labels.find(l => LABEL_TO_STATE[l.name])
+  const stateLabel = gh.labels.find((l) => LABEL_TO_STATE[l.name])
   const state: IssueState =
-    gh.state === 'closed' ? 'COMPLETED' : stateLabel ? LABEL_TO_STATE[stateLabel.name] : 'NEW'
+    gh.state === 'closed'
+      ? 'COMPLETED'
+      : stateLabel
+        ? LABEL_TO_STATE[stateLabel.name]
+        : 'NEW'
   return {
     id: String(gh.number),
     title: gh.title,
@@ -52,7 +59,7 @@ function ghToIssue(gh: GHIssue): Issue {
     split_count: 0,
     force_split: false,
     verify_count: 0,
-    body: gh.body
+    body: gh.body,
   }
 }
 
@@ -78,7 +85,7 @@ export class GitHubIssueProvider extends IssueProvider {
 
   constructor(
     private repo: string,
-    spawnFn?: SpawnFn
+    spawnFn?: SpawnFn,
   ) {
     super()
     this.spawnFile = spawnFn ?? execFileNoThrow
@@ -88,20 +95,29 @@ export class GitHubIssueProvider extends IssueProvider {
     if (this.token) {
       return ResultAsync.fromSafePromise(Promise.resolve(this.token))
     }
-    return ResultAsync.fromPromise(this.spawnFile('gh', ['auth', 'token']), toError).andThen(
-      result => {
-        if (result.status !== 0) {
-          return errAsync(new Error(`gh auth failed — run: gh auth login\n${result.stderr}`))
-        }
-        this.token = result.stdout.trim()
-        return ResultAsync.fromSafePromise(Promise.resolve(this.token))
+    return ResultAsync.fromPromise(
+      this.spawnFile('gh', ['auth', 'token']),
+      toError,
+    ).andThen((result) => {
+      if (result.status !== 0) {
+        return errAsync(
+          new Error(`gh auth failed — run: gh auth login\n${result.stderr}`),
+        )
       }
-    )
+      this.token = result.stdout.trim()
+      return ResultAsync.fromSafePromise(Promise.resolve(this.token))
+    })
   }
 
-  private ghApi<T>(schema: z.ZodType<T>, args: string[]): ResultAsync<T, Error> {
+  private ghApi<T>(
+    schema: z.ZodType<T>,
+    args: string[],
+  ): ResultAsync<T, Error> {
     return this.ensureAuth().andThen(() =>
-      ResultAsync.fromPromise(this.spawnFile('gh', ['api', ...args]), toError).andThen(result => {
+      ResultAsync.fromPromise(
+        this.spawnFile('gh', ['api', ...args]),
+        toError,
+      ).andThen((result) => {
         if (result.status !== 0) {
           return errAsync(new Error(`gh api error: ${result.stderr}`))
         }
@@ -109,12 +125,14 @@ export class GitHubIssueProvider extends IssueProvider {
         return parsed.success
           ? ResultAsync.fromSafePromise(Promise.resolve(parsed.data))
           : errAsync(parsed.error as Error)
-      })
+      }),
     )
   }
 
   fetchIssue(id: string): ResultAsync<Issue, Error> {
-    return this.ghApi(GHIssueSchema, [`/repos/${this.repo}/issues/${id}`]).map(ghToIssue)
+    return this.ghApi(GHIssueSchema, [`/repos/${this.repo}/issues/${id}`]).map(
+      ghToIssue,
+    )
   }
 
   listIssues(filter?: { state?: IssueState }): ResultAsync<Issue[], Error> {
@@ -122,11 +140,15 @@ export class GitHubIssueProvider extends IssueProvider {
       ? `&labels=${encodeURIComponent(STATE_TO_LABEL[filter.state])}`
       : ''
     return this.ghApi(z.array(GHIssueSchema), [
-      `/repos/${this.repo}/issues?state=open&per_page=100${labelParam}`
-    ]).map(ghs => ghs.map(ghToIssue))
+      `/repos/${this.repo}/issues?state=open&per_page=100${labelParam}`,
+    ]).map((ghs) => ghs.map(ghToIssue))
   }
 
-  createIssue(input: { title: string; body?: string; parent?: string }): ResultAsync<Issue, Error> {
+  createIssue(input: {
+    title: string
+    body?: string
+    parent?: string
+  }): ResultAsync<Issue, Error> {
     return this.ensureAuth().andThen(() =>
       ResultAsync.fromPromise(
         this.spawnFile('gh', [
@@ -139,10 +161,10 @@ export class GitHubIssueProvider extends IssueProvider {
           '-f',
           `body=${input.body ?? ''}`,
           '-f',
-          'labels[]=barf:new'
+          'labels[]=barf:new',
         ]),
-        toError
-      ).andThen(result => {
+        toError,
+      ).andThen((result) => {
         if (result.status !== 0) {
           return errAsync(new Error(`Failed to create issue: ${result.stderr}`))
         }
@@ -150,12 +172,15 @@ export class GitHubIssueProvider extends IssueProvider {
         return parsed.success
           ? ResultAsync.fromSafePromise(Promise.resolve(ghToIssue(parsed.data)))
           : errAsync(parsed.error as Error)
-      })
+      }),
     )
   }
 
-  writeIssue(id: string, fields: Partial<Omit<Issue, 'id'>>): ResultAsync<Issue, Error> {
-    return this.fetchIssue(id).andThen(current => {
+  writeIssue(
+    id: string,
+    fields: Partial<Omit<Issue, 'id'>>,
+  ): ResultAsync<Issue, Error> {
+    return this.fetchIssue(id).andThen((current) => {
       const steps: ResultAsync<unknown, Error>[] = []
       if (fields.state && fields.state !== current.state) {
         const oldLabel = STATE_TO_LABEL[current.state]
@@ -166,9 +191,9 @@ export class GitHubIssueProvider extends IssueProvider {
               'api',
               '--method',
               'DELETE',
-              `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent(oldLabel)}`
+              `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent(oldLabel)}`,
             ]),
-            toError
+            toError,
           ).andThen(() =>
             ResultAsync.fromPromise(
               this.spawnFile('gh', [
@@ -177,14 +202,18 @@ export class GitHubIssueProvider extends IssueProvider {
                 'POST',
                 `/repos/${this.repo}/issues/${id}/labels`,
                 '-f',
-                `labels[]=${newLabel}`
+                `labels[]=${newLabel}`,
               ]),
-              toError
-            )
-          )
+              toError,
+            ),
+          ),
         )
       }
-      const patchArgs = ['--method', 'PATCH', `/repos/${this.repo}/issues/${id}`]
+      const patchArgs = [
+        '--method',
+        'PATCH',
+        `/repos/${this.repo}/issues/${id}`,
+      ]
       if (fields.title) {
         patchArgs.push('-f', `title=${fields.title}`)
       }
@@ -195,14 +224,16 @@ export class GitHubIssueProvider extends IssueProvider {
         patchArgs.push('-f', 'state=closed')
       }
       return ResultAsync.combine(steps).andThen(() =>
-        this.ghApi(GHIssueSchema, patchArgs).map(ghToIssue)
+        this.ghApi(GHIssueSchema, patchArgs).map(ghToIssue),
       )
     })
   }
 
   deleteIssue(_id: string): ResultAsync<void, Error> {
     return errAsync(
-      new Error('GitHub Issues cannot be deleted via API. Transition to COMPLETED instead.')
+      new Error(
+        'GitHub Issues cannot be deleted via API. Transition to COMPLETED instead.',
+      ),
     )
   }
 
@@ -215,10 +246,10 @@ export class GitHubIssueProvider extends IssueProvider {
           'POST',
           `/repos/${this.repo}/issues/${id}/labels`,
           '-f',
-          'labels[]=barf:locked'
+          'labels[]=barf:locked',
         ]),
-        toError
-      ).map(() => undefined)
+        toError,
+      ).map(() => undefined),
     )
   }
 
@@ -229,16 +260,16 @@ export class GitHubIssueProvider extends IssueProvider {
           'api',
           '--method',
           'DELETE',
-          `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent('barf:locked')}`
+          `/repos/${this.repo}/issues/${id}/labels/${encodeURIComponent('barf:locked')}`,
         ]),
-        toError
-      ).map(() => undefined)
+        toError,
+      ).map(() => undefined),
     )
   }
 
   isLocked(id: string): ResultAsync<boolean, Error> {
-    return this.ghApi(GHIssueSchema, [`/repos/${this.repo}/issues/${id}`]).map(gh =>
-      gh.labels.some(l => l.name === 'barf:locked')
+    return this.ghApi(GHIssueSchema, [`/repos/${this.repo}/issues/${id}`]).map(
+      (gh) => gh.labels.some((l) => l.name === 'barf:locked'),
     )
   }
 }

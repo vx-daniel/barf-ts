@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { Result, ok, ResultAsync } from 'neverthrow'
+import { type Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
@@ -13,10 +13,11 @@ import {
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
-  type TokenUsage
+  type TokenUsage,
 } from '@/types/schema/provider-schema'
 
-const GEMINI_LIST_MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
+const GEMINI_LIST_MODELS_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models'
 
 /** Factory that constructs a GoogleGenerativeAI client given an API key. Injectable for tests. */
 export type GeminiFactory = (apiKey: string) => GoogleGenerativeAI
@@ -34,7 +35,10 @@ export class GeminiAuditProvider extends AuditProvider {
   private readonly config: Config
   private readonly clientFactory: GeminiFactory
 
-  constructor(config: Config, clientFactory: GeminiFactory = k => new GoogleGenerativeAI(k)) {
+  constructor(
+    config: Config,
+    clientFactory: GeminiFactory = (k) => new GoogleGenerativeAI(k),
+  ) {
     super()
     this.config = config
     this.clientFactory = clientFactory
@@ -50,7 +54,11 @@ export class GeminiAuditProvider extends AuditProvider {
       name: 'gemini',
       displayName: 'Google Gemini',
       requiredConfigKeys: ['geminiApiKey'],
-      supportedModels: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash']
+      supportedModels: [
+        'gemini-1.5-pro',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash',
+      ],
     }
   }
 
@@ -81,20 +89,23 @@ export class GeminiAuditProvider extends AuditProvider {
     return ResultAsync.fromPromise(this.pingImpl(), toError)
   }
 
-  private async chatImpl(prompt: string, opts?: ChatOptions): Promise<ChatResult> {
+  private async chatImpl(
+    prompt: string,
+    opts?: ChatOptions,
+  ): Promise<ChatResult> {
     const client = this.clientFactory(this.config.geminiApiKey)
     const genModel = client.getGenerativeModel({
       model: this.config.geminiModel,
       generationConfig: {
         temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
         maxOutputTokens: opts?.maxTokens,
-        ...(opts?.jsonMode ? { responseMimeType: 'application/json' } : {})
-      }
+        ...(opts?.jsonMode ? { responseMimeType: 'application/json' } : {}),
+      },
     })
 
     logger.debug(
       { model: this.config.geminiModel, promptLen: prompt.length },
-      'sending gemini chat'
+      'sending gemini chat',
     )
 
     const response = await genModel.generateContent(prompt)
@@ -120,7 +131,9 @@ export class GeminiAuditProvider extends AuditProvider {
     const url = `${GEMINI_LIST_MODELS_URL}?key=${this.config.geminiApiKey}`
     const response = await fetch(url)
     if (!response.ok) {
-      throw new Error(`Gemini listModels failed: ${response.status} ${response.statusText}`)
+      throw new Error(
+        `Gemini listModels failed: ${response.status} ${response.statusText}`,
+      )
     }
     const data = (await response.json()) as {
       models?: Array<{
@@ -142,7 +155,7 @@ export class GeminiAuditProvider extends AuditProvider {
       models.push({
         id,
         displayName: m.displayName ?? id,
-        tier: inferTier(id, GEMINI_TIERS)
+        tier: inferTier(id, GEMINI_TIERS),
       })
     }
     return models
@@ -169,7 +182,9 @@ export class GeminiAuditProvider extends AuditProvider {
    * @param raw - Raw response object from the Gemini SDK.
    * @returns `ok({ content, usage })` on success, `err(Error)` if shape is unexpected.
    */
-  protected parseResponse(raw: unknown): Result<{ content: string; usage: TokenUsage }, Error> {
+  protected parseResponse(
+    raw: unknown,
+  ): Result<{ content: string; usage: TokenUsage }, Error> {
     const r = raw as {
       text?: () => string
       usageMetadata?: {
@@ -182,11 +197,11 @@ export class GeminiAuditProvider extends AuditProvider {
     const usage = toTokenUsage(
       r.usageMetadata?.promptTokenCount,
       r.usageMetadata?.candidatesTokenCount,
-      r.usageMetadata?.totalTokenCount
+      r.usageMetadata?.totalTokenCount,
     )
     logger.debug(
       { promptTokens: usage.promptTokens, totalTokens: usage.totalTokens },
-      'gemini chat done'
+      'gemini chat done',
     )
     return ok({ content, usage })
   }

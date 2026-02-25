@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'bun:test'
-import { IterationOutcomeSchema, IterationResultSchema } from '@/types/schema/claude-schema'
+import {
+  IterationOutcomeSchema,
+  IterationResultSchema,
+} from '@/types/schema/claude-schema'
 
 describe('IterationOutcomeSchema', () => {
-  it.each(['success', 'overflow', 'error', 'rate_limited'])('accepts "%s"', outcome => {
+  it.each([
+    'success',
+    'overflow',
+    'error',
+    'rate_limited',
+  ])('accepts "%s"', (outcome) => {
     expect(IterationOutcomeSchema.safeParse(outcome).success).toBe(true)
   })
 
@@ -13,7 +21,10 @@ describe('IterationOutcomeSchema', () => {
 
 describe('IterationResultSchema', () => {
   it('parses a valid result without rateLimitResetsAt', () => {
-    const result = IterationResultSchema.safeParse({ outcome: 'success', tokens: 1500 })
+    const result = IterationResultSchema.safeParse({
+      outcome: 'success',
+      tokens: 1500,
+    })
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data).toEqual({ outcome: 'success', tokens: 1500 })
@@ -21,7 +32,11 @@ describe('IterationResultSchema', () => {
   })
 
   it('parses a rate-limited result with rateLimitResetsAt', () => {
-    const input = { outcome: 'rate_limited', tokens: 800, rateLimitResetsAt: 1700000000 }
+    const input = {
+      outcome: 'rate_limited',
+      tokens: 800,
+      rateLimitResetsAt: 1700000000,
+    }
     const result = IterationResultSchema.safeParse(input)
     expect(result.success).toBe(true)
     if (result.success) {
@@ -34,6 +49,8 @@ describe('IterationResultSchema', () => {
   })
 
   it('rejects missing tokens', () => {
-    expect(IterationResultSchema.safeParse({ outcome: 'success' }).success).toBe(false)
+    expect(
+      IterationResultSchema.safeParse({ outcome: 'success' }).success,
+    ).toBe(false)
   })
 })

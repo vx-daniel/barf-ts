@@ -3,18 +3,24 @@ import { ResultAsync } from 'neverthrow'
 import { errAsync, okAsync } from 'neverthrow'
 
 import { autoCommand } from '@/cli/commands/auto'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import {
+  defaultConfig,
+  makeIssue,
+  makeProvider,
+} from '@tests/fixtures/provider'
 
 const mockTriageIssue = () => okAsync(undefined)
 const mockVerifyIssue = () => okAsync(undefined)
 
 const mockRunClaudeIteration = () =>
-  ResultAsync.fromSafePromise(Promise.resolve({ outcome: 'success', tokens: 0 }))
+  ResultAsync.fromSafePromise(
+    Promise.resolve({ outcome: 'success', tokens: 0 }),
+  )
 
 const deps = {
   triageIssue: mockTriageIssue as never,
   runClaudeIteration: mockRunClaudeIteration as never,
-  verifyIssue: mockVerifyIssue as never
+  verifyIssue: mockVerifyIssue as never,
 }
 
 describe('autoCommand', () => {
@@ -28,7 +34,7 @@ describe('autoCommand', () => {
 
   it('sets exitCode 1 when listIssues() returns err', async () => {
     const provider = makeProvider({
-      listIssues: () => errAsync(new Error('gh: not authenticated'))
+      listIssues: () => errAsync(new Error('gh: not authenticated')),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -38,7 +44,7 @@ describe('autoCommand', () => {
 
   it('does not set exitCode when list is empty', async () => {
     const provider = makeProvider({
-      listIssues: () => okAsync([])
+      listIssues: () => okAsync([]),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -48,7 +54,7 @@ describe('autoCommand', () => {
 
   it('does not set exitCode when all issues are in non-actionable states', async () => {
     const provider = makeProvider({
-      listIssues: () => okAsync([makeIssue({ state: 'COMPLETED' })])
+      listIssues: () => okAsync([makeIssue({ state: 'COMPLETED' })]),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -59,7 +65,9 @@ describe('autoCommand', () => {
   it('exits when only needs_interview=true NEW issues remain', async () => {
     const provider = makeProvider({
       listIssues: () =>
-        okAsync([makeIssue({ id: '001', state: 'NEW', needs_interview: true })])
+        okAsync([
+          makeIssue({ id: '001', state: 'NEW', needs_interview: true }),
+        ]),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -75,7 +83,9 @@ describe('autoCommand', () => {
       listIssues: () => {
         callCount++
         if (callCount <= 2) {
-          return okAsync([makeIssue({ id: '003', state: 'NEW', needs_interview: false })])
+          return okAsync([
+            makeIssue({ id: '003', state: 'NEW', needs_interview: false }),
+          ])
         }
         return okAsync([])
       },
@@ -84,10 +94,11 @@ describe('autoCommand', () => {
         return okAsync(undefined)
       },
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'NEW', needs_interview: false })),
+      fetchIssue: () =>
+        okAsync(makeIssue({ state: 'NEW', needs_interview: false })),
       writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
-      checkAcceptanceCriteria: () => okAsync(false)
+      checkAcceptanceCriteria: () => okAsync(false),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -115,7 +126,7 @@ describe('autoCommand', () => {
       fetchIssue: () => okAsync(makeIssue({ state: 'NEW' })),
       writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
-      checkAcceptanceCriteria: () => okAsync(false)
+      checkAcceptanceCriteria: () => okAsync(false),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -142,7 +153,7 @@ describe('autoCommand', () => {
       fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      checkAcceptanceCriteria: () => okAsync(true)
+      checkAcceptanceCriteria: () => okAsync(true),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -165,7 +176,7 @@ describe('autoCommand', () => {
       fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
       writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
       transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      checkAcceptanceCriteria: () => okAsync(true)
+      checkAcceptanceCriteria: () => okAsync(true),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -182,7 +193,7 @@ describe('autoCommand', () => {
           return okAsync([]) // first call — no untriaged NEW issues
         }
         return errAsync(new Error('network error'))
-      }
+      },
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
@@ -200,7 +211,12 @@ describe('autoCommand', () => {
     }
     let callCount = 0
     // Issue is COMPLETED with verify_count=1 (has been attempted before) — needs re-verify
-    const completedIssue = makeIssue({ id: '007', state: 'COMPLETED', verify_count: 1, children: [] })
+    const completedIssue = makeIssue({
+      id: '007',
+      state: 'COMPLETED',
+      verify_count: 1,
+      children: [],
+    })
     const provider = makeProvider({
       listIssues: () => {
         callCount++
@@ -208,12 +224,12 @@ describe('autoCommand', () => {
           return okAsync([completedIssue])
         }
         return okAsync([]) // second loop: empty → exit
-      }
+      },
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
       ...deps,
-      verifyIssue: mockVerify as never
+      verifyIssue: mockVerify as never,
     })
 
     expect(verifyCalledFor).toContain('007')
@@ -230,15 +246,15 @@ describe('autoCommand', () => {
       state: 'COMPLETED',
       verify_count: 3,
       verify_exhausted: true,
-      children: []
+      children: [],
     })
     const provider = makeProvider({
-      listIssues: () => okAsync([exhaustedIssue])
+      listIssues: () => okAsync([exhaustedIssue]),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
       ...deps,
-      verifyIssue: mockVerify as never
+      verifyIssue: mockVerify as never,
     })
 
     expect(verifyCalled).toBe(false)
@@ -255,15 +271,15 @@ describe('autoCommand', () => {
       state: 'COMPLETED',
       verify_count: 1,
       is_verify_fix: true,
-      children: []
+      children: [],
     })
     const provider = makeProvider({
-      listIssues: () => okAsync([fixIssue])
+      listIssues: () => okAsync([fixIssue]),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
       ...deps,
-      verifyIssue: mockVerify as never
+      verifyIssue: mockVerify as never,
     })
 
     expect(verifyCalled).toBe(false)
@@ -276,12 +292,16 @@ describe('autoCommand', () => {
       return okAsync(undefined)
     }
     // Parent has a fix child that is still IN_PROGRESS
-    const fixChild = makeIssue({ id: '010-1', state: 'IN_PROGRESS', is_verify_fix: true })
+    const fixChild = makeIssue({
+      id: '010-1',
+      state: 'IN_PROGRESS',
+      is_verify_fix: true,
+    })
     const parentIssue = makeIssue({
       id: '010',
       state: 'COMPLETED',
       verify_count: 1,
-      children: ['010-1']
+      children: ['010-1'],
     })
     let callCount = 0
     const provider = makeProvider({
@@ -291,12 +311,12 @@ describe('autoCommand', () => {
         if (callCount <= 2) return okAsync([parentIssue])
         return okAsync([])
       },
-      fetchIssue: () => okAsync(fixChild)
+      fetchIssue: () => okAsync(fixChild),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
       ...deps,
-      verifyIssue: mockVerify as never
+      verifyIssue: mockVerify as never,
     })
 
     expect(verifyCalled).toBe(false)
@@ -309,12 +329,16 @@ describe('autoCommand', () => {
       return okAsync(undefined)
     }
     let callCount = 0
-    const fixChild = makeIssue({ id: '011-1', state: 'COMPLETED', is_verify_fix: true })
+    const fixChild = makeIssue({
+      id: '011-1',
+      state: 'COMPLETED',
+      is_verify_fix: true,
+    })
     const parentIssue = makeIssue({
       id: '011',
       state: 'COMPLETED',
       verify_count: 1,
-      children: ['011-1']
+      children: ['011-1'],
     })
     const provider = makeProvider({
       listIssues: () => {
@@ -322,12 +346,12 @@ describe('autoCommand', () => {
         if (callCount <= 2) return okAsync([parentIssue])
         return okAsync([])
       },
-      fetchIssue: () => okAsync(fixChild)
+      fetchIssue: () => okAsync(fixChild),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
       ...deps,
-      verifyIssue: mockVerify as never
+      verifyIssue: mockVerify as never,
     })
 
     expect(verifyCalledFor).toContain('011')

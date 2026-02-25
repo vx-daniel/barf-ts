@@ -11,7 +11,7 @@ import { z } from 'zod'
 export const ExecResultSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
-  status: z.number()
+  status: z.number(),
 })
 /** A validated exec result. Derived from {@link ExecResultSchema}. */
 export type ExecResult = z.infer<typeof ExecResultSchema>

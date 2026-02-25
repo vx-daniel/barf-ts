@@ -3,7 +3,7 @@ import {
   parseIssue,
   serializeIssue,
   validateTransition,
-  parseAcceptanceCriteria
+  parseAcceptanceCriteria,
 } from '@/core/issue'
 import { InvalidTransitionError, ProviderError } from '@/types'
 
@@ -40,7 +40,9 @@ describe('parseIssue', () => {
   })
 
   it('parses force_split=true', () => {
-    const result = parseIssue(SAMPLE.replace('force_split=false', 'force_split=true'))
+    const result = parseIssue(
+      SAMPLE.replace('force_split=false', 'force_split=true'),
+    )
     expect(result.isOk()).toBe(true)
     expect(result._unsafeUnwrap().force_split).toBe(true)
   })
@@ -53,7 +55,9 @@ describe('parseIssue', () => {
   })
 
   it('parses children as array', () => {
-    const issue = parseIssue(SAMPLE.replace('children=', 'children=001-1,001-2'))._unsafeUnwrap()
+    const issue = parseIssue(
+      SAMPLE.replace('children=', 'children=001-1,001-2'),
+    )._unsafeUnwrap()
     expect(issue.children).toEqual(['001-1', '001-2'])
   })
 
@@ -68,13 +72,18 @@ describe('parseIssue', () => {
   })
 
   it('returns Err on invalid state value', () => {
-    expect(parseIssue(SAMPLE.replace('state=NEW', 'state=BOGUS')).isErr()).toBe(true)
+    expect(parseIssue(SAMPLE.replace('state=NEW', 'state=BOGUS')).isErr()).toBe(
+      true,
+    )
   })
 })
 
 describe('context_usage_percent', () => {
   it('parses context_usage_percent=80 correctly', () => {
-    const withPercent = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=80\n')
+    const withPercent = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\ncontext_usage_percent=80\n',
+    )
     const result = parseIssue(withPercent)
     expect(result.isOk()).toBe(true)
     expect(result._unsafeUnwrap().context_usage_percent).toBe(80)
@@ -87,7 +96,10 @@ describe('context_usage_percent', () => {
   })
 
   it('returns undefined when field is empty string', () => {
-    const withEmpty = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=\n')
+    const withEmpty = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\ncontext_usage_percent=\n',
+    )
     const result = parseIssue(withEmpty)
     expect(result.isOk()).toBe(true)
     expect(result._unsafeUnwrap().context_usage_percent).toBeUndefined()
@@ -108,31 +120,50 @@ describe('context_usage_percent', () => {
   })
 
   it('round-trips with value preserved', () => {
-    const withPercent = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=85\n')
+    const withPercent = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\ncontext_usage_percent=85\n',
+    )
     const original = parseIssue(withPercent)._unsafeUnwrap()
     const reparsed = parseIssue(serializeIssue(original))._unsafeUnwrap()
     expect(reparsed.context_usage_percent).toBe(85)
   })
 
   it('rejects 0 via Zod min(1)', () => {
-    const withZero = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=0\n')
+    const withZero = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\ncontext_usage_percent=0\n',
+    )
     expect(parseIssue(withZero).isErr()).toBe(true)
   })
 
   it('rejects 101 via Zod max(100)', () => {
-    const withOver = SAMPLE.replace('force_split=false\n', 'force_split=false\ncontext_usage_percent=101\n')
+    const withOver = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\ncontext_usage_percent=101\n',
+    )
     expect(parseIssue(withOver).isErr()).toBe(true)
   })
 })
 
 describe('needs_interview', () => {
   it('parses needs_interview=true', () => {
-    const issue = parseIssue(SAMPLE.replace('force_split=false\n', 'force_split=false\nneeds_interview=true\n'))._unsafeUnwrap()
+    const issue = parseIssue(
+      SAMPLE.replace(
+        'force_split=false\n',
+        'force_split=false\nneeds_interview=true\n',
+      ),
+    )._unsafeUnwrap()
     expect(issue.needs_interview).toBe(true)
   })
 
   it('parses needs_interview=false', () => {
-    const issue = parseIssue(SAMPLE.replace('force_split=false\n', 'force_split=false\nneeds_interview=false\n'))._unsafeUnwrap()
+    const issue = parseIssue(
+      SAMPLE.replace(
+        'force_split=false\n',
+        'force_split=false\nneeds_interview=false\n',
+      ),
+    )._unsafeUnwrap()
     expect(issue.needs_interview).toBe(false)
   })
 
@@ -159,8 +190,13 @@ describe('needs_interview', () => {
   })
 
   it('round-trips needs_interview=true', () => {
-    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nneeds_interview=true\n')
-    const reparsed = parseIssue(serializeIssue(parseIssue(src)._unsafeUnwrap()))._unsafeUnwrap()
+    const src = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\nneeds_interview=true\n',
+    )
+    const reparsed = parseIssue(
+      serializeIssue(parseIssue(src)._unsafeUnwrap()),
+    )._unsafeUnwrap()
     expect(reparsed.needs_interview).toBe(true)
   })
 })
@@ -184,7 +220,10 @@ describe('verify_count / is_verify_fix / verify_exhausted', () => {
   })
 
   it('parses verify_count=2', () => {
-    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_count=2\n')
+    const src = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\nverify_count=2\n',
+    )
     const result = parseIssue(src)
     expect(result.isOk()).toBe(true)
     expect(result._unsafeUnwrap().verify_count).toBe(2)
@@ -196,20 +235,29 @@ describe('verify_count / is_verify_fix / verify_exhausted', () => {
   })
 
   it('round-trips verify_count=5', () => {
-    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_count=5\n')
+    const src = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\nverify_count=5\n',
+    )
     const original = parseIssue(src)._unsafeUnwrap()
     const reparsed = parseIssue(serializeIssue(original))._unsafeUnwrap()
     expect(reparsed.verify_count).toBe(5)
   })
 
   it('parses is_verify_fix=true', () => {
-    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nis_verify_fix=true\n')
+    const src = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\nis_verify_fix=true\n',
+    )
     const issue = parseIssue(src)._unsafeUnwrap()
     expect(issue.is_verify_fix).toBe(true)
   })
 
   it('parses is_verify_fix=false', () => {
-    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nis_verify_fix=false\n')
+    const src = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\nis_verify_fix=false\n',
+    )
     const issue = parseIssue(src)._unsafeUnwrap()
     expect(issue.is_verify_fix).toBe(false)
   })
@@ -231,7 +279,10 @@ describe('verify_count / is_verify_fix / verify_exhausted', () => {
   })
 
   it('parses verify_exhausted=true', () => {
-    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_exhausted=true\n')
+    const src = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\nverify_exhausted=true\n',
+    )
     const issue = parseIssue(src)._unsafeUnwrap()
     expect(issue.verify_exhausted).toBe(true)
   })
@@ -247,7 +298,10 @@ describe('verify_count / is_verify_fix / verify_exhausted', () => {
   })
 
   it('round-trips verify_exhausted=true', () => {
-    const src = SAMPLE.replace('force_split=false\n', 'force_split=false\nverify_exhausted=true\n')
+    const src = SAMPLE.replace(
+      'force_split=false\n',
+      'force_split=false\nverify_exhausted=true\n',
+    )
     const original = parseIssue(src)._unsafeUnwrap()
     const reparsed = parseIssue(serializeIssue(original))._unsafeUnwrap()
     expect(reparsed.verify_exhausted).toBe(true)
@@ -293,7 +347,10 @@ describe('parseAcceptanceCriteria', () => {
   })
 
   it('returns true when all criteria checked', () => {
-    const allDone = SAMPLE.replace('- [ ] Not done thing', '- [x] Not done thing')
+    const allDone = SAMPLE.replace(
+      '- [ ] Not done thing',
+      '- [x] Not done thing',
+    )
     expect(parseAcceptanceCriteria(allDone)).toBe(true)
   })
 

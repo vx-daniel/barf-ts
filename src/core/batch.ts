@@ -43,7 +43,10 @@ export function shouldContinue(iteration: number, config: Config): boolean {
  *
  * @category Orchestration
  */
-export function handleOverflow(splitCount: number, config: Config): OverflowDecision {
+export function handleOverflow(
+  splitCount: number,
+  config: Config,
+): OverflowDecision {
   if (splitCount < config.maxAutoSplits) {
     return { action: 'split', nextModel: config.splitModel }
   }
@@ -70,7 +73,7 @@ async function planSplitChildren(
   childIds: string[],
   config: Config,
   provider: IssueProvider,
-  deps: RunLoopDeps
+  deps: RunLoopDeps,
 ): Promise<void> {
   for (const childId of childIds) {
     const result = await provider.fetchIssue(childId)
@@ -79,13 +82,19 @@ async function planSplitChildren(
       continue
     }
     if (result.value.state !== 'NEW') {
-      logger.debug({ childId, state: result.value.state }, 'skipping non-NEW child')
+      logger.debug(
+        { childId, state: result.value.state },
+        'skipping non-NEW child',
+      )
       continue
     }
     logger.info({ childId }, 'auto-planning split child')
     const planResult = await runLoop(childId, 'plan', config, provider, deps)
     if (planResult.isErr()) {
-      logger.warn({ childId, error: planResult.error.message }, 'child plan failed')
+      logger.warn(
+        { childId, error: planResult.error.message },
+        'child plan failed',
+      )
     }
   }
 }
@@ -95,7 +104,7 @@ async function runLoopImpl(
   mode: LoopMode,
   config: Config,
   provider: IssueProvider,
-  deps: RunLoopDeps
+  deps: RunLoopDeps,
 ): Promise<void> {
   const _runClaudeIteration = deps.runClaudeIteration ?? runClaudeIteration
   const _verifyIssue = deps.verifyIssue ?? verifyIssue
@@ -115,9 +124,15 @@ async function runLoopImpl(
       if (issueResult.isOk()) {
         const currentState = issueResult.value.state
         if (currentState === 'NEW' || currentState === 'PLANNED') {
-          const transitionResult = await provider.transition(issueId, 'IN_PROGRESS')
+          const transitionResult = await provider.transition(
+            issueId,
+            'IN_PROGRESS',
+          )
           if (transitionResult.isErr()) {
-            logger.warn({ error: transitionResult.error.message }, 'transition failed')
+            logger.warn(
+              { error: transitionResult.error.message },
+              'transition failed',
+            )
           }
         }
       }
@@ -134,7 +149,7 @@ async function runLoopImpl(
           model = decision.nextModel
           await provider.writeIssue(issueId, {
             split_count: fsIssue.value.split_count + 1,
-            force_split: false
+            force_split: false,
           })
         } else {
           model = decision.nextModel
@@ -142,7 +157,7 @@ async function runLoopImpl(
       }
     }
 
-    iterationLoop: while (shouldContinue(iteration, config)) {
+    while (shouldContinue(iteration, config)) {
       const issueResult = await provider.fetchIssue(issueId)
       if (issueResult.isErr()) {
         throw issueResult.error
@@ -152,34 +167,43 @@ async function runLoopImpl(
       }
 
       const currentMode: LoopMode = splitPending ? 'split' : mode
-      logger.info({ issueId, mode: currentMode, model, iteration }, 'starting iteration')
+      logger.info(
+        { issueId, mode: currentMode, model, iteration },
+        'starting iteration',
+      )
 
-      const prompt = injectTemplateVars(resolvePromptTemplate(currentMode, config), {
-        BARF_ISSUE_ID: issueId,
-        BARF_ISSUE_FILE: resolveIssueFile(issueId, config),
-        BARF_MODE: currentMode,
-        BARF_ITERATION: iteration,
-        ISSUES_DIR: config.issuesDir,
-        PLAN_DIR: config.planDir
-      })
+      const prompt = injectTemplateVars(
+        resolvePromptTemplate(currentMode, config),
+        {
+          BARF_ISSUE_ID: issueId,
+          BARF_ISSUE_FILE: resolveIssueFile(issueId, config),
+          BARF_MODE: currentMode,
+          BARF_ITERATION: iteration,
+          ISSUES_DIR: config.issuesDir,
+          PLAN_DIR: config.planDir,
+        },
+      )
 
       const effectiveConfig =
         issueResult.value.context_usage_percent !== undefined
-          ? { ...config, contextUsagePercent: issueResult.value.context_usage_percent }
+          ? {
+              ...config,
+              contextUsagePercent: issueResult.value.context_usage_percent,
+            }
           : config
 
       const displayContext: DisplayContext = {
         mode: currentMode,
         issueId,
         state: issueResult.value.state,
-        title: issueResult.value.title
+        title: issueResult.value.title,
       }
       const iterResult = await _runClaudeIteration(
         prompt,
         model,
         effectiveConfig,
         issueId,
-        displayContext
+        displayContext,
       )
       if (iterResult.isErr()) {
         throw iterResult.error
@@ -201,7 +225,7 @@ async function runLoopImpl(
           await planSplitChildren(fresh.value.children, config, provider, deps)
           return
         }
-        break iterationLoop
+        break
       }
 
       // ── Handle iteration outcome ───────────────────────────────────────
@@ -215,24 +239,32 @@ async function runLoopImpl(
           splitPending = true
           model = decision.nextModel
           await provider.writeIssue(issueId, {
-            split_count: fresh.value.split_count + 1
+            split_count: fresh.value.split_count + 1,
           })
         } else {
           model = decision.nextModel
-          logger.info({ newModel: model }, 'escalating to extended context model')
+          logger.info(
+            { newModel: model },
+            'escalating to extended context model',
+          )
         }
-        continue iterationLoop
+        continue
       }
 
       if (outcome === 'rate_limited') {
         const resetsAt = iterResult.value.rateLimitResetsAt
-        const timeStr = resetsAt ? new Date(resetsAt * 1000).toLocaleTimeString() : 'soon'
+        const timeStr = resetsAt
+          ? new Date(resetsAt * 1000).toLocaleTimeString()
+          : 'soon'
         throw new Error(`Rate limited until ${timeStr}`)
       }
 
       if (outcome === 'error') {
-        logger.warn({ issueId, iteration }, 'claude returned error — stopping loop')
-        break iterationLoop
+        logger.warn(
+          { issueId, iteration },
+          'claude returned error — stopping loop',
+        )
+        break
       }
 
       // ── Normal success — check completion ──────────────────────────────
@@ -246,7 +278,7 @@ async function runLoopImpl(
             await provider.transition(issueId, 'PLANNED')
           }
         }
-        break iterationLoop // plan mode is always single iteration
+        break // plan mode is always single iteration
       }
 
       // Build mode: check acceptance criteria + optional test command
@@ -257,7 +289,10 @@ async function runLoopImpl(
         if (criteriaMet) {
           let testsPassed = true
           if (config.testCommand) {
-            const testResult = await execFileNoThrow('sh', ['-c', config.testCommand])
+            const testResult = await execFileNoThrow('sh', [
+              '-c',
+              config.testCommand,
+            ])
             testsPassed = testResult.status === 0
             if (!testsPassed) {
               logger.warn({ issueId, iteration }, 'tests failed — continuing')
@@ -273,10 +308,10 @@ async function runLoopImpl(
             if (verifyResult.isErr()) {
               logger.warn(
                 { issueId, err: verifyResult.error.message },
-                'verification failed after COMPLETED'
+                'verification failed after COMPLETED',
               )
             }
-            break iterationLoop
+            break
           }
         }
       }
@@ -309,7 +344,10 @@ export function runLoop(
   mode: LoopMode,
   config: Config,
   provider: IssueProvider,
-  deps: RunLoopDeps = {}
+  deps: RunLoopDeps = {},
 ): ResultAsync<void, Error> {
-  return ResultAsync.fromPromise(runLoopImpl(issueId, mode, config, provider, deps), toError)
+  return ResultAsync.fromPromise(
+    runLoopImpl(issueId, mode, config, provider, deps),
+    toError,
+  )
 }

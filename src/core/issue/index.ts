@@ -1,6 +1,11 @@
-import { z } from 'zod'
-import { Result, ok, err } from 'neverthrow'
-import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from '@/types'
+import { err, ok, type Result } from 'neverthrow'
+import type { z } from 'zod'
+import {
+  InvalidTransitionError,
+  type Issue,
+  IssueSchema,
+  type IssueState,
+} from '@/types'
 
 /**
  * The allowed state transitions in the barf issue lifecycle.
@@ -18,7 +23,7 @@ export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
   STUCK: ['PLANNED', 'NEW', 'SPLIT'],
   SPLIT: [],
   COMPLETED: ['VERIFIED'],
-  VERIFIED: []
+  VERIFIED: [],
 }
 
 /**
@@ -44,7 +49,9 @@ export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
 export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
   if (!match) {
-    return err(new Error('Invalid issue format: missing frontmatter delimiters'))
+    return err(
+      new Error('Invalid issue format: missing frontmatter delimiters'),
+    )
   }
   const [, fm, body] = match
   const fields: Record<string, unknown> = {}
@@ -70,7 +77,7 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
       // absent or empty → leave undefined (not set in fields)
     } else if (key === 'verify_count') {
       const parsed = parseInt(val, 10)
-      fields[key] = isNaN(parsed) ? 0 : parsed
+      fields[key] = Number.isNaN(parsed) ? 0 : parsed
     } else if (key === 'is_verify_fix' || key === 'verify_exhausted') {
       if (val === 'true') {
         fields[key] = true
@@ -80,14 +87,14 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
       // absent or empty → leave undefined (not set in fields)
     } else if (key === 'context_usage_percent') {
       const parsed = parseInt(val, 10)
-      if (!isNaN(parsed)) {
+      if (!Number.isNaN(parsed)) {
         fields[key] = parsed
       }
     } else {
       fields[key] = val
     }
   }
-  fields['body'] = body.trim()
+  fields.body = body.trim()
   const parsed = IssueSchema.safeParse(fields)
   return parsed.success ? ok(parsed.data) : err(parsed.error)
 }
@@ -99,7 +106,7 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
  * @category Issue Model
  */
 export function serializeIssue(issue: Issue): string {
-  const fm = [
+  const fm: string[] = [
     `id=${issue.id}`,
     `title=${issue.title}`,
     `state=${issue.state}`,
@@ -107,15 +114,21 @@ export function serializeIssue(issue: Issue): string {
     `children=${issue.children.join(',')}`,
     `split_count=${issue.split_count}`,
     `force_split=${issue.force_split}`,
-    ...(issue.context_usage_percent !== undefined
-      ? [`context_usage_percent=${issue.context_usage_percent}`]
-      : []),
-    ...(issue.needs_interview !== undefined ? [`needs_interview=${issue.needs_interview}`] : []),
-    `verify_count=${issue.verify_count}`,
-    ...(issue.is_verify_fix !== undefined ? [`is_verify_fix=${issue.is_verify_fix}`] : []),
-    ...(issue.verify_exhausted !== undefined ? [`verify_exhausted=${issue.verify_exhausted}`] : [])
-  ].join('\n')
-  return `---\n${fm}\n---\n\n${issue.body}\n`
+  ]
+  if (issue.context_usage_percent !== undefined) {
+    fm.push(`context_usage_percent=${issue.context_usage_percent}`)
+  }
+  if (issue.needs_interview !== undefined) {
+    fm.push(`needs_interview=${issue.needs_interview}`)
+  }
+  fm.push(`verify_count=${issue.verify_count}`)
+  if (issue.is_verify_fix !== undefined) {
+    fm.push(`is_verify_fix=${issue.is_verify_fix}`)
+  }
+  if (issue.verify_exhausted !== undefined) {
+    fm.push(`verify_exhausted=${issue.verify_exhausted}`)
+  }
+  return `---\n${fm.join('\n')}\n---\n\n${issue.body}\n`
 }
 
 /**
@@ -129,7 +142,7 @@ export function serializeIssue(issue: Issue): string {
  */
 export function validateTransition(
   from: IssueState,
-  to: IssueState
+  to: IssueState,
 ): Result<void, InvalidTransitionError> {
   if (!VALID_TRANSITIONS[from].includes(to)) {
     return err(new InvalidTransitionError(from, to))
@@ -147,7 +160,9 @@ export function validateTransition(
  * @category Issue Model
  */
 export function parseAcceptanceCriteria(content: string): boolean {
-  const section = content.match(/## Acceptance Criteria\n([\s\S]*?)(?=\n## |\s*$)/)
+  const section = content.match(
+    /## Acceptance Criteria\n([\s\S]*?)(?=\n## |\s*$)/,
+  )
   if (!section) {
     return true
   }

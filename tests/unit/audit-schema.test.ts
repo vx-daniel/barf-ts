@@ -18,15 +18,15 @@ describe('AuditResponseSchema', () => {
           category: 'failing_check',
           severity: 'error',
           title: 'Tests failing',
-          detail: 'Unit tests have 3 failures'
+          detail: 'Unit tests have 3 failures',
         },
         {
           category: 'rule_violation',
           severity: 'warning',
           title: 'Missing TSDoc',
-          detail: 'Exported function lacks doc comment'
-        }
-      ]
+          detail: 'Exported function lacks doc comment',
+        },
+      ],
     }
     const result = AuditResponseSchema.safeParse(input)
     expect(result.success).toBe(true)
@@ -51,7 +51,9 @@ describe('AuditResponseSchema', () => {
   it('rejects invalid category', () => {
     const result = AuditResponseSchema.safeParse({
       pass: false,
-      findings: [{ category: 'unknown', severity: 'error', title: 'x', detail: 'y' }]
+      findings: [
+        { category: 'unknown', severity: 'error', title: 'x', detail: 'y' },
+      ],
     })
     expect(result.success).toBe(false)
   })
@@ -59,14 +61,24 @@ describe('AuditResponseSchema', () => {
   it('rejects invalid severity', () => {
     const result = AuditResponseSchema.safeParse({
       pass: false,
-      findings: [{ category: 'failing_check', severity: 'critical', title: 'x', detail: 'y' }]
+      findings: [
+        {
+          category: 'failing_check',
+          severity: 'critical',
+          title: 'x',
+          detail: 'y',
+        },
+      ],
     })
     expect(result.success).toBe(false)
   })
 
   it('rejects extra fields on pass=true gracefully', () => {
     // Zod strips extra fields by default
-    const result = AuditResponseSchema.safeParse({ pass: true, extra: 'stuff' })
+    const result = AuditResponseSchema.safeParse({
+      pass: true,
+      extra: 'stuff',
+    })
     expect(result.success).toBe(true)
   })
 })

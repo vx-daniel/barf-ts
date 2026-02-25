@@ -13,7 +13,10 @@ describe('createIssueProvider', () => {
   })
 
   it('returns GitHubIssueProvider when issueProvider=github', () => {
-    const config = ConfigSchema.parse({ issueProvider: 'github', githubRepo: 'owner/repo' })
+    const config = ConfigSchema.parse({
+      issueProvider: 'github',
+      githubRepo: 'owner/repo',
+    })
     const result = createIssueProvider(config)
     expect(result._unsafeUnwrap()).toBeInstanceOf(GitHubIssueProvider)
   })

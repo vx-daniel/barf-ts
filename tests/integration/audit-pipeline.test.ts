@@ -17,17 +17,20 @@ const capturedCodexPrompts: string[] = []
 const execState = {
   codexStatus: 0,
   codexStdout: '{"pass":true}',
-  toolStatus: 0
+  toolStatus: 0,
 }
 
-async function mockExecFn(file: string, args: string[] = []): Promise<ExecResult> {
+async function mockExecFn(
+  file: string,
+  args: string[] = [],
+): Promise<ExecResult> {
   if (file === 'codex') {
     // Prompt is the last arg: codex exec --full-auto --ephemeral <prompt>
     capturedCodexPrompts.push(args[args.length - 1])
     return {
       stdout: execState.codexStdout,
       stderr: '',
-      status: execState.codexStatus
+      status: execState.codexStatus,
     }
   }
   // bun run lint / bun run format:check / sh -c testCommand
@@ -36,7 +39,11 @@ async function mockExecFn(file: string, args: string[] = []): Promise<ExecResult
 
 import { auditCommand } from '@/cli/commands/audit'
 import { CodexAuditProvider } from '@/providers/codex'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import {
+  defaultConfig,
+  makeIssue,
+  makeProvider,
+} from '@tests/fixtures/provider'
 
 const originalCwd = process.cwd()
 
@@ -70,25 +77,33 @@ describe('audit-pipeline integration', () => {
       auditProvider: 'codex' as const,
       issuesDir: join(tmpDir, 'issues'),
       planDir: join(tmpDir, 'plans'),
-      ...overrides
+      ...overrides,
     }
   }
 
   function makeDeps(config: ReturnType<typeof makeConfig>) {
     return {
       execFn: mockExecFn,
-      provider: new CodexAuditProvider(config, mockExecFn)
+      provider: new CodexAuditProvider(config, mockExecFn),
     }
   }
 
   it('CLAUDE.md content appears in codex prompt', async () => {
-    writeFileSync(join(tmpDir, 'CLAUDE.md'), '# Project Rules\n\nNo any types.\n')
+    writeFileSync(
+      join(tmpDir, 'CLAUDE.md'),
+      '# Project Rules\n\nNo any types.\n',
+    )
 
     const config = makeConfig()
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
+    await auditCommand(
+      provider,
+      { issue: '001', all: false },
+      config,
+      makeDeps(config),
+    )
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('No any types.')
@@ -97,14 +112,19 @@ describe('audit-pipeline integration', () => {
   it('.claude/rules/ files are loaded into prompt', async () => {
     writeFileSync(
       join(tmpDir, '.claude', 'rules', 'typescript-advanced.md'),
-      '# TypeScript Rules\n\nUse satisfies keyword.\n'
+      '# TypeScript Rules\n\nUse satisfies keyword.\n',
     )
 
     const config = makeConfig()
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
+    await auditCommand(
+      provider,
+      { issue: '001', all: false },
+      config,
+      makeDeps(config),
+    )
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('Use satisfies keyword.')
@@ -118,7 +138,12 @@ describe('audit-pipeline integration', () => {
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
+    await auditCommand(
+      provider,
+      { issue: '001', all: false },
+      config,
+      makeDeps(config),
+    )
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('Implement user auth with JWT.')
@@ -131,7 +156,12 @@ describe('audit-pipeline integration', () => {
     const issue = makeIssue({ id: '001', state: 'COMPLETED' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
-    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
+    await auditCommand(
+      provider,
+      { issue: '001', all: false },
+      config,
+      makeDeps(config),
+    )
 
     expect(capturedCodexPrompts).toHaveLength(1)
     expect(capturedCodexPrompts[0]).toContain('(no plan file found)')
@@ -145,29 +175,38 @@ describe('audit-pipeline integration', () => {
           category: 'failing_check',
           severity: 'error',
           title: 'Tests broken',
-          detail: '3 tests fail'
+          detail: '3 tests fail',
         },
         {
           category: 'rule_violation',
           severity: 'warning',
           title: 'Used any type',
-          detail: 'Found any in src/foo.ts'
-        }
-      ]
+          detail: 'Found any in src/foo.ts',
+        },
+      ],
     })
 
     const config = makeConfig()
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', title: 'Add feature' })
+    const issue = makeIssue({
+      id: '001',
+      state: 'COMPLETED',
+      title: 'Add feature',
+    })
     let createdBody = ''
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       createIssue: (input) => {
         createdBody = input.body ?? ''
         return okAsync(makeIssue({ id: '002', title: input.title }))
-      }
+      },
     })
 
-    await auditCommand(provider, { issue: '001', all: false }, config, makeDeps(config))
+    await auditCommand(
+      provider,
+      { issue: '001', all: false },
+      config,
+      makeDeps(config),
+    )
 
     expect(createdBody).toContain('Failing Checks')
     expect(createdBody).toContain('Tests broken')
@@ -178,18 +217,26 @@ describe('audit-pipeline integration', () => {
   })
 
   it('--all mode: 2 COMPLETED issues are each sent to codex', async () => {
-    const issue1 = makeIssue({ id: '001', state: 'COMPLETED', title: 'Feature A' })
-    const issue2 = makeIssue({ id: '002', state: 'COMPLETED', title: 'Feature B' })
+    const issue1 = makeIssue({
+      id: '001',
+      state: 'COMPLETED',
+      title: 'Feature A',
+    })
+    const issue2 = makeIssue({
+      id: '002',
+      state: 'COMPLETED',
+      title: 'Feature B',
+    })
 
     const issueMap: Record<string, typeof issue1> = {
       '001': issue1,
-      '002': issue2
+      '002': issue2,
     }
 
     const config = makeConfig()
     const provider = makeProvider({
       listIssues: () => okAsync([issue1, issue2]),
-      fetchIssue: (id) => okAsync(issueMap[id]!)
+      fetchIssue: (id) => okAsync(issueMap[id]!),
     })
 
     await auditCommand(provider, { all: true }, config, makeDeps(config))

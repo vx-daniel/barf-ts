@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { errAsync, okAsync } from 'neverthrow'
 import { auditCommand } from '@/cli/commands/audit'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import {
+  defaultConfig,
+  makeIssue,
+  makeProvider,
+} from '@tests/fixtures/provider'
 import { toTokenUsage } from '@/types/schema/provider-schema'
 
 describe('auditCommand', () => {
@@ -15,7 +19,7 @@ describe('auditCommand', () => {
 
   it('sets exitCode 1 when listIssues returns err (--all mode)', async () => {
     const provider = makeProvider({
-      listIssues: () => errAsync(new Error('provider error'))
+      listIssues: () => errAsync(new Error('provider error')),
     })
 
     await auditCommand(provider, { all: true }, defaultConfig())
@@ -25,7 +29,7 @@ describe('auditCommand', () => {
 
   it('does nothing when no COMPLETED issues exist', async () => {
     const provider = makeProvider({
-      listIssues: () => okAsync([])
+      listIssues: () => okAsync([]),
     })
 
     await auditCommand(provider, { all: true }, defaultConfig())
@@ -35,7 +39,7 @@ describe('auditCommand', () => {
 
   it('sets exitCode 1 when fetchIssue fails for --issue mode', async () => {
     const provider = makeProvider({
-      fetchIssue: () => errAsync(new Error('not found'))
+      fetchIssue: () => errAsync(new Error('not found')),
     })
 
     await auditCommand(provider, { issue: '001', all: false }, defaultConfig())
@@ -46,10 +50,14 @@ describe('auditCommand', () => {
   it('skips non-COMPLETED issues when --issue targets wrong state', async () => {
     const issue = makeIssue({ state: 'IN_PROGRESS' })
     const provider = makeProvider({
-      fetchIssue: () => okAsync(issue)
+      fetchIssue: () => okAsync(issue),
     })
 
-    await auditCommand(provider, { issue: issue.id, all: false }, defaultConfig())
+    await auditCommand(
+      provider,
+      { issue: issue.id, all: false },
+      defaultConfig(),
+    )
 
     // Not COMPLETED — should warn but not set exitCode=1
     expect(process.exitCode).toBe(0)
@@ -64,7 +72,7 @@ describe('auditCommand', () => {
       fetchIssue: () => {
         fetchCount++
         return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
-      }
+      },
     })
 
     await auditCommand(provider, { all: true }, defaultConfig())
@@ -80,7 +88,7 @@ describe('auditCommand', () => {
       fetchIssue: (id) => {
         fetchedId = id
         return okAsync(makeIssue({ id, state: 'IN_PROGRESS' }))
-      }
+      },
     })
 
     await auditCommand(provider, { issue: '005', all: false }, defaultConfig())
@@ -91,26 +99,34 @@ describe('auditCommand', () => {
 
 describe('toTokenUsage', () => {
   it('defaults all fields to 0 when called with no args', () => {
-    expect(toTokenUsage()).toEqual({ promptTokens: 0, completionTokens: 0, totalTokens: 0 })
+    expect(toTokenUsage()).toEqual({
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    })
   })
 
   it('defaults all fields to 0 when called with undefined args', () => {
     expect(toTokenUsage(undefined, undefined, undefined)).toEqual({
       promptTokens: 0,
       completionTokens: 0,
-      totalTokens: 0
+      totalTokens: 0,
     })
   })
 
   it('computes totalTokens as prompt + completion when total is absent', () => {
-    expect(toTokenUsage(100, 50)).toEqual({ promptTokens: 100, completionTokens: 50, totalTokens: 150 })
+    expect(toTokenUsage(100, 50)).toEqual({
+      promptTokens: 100,
+      completionTokens: 50,
+      totalTokens: 150,
+    })
   })
 
   it('uses provided total when all three args given', () => {
     expect(toTokenUsage(100, 50, 200)).toEqual({
       promptTokens: 100,
       completionTokens: 50,
-      totalTokens: 200
+      totalTokens: 200,
     })
   })
 
@@ -118,7 +134,7 @@ describe('toTokenUsage', () => {
     expect(toTokenUsage(null, null, null)).toEqual({
       promptTokens: 0,
       completionTokens: 0,
-      totalTokens: 0
+      totalTokens: 0,
     })
   })
 })

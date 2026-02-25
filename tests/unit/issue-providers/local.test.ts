@@ -54,7 +54,9 @@ describe('LocalIssueProvider', () => {
 
   it('filters by state', async () => {
     const news = (await provider.listIssues({ state: 'NEW' }))._unsafeUnwrap()
-    const planned = (await provider.listIssues({ state: 'PLANNED' }))._unsafeUnwrap()
+    const planned = (
+      await provider.listIssues({ state: 'PLANNED' })
+    )._unsafeUnwrap()
     expect(news).toHaveLength(1)
     expect(planned).toHaveLength(0)
   })
@@ -109,8 +111,8 @@ describe('LocalIssueProvider', () => {
         pid: 999999999,
         acquiredAt: new Date().toISOString(),
         state: 'IN_PROGRESS',
-        mode: 'build'
-      })
+        mode: 'build',
+      }),
     )
     const result = await provider.lockIssue('001', { mode: 'build' })
     expect(result.isOk()).toBe(true)
@@ -125,8 +127,8 @@ describe('LocalIssueProvider', () => {
         pid: 999999999,
         acquiredAt: new Date().toISOString(),
         state: 'IN_PROGRESS',
-        mode: 'build'
-      })
+        mode: 'build',
+      }),
     )
     const result = await provider.isLocked('001')
     expect(result._unsafeUnwrap()).toBe(false)

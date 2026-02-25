@@ -5,13 +5,17 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 
 import { auditCommand } from '@/cli/commands/audit'
-import { defaultConfig, makeIssue, makeProvider } from '@tests/fixtures/provider'
+import {
+  defaultConfig,
+  makeIssue,
+  makeProvider,
+} from '@tests/fixtures/provider'
 
 // Mock audit provider injected via AuditDeps — no module mocking needed
 const mockState = {
   isConfigured: true,
   content: '{"pass":true,"findings":[]}',
-  error: null as Error | null
+  error: null as Error | null,
 }
 
 function makeMockAuditProvider() {
@@ -22,7 +26,7 @@ function makeMockAuditProvider() {
       name: 'mock',
       displayName: 'Mock Provider',
       requiredConfigKeys: ['mockKey'],
-      supportedModels: []
+      supportedModels: [],
     }),
     chatJSON: () => {
       if (mockState.error) return errAsync(mockState.error)
@@ -31,7 +35,7 @@ function makeMockAuditProvider() {
       } catch {
         return errAsync(new Error('invalid JSON'))
       }
-    }
+    },
   }
 }
 
@@ -53,7 +57,7 @@ describe('auditCommand (full flow)', () => {
       ...defaultConfig(),
       openaiApiKey: 'sk-test',
       issuesDir: join(dirs, 'issues'),
-      planDir: join(dirs, 'plans')
+      planDir: join(dirs, 'plans'),
     }
     mkdirSync(config.issuesDir, { recursive: true })
     mkdirSync(config.planDir, { recursive: true })
@@ -62,7 +66,7 @@ describe('auditCommand (full flow)', () => {
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(provider, { issue: '001', all: false }, config, {
-      provider: makeMockAuditProvider() as never
+      provider: makeMockAuditProvider() as never,
     })
 
     expect(process.exitCode).toBe(0)
@@ -76,11 +80,11 @@ describe('auditCommand (full flow)', () => {
       ...defaultConfig(),
       openaiApiKey: 'sk-test',
       issuesDir: '/tmp/nonexistent-' + Date.now(),
-      planDir: '/tmp/nonexistent-plans-' + Date.now()
+      planDir: '/tmp/nonexistent-plans-' + Date.now(),
     }
 
     await auditCommand(provider, { issue: '001', all: false }, config, {
-      provider: makeMockAuditProvider() as never
+      provider: makeMockAuditProvider() as never,
     })
     expect(process.exitCode).toBe(1)
   })
@@ -93,9 +97,9 @@ describe('auditCommand (full flow)', () => {
           category: 'failing_check',
           severity: 'error',
           title: 'Tests failing',
-          detail: '3 unit tests are broken'
-        }
-      ]
+          detail: '3 unit tests are broken',
+        },
+      ],
     })
 
     const dirs = mkdtempSync(join(tmpdir(), 'barf-audit-findings-'))
@@ -103,23 +107,28 @@ describe('auditCommand (full flow)', () => {
       ...defaultConfig(),
       openaiApiKey: 'sk-test',
       issuesDir: join(dirs, 'issues'),
-      planDir: join(dirs, 'plans')
+      planDir: join(dirs, 'plans'),
     }
     mkdirSync(config.issuesDir, { recursive: true })
     mkdirSync(config.planDir, { recursive: true })
 
-    let createdIssue: { title: string; body?: string; parent?: string } | null = null
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', title: 'Add feature X' })
+    let createdIssue: { title: string; body?: string; parent?: string } | null =
+      null
+    const issue = makeIssue({
+      id: '001',
+      state: 'COMPLETED',
+      title: 'Add feature X',
+    })
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       createIssue: (input) => {
         createdIssue = input
         return okAsync(makeIssue({ id: '002', title: input.title }))
-      }
+      },
     })
 
     await auditCommand(provider, { issue: '001', all: false }, config, {
-      provider: makeMockAuditProvider() as never
+      provider: makeMockAuditProvider() as never,
     })
 
     expect(process.exitCode).toBe(1)
@@ -136,11 +145,11 @@ describe('auditCommand (full flow)', () => {
     const config = {
       ...defaultConfig(),
       issuesDir: '/tmp/nonexistent-' + Date.now(),
-      planDir: '/tmp/nonexistent-plans-' + Date.now()
+      planDir: '/tmp/nonexistent-plans-' + Date.now(),
     }
 
     await auditCommand(provider, { issue: '001', all: false }, config, {
-      provider: makeMockAuditProvider() as never
+      provider: makeMockAuditProvider() as never,
     })
     expect(process.exitCode).toBe(1)
   })
@@ -152,7 +161,7 @@ describe('auditCommand (full flow)', () => {
       ...defaultConfig(),
       openaiApiKey: 'sk-test',
       issuesDir: join(dirs, 'issues'),
-      planDir: join(dirs, 'plans')
+      planDir: join(dirs, 'plans'),
     }
     mkdirSync(config.issuesDir, { recursive: true })
     mkdirSync(config.planDir, { recursive: true })
@@ -161,7 +170,7 @@ describe('auditCommand (full flow)', () => {
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(provider, { issue: '001', all: false }, config, {
-      provider: makeMockAuditProvider() as never
+      provider: makeMockAuditProvider() as never,
     })
     expect(process.exitCode).toBe(1)
   })

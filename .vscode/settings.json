@@ -1,17 +1,12 @@
 {
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.oxc": "explicit"
+    "source.fixAll.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
   },
   "[typescript]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
+    "editor.defaultFormatter": "biomejs.biome"
   },
-  "oxc.enable.oxlint": true,
-  "oxc.path.oxfmt": "node_modules",
-  "oxc.path.oxlint": "node_modules",
-  "oxc.path.node": "",
-  "oxc.requireConfig": true,
-  "editor.defaultFormatter": "oxc.oxc-vscode",
-  "workbench.colorTheme": "Dracula Theme",
-  
+  "editor.defaultFormatter": "biomejs.biome",
+  "workbench.colorTheme": "Dracula Theme"
 }

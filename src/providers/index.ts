@@ -10,7 +10,12 @@ export { OpenAIAuditProvider }
 export { GeminiAuditProvider }
 export { ClaudeAuditProvider }
 export { CodexAuditProvider }
-export type { ChatResult, ChatOptions, PingResult, ProviderInfo } from '@/providers/base'
+export type {
+  ChatResult,
+  ChatOptions,
+  PingResult,
+  ProviderInfo,
+} from '@/providers/base'
 
 /**
  * Creates the configured {@link AuditProvider} implementation.
@@ -29,7 +34,6 @@ export function createAuditProvider(config: Config): AuditProvider {
       return new ClaudeAuditProvider(config)
     case 'codex':
       return new CodexAuditProvider(config)
-    case 'openai':
     default:
       return new OpenAIAuditProvider(config)
   }

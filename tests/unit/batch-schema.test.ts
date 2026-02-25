@@ -5,7 +5,7 @@ describe('OverflowDecisionSchema', () => {
   it('parses a split decision', () => {
     const result = OverflowDecisionSchema.safeParse({
       action: 'split',
-      nextModel: 'claude-sonnet-4-6'
+      nextModel: 'claude-sonnet-4-6',
     })
     expect(result.success).toBe(true)
     if (result.success) {
@@ -16,7 +16,7 @@ describe('OverflowDecisionSchema', () => {
   it('parses an escalate decision', () => {
     const result = OverflowDecisionSchema.safeParse({
       action: 'escalate',
-      nextModel: 'claude-opus-4-6'
+      nextModel: 'claude-opus-4-6',
     })
     expect(result.success).toBe(true)
     if (result.success) {
@@ -26,19 +26,21 @@ describe('OverflowDecisionSchema', () => {
 
   it('rejects invalid action', () => {
     expect(
-      OverflowDecisionSchema.safeParse({ action: 'retry', nextModel: 'x' }).success
+      OverflowDecisionSchema.safeParse({ action: 'retry', nextModel: 'x' })
+        .success,
     ).toBe(false)
   })
 
   it('rejects empty nextModel', () => {
     expect(
-      OverflowDecisionSchema.safeParse({ action: 'split', nextModel: '' }).success
+      OverflowDecisionSchema.safeParse({ action: 'split', nextModel: '' })
+        .success,
     ).toBe(false)
   })
 
   it('rejects missing nextModel', () => {
-    expect(
-      OverflowDecisionSchema.safeParse({ action: 'split' }).success
-    ).toBe(false)
+    expect(OverflowDecisionSchema.safeParse({ action: 'split' }).success).toBe(
+      false,
+    )
   })
 })

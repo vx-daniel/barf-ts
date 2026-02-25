@@ -15,7 +15,9 @@ describe('parseBarfrc', () => {
   })
 
   it('parses ISSUE_PROVIDER=github and GITHUB_REPO', () => {
-    const result = parseBarfrc('ISSUE_PROVIDER=github\nGITHUB_REPO=owner/repo\n')
+    const result = parseBarfrc(
+      'ISSUE_PROVIDER=github\nGITHUB_REPO=owner/repo\n',
+    )
     const config = result._unsafeUnwrap()
     expect(config.issueProvider).toBe('github')
     expect(config.githubRepo).toBe('owner/repo')
