@@ -69,6 +69,34 @@ function safeRenderHTML(container: HTMLElement, htmlString: string): void {
   }
 }
 
+/**
+ * Renders issue frontmatter (excluding body) as syntax-highlighted JSON.
+ * Uses regex-based syntax highlighting for keys, strings, numbers, booleans, and null.
+ * Returns HTML string meant to be rendered via safeRenderHTML.
+ */
+function renderMetadataJSON(issue: Issue): string {
+  // Extract frontmatter, exclude body field
+  const { body, ...frontmatter } = issue
+
+  // Pretty-print JSON with 2-space indentation
+  const json = JSON.stringify(frontmatter, null, 2)
+
+  // Apply syntax highlighting via regex replacements
+  const highlighted = json
+    // Keys: "fieldName":
+    .replace(/"([^"]+)":/g, '<span class="json-key">"$1":</span>')
+    // String values: "value"
+    .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>')
+    // Numbers: 123
+    .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
+    // Booleans: true/false
+    .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
+    // Null values
+    .replace(/: null/g, ': <span class="json-null">null</span>')
+
+  return `<pre class="metadata-viewer">${highlighted}</pre>`
+}
+
 export interface EditorCallbacks {
   onTransition: (issueId: string, to: string) => void
   onDelete: (issueId: string) => void
