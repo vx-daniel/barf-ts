@@ -69,6 +69,34 @@ function safeRenderHTML(container: HTMLElement, htmlString: string): void {
   }
 }
 
+/**
+ * Renders issue frontmatter (excluding body) as syntax-highlighted JSON.
+ * Uses regex-based syntax highlighting for keys, strings, numbers, booleans, and null.
+ * Returns HTML string meant to be rendered via safeRenderHTML.
+ */
+function renderMetadataJSON(issue: Issue): string {
+  // Extract frontmatter, exclude body field
+  const { body, ...frontmatter } = issue
+
+  // Pretty-print JSON with 2-space indentation
+  const json = JSON.stringify(frontmatter, null, 2)
+
+  // Apply syntax highlighting via regex replacements
+  const highlighted = json
+    // Keys: "fieldName":
+    .replace(/"([^"]+)":/g, '<span class="json-key">"$1":</span>')
+    // String values: "value"
+    .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>')
+    // Numbers: 123
+    .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
+    // Booleans: true/false
+    .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
+    // Null values
+    .replace(/: null/g, ': <span class="json-null">null</span>')
+
+  return `<pre class="metadata-viewer">${highlighted}</pre>`
+}
+
 export interface EditorCallbacks {
   onTransition: (issueId: string, to: string) => void
   onDelete: (issueId: string) => void
@@ -96,13 +124,29 @@ export function initEditor(cb: EditorCallbacks): void {
 
     const cm = document.getElementById('editor-cm')!
     const preview = document.getElementById('editor-preview')!
+    const metadata = document.getElementById('editor-metadata')!
+
     if (tab === 'edit') {
       if (!editorView) mountCodeMirror(currentBody)
       cm.style.display = ''
       preview.style.display = 'none'
+      metadata.style.display = 'none'
+    } else if (tab === 'metadata') {
+      cm.style.display = 'none'
+      preview.style.display = 'none'
+      metadata.style.display = 'block'
+      // Render metadata using safe HTML rendering
+      const issues = callbacks?.getIssues() ?? []
+      const currentIssue = issues.find((i) => i.id === currentIssueId)
+      if (currentIssue) {
+        const htmlString = renderMetadataJSON(currentIssue)
+        safeRenderHTML(metadata, htmlString)
+      }
     } else {
+      // Preview tab
       cm.style.display = 'none'
       preview.style.display = 'block'
+      metadata.style.display = 'none'
       updatePreview()
     }
   })
@@ -255,14 +299,19 @@ export function openIssue(issue: Issue): void {
   actsDiv.appendChild(statusSpan)
 
   // Default to preview tab
+  // Default to preview tab
   document
     .querySelector('.editor-tab[data-tab="edit"]')
+    ?.classList.remove('active')
+  document
+    .querySelector('.editor-tab[data-tab="metadata"]')
     ?.classList.remove('active')
   document
     .querySelector('.editor-tab[data-tab="preview"]')
     ?.classList.add('active')
   document.getElementById('editor-cm')!.style.display = 'none'
   document.getElementById('editor-preview')!.style.display = 'block'
+  document.getElementById('editor-metadata')!.style.display = 'none'
   updatePreview()
 }
 
