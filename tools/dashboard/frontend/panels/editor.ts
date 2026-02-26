@@ -124,13 +124,29 @@ export function initEditor(cb: EditorCallbacks): void {
 
     const cm = document.getElementById('editor-cm')!
     const preview = document.getElementById('editor-preview')!
+    const metadata = document.getElementById('editor-metadata')!
+
     if (tab === 'edit') {
       if (!editorView) mountCodeMirror(currentBody)
       cm.style.display = ''
       preview.style.display = 'none'
+      metadata.style.display = 'none'
+    } else if (tab === 'metadata') {
+      cm.style.display = 'none'
+      preview.style.display = 'none'
+      metadata.style.display = 'block'
+      // Render metadata using safe HTML rendering
+      const issues = callbacks?.getIssues() ?? []
+      const currentIssue = issues.find((i) => i.id === currentIssueId)
+      if (currentIssue) {
+        const htmlString = renderMetadataJSON(currentIssue)
+        safeRenderHTML(metadata, htmlString)
+      }
     } else {
+      // Preview tab
       cm.style.display = 'none'
       preview.style.display = 'block'
+      metadata.style.display = 'none'
       updatePreview()
     }
   })
@@ -283,14 +299,19 @@ export function openIssue(issue: Issue): void {
   actsDiv.appendChild(statusSpan)
 
   // Default to preview tab
+  // Default to preview tab
   document
     .querySelector('.editor-tab[data-tab="edit"]')
+    ?.classList.remove('active')
+  document
+    .querySelector('.editor-tab[data-tab="metadata"]')
     ?.classList.remove('active')
   document
     .querySelector('.editor-tab[data-tab="preview"]')
     ?.classList.add('active')
   document.getElementById('editor-cm')!.style.display = 'none'
   document.getElementById('editor-preview')!.style.display = 'block'
+  document.getElementById('editor-metadata')!.style.display = 'none'
   updatePreview()
 }
 
