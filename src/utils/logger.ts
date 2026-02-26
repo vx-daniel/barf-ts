@@ -71,7 +71,9 @@ export function createLogger(name: string): pino.Logger {
   return new Proxy({} as pino.Logger, {
     get: (_t, prop) => {
       const val = get()[prop as keyof pino.Logger]
-      return typeof val === 'function' ? (val as CallableFunction).bind(get()) : val
+      return typeof val === 'function'
+        ? (val as CallableFunction).bind(get())
+        : val
     },
   })
 }

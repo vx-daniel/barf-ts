@@ -1,5 +1,11 @@
 /* ── CSS Variables + Dark Theme + Layout Grid ───────────────────── */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 :root {
   --bg: #0d0d1a;
@@ -20,12 +26,13 @@
   --c-split: #a855f7;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: "SF Mono", "Fira Code", monospace;
   font-size: 13px;
 }
 
@@ -50,7 +57,9 @@ html, body {
     "bottom";
 }
 
-#app.no-sidebar #sidebar { display: none; }
+#app.no-sidebar #sidebar {
+  display: none;
+}
 
 /* ── Header ─────────────────────────────────────────────────────── */
 #header {
@@ -91,10 +100,20 @@ html, body {
   white-space: nowrap;
 }
 
-.hbtn:hover { border-color: var(--accent); color: var(--accent); }
-.hbtn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.hbtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.hbtn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
 
-#refresh-ind { font-size: 11px; color: var(--text-muted); }
+#refresh-ind {
+  font-size: 11px;
+  color: var(--text-muted);
+}
 
 /* ── Main area ──────────────────────────────────────────────────── */
 #main {
@@ -125,7 +144,9 @@ html, body {
   max-height: 300px;
 }
 
-#bottom.open { display: flex; }
+#bottom.open {
+  display: flex;
+}
 
 /* ── Shared button styles ───────────────────────────────────────── */
 .abtn {
@@ -137,28 +158,55 @@ html, body {
   cursor: pointer;
   font-family: inherit;
   font-weight: 600;
-  letter-spacing: .03em;
-  transition: background .15s;
+  letter-spacing: 0.03em;
+  transition: background 0.15s;
 }
-.abtn:hover { filter: brightness(1.2); }
-.abtn:disabled { opacity: .4; cursor: not-allowed; }
-.abtn-plan { border-color: #f59e0b; color: #f59e0b; }
-.abtn-build { border-color: #f97316; color: #f97316; }
-.abtn-audit { border-color: #22c55e; color: #22c55e; }
-.abtn-interview { border-color: #3b82f6; color: #3b82f6; }
-.abtn-triage { border-color: #8b5cf6; color: #8b5cf6; }
-.abtn-stop { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+.abtn:hover {
+  filter: brightness(1.2);
+}
+.abtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.abtn-plan {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+.abtn-build {
+  border-color: #f97316;
+  color: #f97316;
+}
+.abtn-audit {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+.abtn-interview {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.abtn-triage {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+}
+.abtn-stop {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
 
 /* ── Modal ──────────────────────────────────────────────────────── */
 #modal-ov {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.6);
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
   z-index: 200;
   display: none;
   align-items: center;
   justify-content: center;
 }
-#modal-ov.open { display: flex; }
+#modal-ov.open {
+  display: flex;
+}
 
 #modal {
   background: var(--surface);
@@ -168,9 +216,18 @@ html, body {
   max-width: 90vw;
   padding: 20px;
 }
-#modal h2 { font-size: 14px; margin-bottom: 14px; }
-#modal label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
-#modal input, #modal textarea {
+#modal h2 {
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+#modal label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+#modal input,
+#modal textarea {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -182,8 +239,16 @@ html, body {
   margin-bottom: 12px;
   resize: vertical;
 }
-#modal input:focus, #modal textarea:focus { outline: none; border-color: var(--accent); }
-#modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+#modal input:focus,
+#modal textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+#modal-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 .mbtn {
   padding: 6px 16px;
   border-radius: var(--radius);
@@ -194,13 +259,20 @@ html, body {
   font-family: inherit;
   font-size: 12px;
 }
-.mbtn.primary { background: #7c3aed; border-color: #7c3aed; color: #fff; }
-.mbtn.primary:hover { background: #6d28d9; }
+.mbtn.primary {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+}
+.mbtn.primary:hover {
+  background: #6d28d9;
+}
 
 /* ── Interview Modal ──────────────────────────────────────────── */
 .modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.6);
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
   z-index: 200;
   align-items: center;
   justify-content: center;
@@ -215,41 +287,98 @@ html, body {
   overflow-y: auto;
   padding: 20px;
 }
-.interview-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.interview-hdr h2 { font-size: 14px; margin: 0; }
-.interview-progress { font-size: 11px; color: var(--text-muted); }
-.interview-q { font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
-.interview-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.interview-opt { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; padding: 6px 8px; border-radius: var(--radius); }
-.interview-opt:hover { background: var(--surface2); }
-.interview-opt input[type=radio] { accent-color: var(--accent); }
+.interview-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.interview-hdr h2 {
+  font-size: 14px;
+  margin: 0;
+}
+.interview-progress {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.interview-q {
+  font-size: 13px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.interview-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.interview-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+}
+.interview-opt:hover {
+  background: var(--surface2);
+}
+.interview-opt input[type="radio"] {
+  accent-color: var(--accent);
+}
 .interview-other-input {
-  width: 100%; margin-top: 6px;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text);
-  font-family: inherit; font-size: 12px; padding: 7px 10px;
+  width: 100%;
+  margin-top: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 7px 10px;
 }
 .interview-textarea {
   width: 100%;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text);
-  font-family: inherit; font-size: 12px; padding: 7px 10px;
-  resize: vertical; margin-bottom: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 7px 10px;
+  resize: vertical;
+  margin-bottom: 14px;
 }
-.interview-textarea:focus, .interview-other-input:focus { outline: none; border-color: var(--accent); }
-.interview-btns { display: flex; gap: 8px; justify-content: flex-end; }
-.interview-err { color: #ef4444; font-size: 11px; margin-top: 8px; }
+.interview-textarea:focus,
+.interview-other-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.interview-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.interview-err {
+  color: #ef4444;
+  font-size: 11px;
+  margin-top: 8px;
+}
 
 /* ── Config Modal ──────────────────────────────────────────────── */
 #config-ov {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.6);
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
   z-index: 200;
   display: none;
   align-items: center;
   justify-content: center;
 }
-#config-ov.open { display: flex; }
+#config-ov.open {
+  display: flex;
+}
 
 #config-modal {
   background: var(--surface);
@@ -270,7 +399,11 @@ html, body {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-#config-header h2 { font-size: 14px; margin: 0; white-space: nowrap; }
+#config-header h2 {
+  font-size: 14px;
+  margin: 0;
+  white-space: nowrap;
+}
 #config-path {
   font-size: 10px;
   color: var(--text-muted);
@@ -280,12 +413,18 @@ html, body {
   flex: 1;
 }
 #config-close {
-  background: none; border: none;
+  background: none;
+  border: none;
   color: var(--text-muted);
-  cursor: pointer; font-size: 18px; line-height: 1; padding: 2px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px;
   margin-left: auto;
 }
-#config-close:hover { color: var(--text); }
+#config-close:hover {
+  color: var(--text);
+}
 
 #config-body {
   flex: 1;
@@ -296,13 +435,15 @@ html, body {
 .config-group-heading {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   color: var(--accent);
   margin: 14px 0 6px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
 }
-.config-group-heading:first-child { margin-top: 0; }
+.config-group-heading:first-child {
+  margin-top: 0;
+}
 
 .config-row {
   display: flex;
@@ -328,7 +469,10 @@ html, body {
   font-size: 12px;
   padding: 5px 8px;
 }
-.config-input:focus { outline: none; border-color: var(--accent); }
+.config-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
 
 select.config-input {
   appearance: none;
@@ -364,10 +508,10 @@ select.config-input {
 }
 
 .resize-handle::after {
-  content: '';
+  content: "";
   position: absolute;
   background: var(--border);
-  transition: background .15s;
+  transition: background 0.15s;
 }
 
 .resize-handle:hover::after,
@@ -387,7 +531,8 @@ select.config-input {
 }
 
 .resize-handle-v::after {
-  top: 0; bottom: 0;
+  top: 0;
+  bottom: 0;
   left: 2px;
   width: 1px;
 }
@@ -400,11 +545,17 @@ select.config-input {
 }
 
 .resize-handle-h::after {
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   top: 2px;
   height: 1px;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}

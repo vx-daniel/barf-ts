@@ -5,6 +5,8 @@
  * CSS grid template sizes on #app.
  */
 
+import { getEl } from './dom'
+
 const MIN_SIDEBAR_W = 280
 const MAX_SIDEBAR_W = 800
 const MIN_BOTTOM_H = 100
@@ -12,8 +14,8 @@ const MAX_BOTTOM_H = 600
 
 /** Mount sidebar resize handle (vertical bar between main and sidebar). */
 export function mountSidebarResizer(): void {
-  const app = document.getElementById('app')!
-  const sidebar = document.getElementById('sidebar')!
+  const app = getEl('app')
+  const sidebar = getEl('sidebar')
 
   const handle = document.createElement('div')
   handle.id = 'resize-sidebar'
@@ -30,7 +32,10 @@ export function mountSidebarResizer(): void {
 
     const onMove = (ev: MouseEvent) => {
       const delta = startX - ev.clientX
-      const newW = Math.min(MAX_SIDEBAR_W, Math.max(MIN_SIDEBAR_W, startW + delta))
+      const newW = Math.min(
+        MAX_SIDEBAR_W,
+        Math.max(MIN_SIDEBAR_W, startW + delta),
+      )
       app.style.gridTemplateColumns = `1fr ${newW}px`
     }
 
@@ -50,8 +55,8 @@ export function mountSidebarResizer(): void {
 
 /** Mount bottom panel resize handle (horizontal bar above bottom). */
 export function mountBottomResizer(): void {
-  const app = document.getElementById('app')!
-  const bottom = document.getElementById('bottom')!
+  const _app = getEl('app')
+  const bottom = getEl('bottom')
 
   const handle = document.createElement('div')
   handle.id = 'resize-bottom'
@@ -68,9 +73,12 @@ export function mountBottomResizer(): void {
 
     const onMove = (ev: MouseEvent) => {
       const delta = startY - ev.clientY
-      const newH = Math.min(MAX_BOTTOM_H, Math.max(MIN_BOTTOM_H, startH + delta))
-      bottom.style.maxHeight = newH + 'px'
-      bottom.style.height = newH + 'px'
+      const newH = Math.min(
+        MAX_BOTTOM_H,
+        Math.max(MIN_BOTTOM_H, startH + delta),
+      )
+      bottom.style.maxHeight = `${newH}px`
+      bottom.style.height = `${newH}px`
     }
 
     const onUp = () => {

@@ -29,7 +29,7 @@
   padding: 8px 10px;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -64,23 +64,67 @@
   border-left: 3px solid var(--sc, #444);
   padding: 8px 9px;
   cursor: pointer;
-  transition: border-color .15s, transform .1s;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
   position: relative;
 }
-.card:hover { border-color: var(--sc, #888); transform: translateY(-1px); }
-.card.running { opacity: .7; }
+.card:hover {
+  border-color: var(--sc, #888);
+  transform: translateY(-1px);
+}
+.card.running {
+  opacity: 0.7;
+}
 
-.card-id { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
-.card-title { font-size: 12px; line-height: 1.4; word-break: break-word; }
+.card-id {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.card-title {
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
 
-.card-meta { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
-.pbar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.pbar-fill { height: 100%; border-radius: 2px; transition: width .3s; }
-.pbar-lbl { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.card-meta {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pbar {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pbar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+.pbar-lbl {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 
-.card-actions { display: flex; gap: 4px; margin-top: 7px; flex-wrap: wrap; }
+.card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 7px;
+  flex-wrap: wrap;
+}
 
-.card-rel { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+.card-rel {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
 .card-rel-tag {
   font-size: 10px;
   padding: 1px 5px;

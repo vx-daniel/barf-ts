@@ -92,9 +92,7 @@ export async function autoCommand(
     const refreshed = refreshResult.value
 
     // ── Gate check ─────────────────────────────────────────────────────────────
-    const needsInterview = refreshed.filter(
-      (i) => i.needs_interview === true,
-    )
+    const needsInterview = refreshed.filter((i) => i.needs_interview === true)
     for (const issue of needsInterview) {
       logger.warn(
         { issueId: issue.id, title: issue.title },

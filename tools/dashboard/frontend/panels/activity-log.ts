@@ -71,8 +71,8 @@ function timeSpan(ts: number): HTMLElement {
 }
 
 function levelSpan(text: string, cls: string): HTMLElement {
-  const s = el('span', 'pino-level ' + cls)
-  s.textContent = '[' + text + ']'
+  const s = el('span', `pino-level ${cls}`)
+  s.textContent = `[${text}]`
   return s
 }
 
@@ -154,9 +154,9 @@ export function mountActivityLog(container: HTMLElement): void {
       const kind = (btn as HTMLElement).dataset.kind
       if (kind === 'all') {
         activeFilters = new Set(VISIBLE_KINDS)
-        container
-          .querySelectorAll('.filter-btn')
-          .forEach((b) => b.classList.add('active'))
+        container.querySelectorAll('.filter-btn').forEach((b) => {
+          b.classList.add('active')
+        })
       } else if (kind) {
         if (activeFilters.has(kind)) {
           activeFilters.delete(kind)
@@ -211,7 +211,7 @@ function appendStdoutLine(entry: ActivityEntry): void {
     const state = line.slice('__BARF_STATE__:'.length).trim()
     const banner = el('div', 'state-banner')
     banner.dataset.kind = 'stdout'
-    banner.textContent = '→ ' + state
+    banner.textContent = `→ ${state}`
     log.appendChild(banner)
     log.scrollTop = log.scrollHeight
     return
@@ -278,7 +278,7 @@ function updateGroupSummary(summary: HTMLElement): void {
   const issueId = summary.dataset.issueId
   const issueName = summary.dataset.issueName
   const issueTag = issueId
-    ? ` · #${issueId}${issueName ? ':' + issueName : ''}`
+    ? ` · #${issueId}${issueName ? `:${issueName}` : ''}`
     : ''
   summary.textContent = `◦ Claude output${issueTag} · ${count} line${count === '1' ? '' : 's'} · ${time}`
 }
@@ -343,14 +343,14 @@ function appendStderrLine(entry: ActivityEntry): void {
   if (pino) {
     const summaryChildren: HTMLElement[] = [timeSpan(entry.timestamp)]
 
-    const lvlCls = 'pino-level-' + pino.levelName.toLowerCase()
+    const lvlCls = `pino-level-${pino.levelName.toLowerCase()}`
     summaryChildren.push(levelSpan(pino.levelName, lvlCls))
 
     if (pino.issueId) {
       const title =
         typeof pino.extra.title === 'string' ? pino.extra.title : null
       const idSpan = el('span', 'pino-issue-id')
-      idSpan.textContent = '#' + pino.issueId + (title ? ':' + title : '')
+      idSpan.textContent = `#${pino.issueId}${title ? `:${title}` : ''}`
       summaryChildren.push(idSpan)
     }
 
@@ -375,13 +375,13 @@ function appendStderrLine(entry: ActivityEntry): void {
       summaryChildren.push(extraSpan)
     }
 
-    const levelCls =
-      pino.levelName === 'WARN'
-        ? 'pino-warn'
-        : pino.levelName === 'ERROR' || pino.levelName === 'FATAL'
-          ? 'pino-error'
-          : ''
-    const cssClass = 'activity-row pino-row' + (levelCls ? ' ' + levelCls : '')
+    let levelCls = ''
+    if (pino.levelName === 'WARN') {
+      levelCls = 'pino-warn'
+    } else if (pino.levelName === 'ERROR' || pino.levelName === 'FATAL') {
+      levelCls = 'pino-error'
+    }
+    const cssClass = `activity-row pino-row${levelCls ? ` ${levelCls}` : ''}`
     details = makeDetailsRow(
       'stderr',
       cssClass,
@@ -427,7 +427,7 @@ function mainArgSnippet(
   args: Record<string, unknown>,
 ): string {
   const truncate = (s: string, len = 60) =>
-    s.length > len ? s.slice(0, len) + '…' : s
+    s.length > len ? `${s.slice(0, len)}…` : s
 
   switch (toolName) {
     case 'Read':
@@ -487,7 +487,7 @@ function appendToolCard(entry: ActivityEntry): void {
   const tSpan = timeSpan(entry.timestamp)
   const issueBadge = issueSpan(entry)
   const badge = el('span', 'pino-level')
-  badge.textContent = '[' + badgeText + ']'
+  badge.textContent = `[${badgeText}]`
   const nameSpan = el('span', 'pino-name')
   nameSpan.textContent = displayName
   summary.appendChild(tSpan)
@@ -543,9 +543,9 @@ function resolveToolCard(entry: ActivityEntry): void {
   const isError = entry.data.isError === true
 
   resultSlot.textContent = ''
-  resultSlot.className = 'result-slot' + (isError ? ' result-error' : '')
+  resultSlot.className = `result-slot${isError ? ' result-error' : ''}`
 
-  const truncated = content.length > 500 ? content.slice(0, 500) + '…' : content
+  const truncated = content.length > 500 ? `${content.slice(0, 500)}…` : content
   const pre = document.createElement('pre')
   pre.className = 'result-content'
   pre.textContent = truncated

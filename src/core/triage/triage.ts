@@ -83,7 +83,12 @@ function parseClaudeEnvelope(raw: unknown): ClaudeEnvelope {
     const result = ClaudeResultItemSchema.parse(resultItem).result
     const usage = assistantItem
       ? ClaudeAssistantItemSchema.parse(assistantItem).message.usage
-      : { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
+      : {
+          input_tokens: 0,
+          output_tokens: 0,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 0,
+        }
 
     return { result, usage }
   }

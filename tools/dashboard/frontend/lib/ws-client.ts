@@ -7,10 +7,17 @@ export type WSHandler = (data: Record<string, unknown>) => void
 export class WSClient {
   private ws: WebSocket | null = null
 
-  connect(issueId: string, onMessage: WSHandler, onOpen?: () => void, onClose?: () => void): void {
+  connect(
+    issueId: string,
+    onMessage: WSHandler,
+    onOpen?: () => void,
+    onClose?: () => void,
+  ): void {
     this.close()
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    this.ws = new WebSocket(`${proto}//${location.host}/api/issues/${issueId}/run/interview`)
+    this.ws = new WebSocket(
+      `${proto}//${location.host}/api/issues/${issueId}/run/interview`,
+    )
     this.ws.onopen = () => onOpen?.()
     this.ws.onmessage = (e) => {
       try {

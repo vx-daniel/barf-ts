@@ -24,7 +24,12 @@ import type { Config, DisplayContext } from '@/types'
 import type { LoopMode } from '@/types/schema/mode-schema'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
-import { handleOverflow, planSplitChildren, resolveIssueFile, shouldContinue } from './helpers'
+import {
+  handleOverflow,
+  planSplitChildren,
+  resolveIssueFile,
+  shouldContinue,
+} from './helpers'
 import {
   type LoopState,
   handleBuildCompletion,
@@ -138,7 +143,12 @@ async function runLoopImpl(
       const currentMode: LoopMode = state.splitPending ? 'split' : mode
       state.iterationsRan++
       logger.info(
-        { issueId, mode: currentMode, model: state.model, iteration: state.iteration },
+        {
+          issueId,
+          mode: currentMode,
+          model: state.model,
+          iteration: state.iteration,
+        },
         'starting iteration',
       )
 

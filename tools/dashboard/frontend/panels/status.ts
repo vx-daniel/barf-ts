@@ -88,13 +88,13 @@ export function mountStatus(container: HTMLElement): void {
 }
 
 function fmt(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
   return String(n)
 }
 
 function fmtDuration(seconds: number): string {
-  if (seconds < 60) return seconds.toFixed(0) + 's'
+  if (seconds < 60) return `${seconds.toFixed(0)}s`
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
   if (m < 60) return `${m}m ${s}s`
@@ -122,7 +122,15 @@ export function updateSummary(issues: Issue[]): void {
   }
 
   // Render state chips
-  const order = ['NEW', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED', 'STUCK', 'SPLIT']
+  const order = [
+    'NEW',
+    'PLANNED',
+    'IN_PROGRESS',
+    'COMPLETED',
+    'VERIFIED',
+    'STUCK',
+    'SPLIT',
+  ]
   for (const state of order) {
     const count = counts[state]
     if (!count) continue
@@ -144,10 +152,11 @@ export function updateSummary(issues: Issue[]): void {
     if (stInput) stInput.textContent = fmt(totalIn)
     if (stOutput) stOutput.textContent = fmt(totalOut)
     if (stContext) {
-      stContext.textContent = String(issues.length) + ' issues'
+      stContext.textContent = `${String(issues.length)} issues`
       stContext.className = 'sb-stat-value'
     }
-    if (stRuns) stRuns.textContent = String(issues.reduce((a, i) => a + i.run_count, 0))
+    if (stRuns)
+      stRuns.textContent = String(issues.reduce((a, i) => a + i.run_count, 0))
     if (stDuration) {
       const totalSec = issues.reduce((a, i) => a + i.total_duration_seconds, 0)
       stDuration.textContent = fmtDuration(totalSec)
@@ -158,7 +167,10 @@ export function updateSummary(issues: Issue[]): void {
 /**
  * Show stats for a specific selected issue, or revert to summary mode.
  */
-export function updateStatus(issue: Issue | null, _models?: Record<string, string>): void {
+export function updateStatus(
+  issue: Issue | null,
+  _models?: Record<string, string>,
+): void {
   const issueSection = document.getElementById('sb-issue')
   const summary = document.getElementById('sb-summary')
 
@@ -174,7 +186,7 @@ export function updateStatus(issue: Issue | null, _models?: Record<string, strin
 
   const issueId = document.getElementById('sb-issue-id')
   const issueTitle = document.getElementById('sb-issue-title')
-  if (issueId) issueId.textContent = '#' + issue.id
+  if (issueId) issueId.textContent = `#${issue.id}`
   if (issueTitle) issueTitle.textContent = issue.title
 
   const stInput = document.getElementById('sb-st-input')
@@ -186,7 +198,7 @@ export function updateStatus(issue: Issue | null, _models?: Record<string, strin
   if (stOutput) stOutput.textContent = fmt(issue.total_output_tokens)
   if (stContext) {
     const pct = issue.context_usage_percent
-    stContext.textContent = pct != null ? pct + '%' : '\u2014'
+    stContext.textContent = pct != null ? `${pct}%` : '\u2014'
     stContext.className = 'sb-stat-value'
     if (pct != null) {
       if (pct > 80) stContext.classList.add('danger')
@@ -195,7 +207,8 @@ export function updateStatus(issue: Issue | null, _models?: Record<string, strin
     }
   }
   if (stRuns) stRuns.textContent = String(issue.run_count)
-  if (stDuration) stDuration.textContent = fmtDuration(issue.total_duration_seconds)
+  if (stDuration)
+    stDuration.textContent = fmtDuration(issue.total_duration_seconds)
 }
 
 export function setActiveCommand(cmd: string | null): void {

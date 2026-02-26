@@ -45,7 +45,8 @@ function parseArgs(): {
   let port = 3333
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--cwd' && args[i + 1]) cwd = resolve(args[++i])
-    else if (args[i] === '--config' && args[i + 1]) configPath = resolve(args[++i])
+    else if (args[i] === '--config' && args[i + 1])
+      configPath = resolve(args[++i])
     else if (args[i] === '--port' && args[i + 1]) port = parseInt(args[++i], 10)
   }
   return { projectCwd: resolve(cwd), configPath, port }
@@ -63,10 +64,13 @@ async function router(req: Request): Promise<Response> {
 
   // API routes
   if (method === 'GET' && path === '/api/issues') return handleListIssues(svc)
-  if (method === 'POST' && path === '/api/issues') return handleCreateIssue(svc, req)
+  if (method === 'POST' && path === '/api/issues')
+    return handleCreateIssue(svc, req)
   if (method === 'GET' && path === '/api/config') return handleGetConfig(svc)
-  if (method === 'PUT' && path === '/api/config') return handleSaveConfig(svc, req)
-  if ((method === 'GET' || method === 'POST') && path === '/api/auto') return handleRunAuto(svc)
+  if (method === 'PUT' && path === '/api/config')
+    return handleSaveConfig(svc, req)
+  if ((method === 'GET' || method === 'POST') && path === '/api/auto')
+    return handleRunAuto(svc)
   if (method === 'POST' && path === '/api/auto/stop') return handleStopActive()
 
   const issueMatch = path.match(/^\/api\/issues\/([^/]+)$/)
@@ -78,26 +82,32 @@ async function router(req: Request): Promise<Response> {
   }
 
   const transitionMatch = path.match(/^\/api\/issues\/([^/]+)\/transition$/)
-  if (transitionMatch && method === 'PUT') return handleTransition(svc, transitionMatch[1], req)
+  if (transitionMatch && method === 'PUT')
+    return handleTransition(svc, transitionMatch[1], req)
 
   const interviewMatch = path.match(/^\/api\/issues\/([^/]+)\/interview$/)
-  if (interviewMatch && method === 'POST') return handleInterview(svc, interviewMatch[1], req)
+  if (interviewMatch && method === 'POST')
+    return handleInterview(svc, interviewMatch[1], req)
 
   const runMatch = path.match(/^\/api\/issues\/([^/]+)\/run\/([^/]+)$/)
   if (runMatch && (method === 'GET' || method === 'POST')) {
     const [, id, command] = runMatch
     if (!isAllowedCommand(command)) {
-      return jsonError(`Unknown command: ${command}. Allowed: plan, build, audit, triage`)
+      return jsonError(
+        `Unknown command: ${command}. Allowed: plan, build, audit, triage`,
+      )
     }
     return handleRunCommand(svc, id, command)
   }
 
   // Activity log endpoints
   const logTailMatch = path.match(/^\/api\/issues\/([^/]+)\/logs$/)
-  if (logTailMatch && method === 'GET') return handleLogTail(svc, logTailMatch[1])
+  if (logTailMatch && method === 'GET')
+    return handleLogTail(svc, logTailMatch[1])
 
   const logHistoryMatch = path.match(/^\/api\/issues\/([^/]+)\/logs\/history$/)
-  if (logHistoryMatch && method === 'GET') return handleLogHistory(svc, logHistoryMatch[1])
+  if (logHistoryMatch && method === 'GET')
+    return handleLogHistory(svc, logHistoryMatch[1])
 
   // Static files (frontend)
   const staticResponse = serveStatic(path)
@@ -113,7 +123,9 @@ Bun.serve({
   idleTimeout: 255, // max — SSE streams are long-lived
   fetch(req, server) {
     const url = new URL(req.url)
-    const wsMatch = url.pathname.match(/^\/api\/issues\/([^/]+)\/run\/interview$/)
+    const wsMatch = url.pathname.match(
+      /^\/api\/issues\/([^/]+)\/run\/interview$/,
+    )
     if (wsMatch && req.headers.get('upgrade') === 'websocket') {
       const upgraded = server.upgrade(req, { data: { issueId: wsMatch[1] } })
       if (upgraded) return undefined
@@ -128,8 +140,11 @@ Bun.serve({
     message(ws, message) {
       const proc = wsProcs.get(ws)
       if (proc?.stdin) {
-        const line = typeof message === 'string' ? message : new TextDecoder().decode(message)
-        proc.stdin.write(line + '\n')
+        const line =
+          typeof message === 'string'
+            ? message
+            : new TextDecoder().decode(message)
+        proc.stdin.write(`${line}\n`)
         proc.stdin.flush()
       }
     },

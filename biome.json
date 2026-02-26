@@ -15,7 +15,9 @@
       "!!**/dist",
       "!!**/sample-project",
       "!!**/tests",
-      "!!**/node_modules"
+      "!!**/node_modules",
+      "!!docs/api",
+      "!!barf-architecture.html"
     ]
   },
   "formatter": {

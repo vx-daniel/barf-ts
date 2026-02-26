@@ -13,7 +13,8 @@ export { ALLOWED_COMMANDS }
 export type { AllowedCommand }
 
 /** Tracks the currently running process so it can be killed via /api/auto/stop. */
-let activeProc: { proc: ReturnType<typeof Bun.spawn>; label: string } | null = null
+let activeProc: { proc: ReturnType<typeof Bun.spawn>; label: string } | null =
+  null
 
 export function isAllowedCommand(cmd: string): cmd is AllowedCommand {
   return (ALLOWED_COMMANDS as readonly string[]).includes(cmd)
@@ -30,7 +31,11 @@ const SSE_HEADERS = {
  * Spawns a barf subprocess and streams its stdout/stderr as SSE events.
  * Guards against writing to a closed controller.
  */
-function spawnSSEStream(svc: IssueService, args: string[], label?: string): Response {
+function spawnSSEStream(
+  svc: IssueService,
+  args: string[],
+  label?: string,
+): Response {
   const srcIndex = join(import.meta.dir, '..', '..', '..', 'src', 'index.ts')
 
   const stream = new ReadableStream({
@@ -41,7 +46,7 @@ function spawnSSEStream(svc: IssueService, args: string[], label?: string): Resp
       function send(data: object) {
         if (closed) return
         try {
-          controller.enqueue(enc.encode('data: ' + JSON.stringify(data) + '\n\n'))
+          controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`))
         } catch {
           closed = true
         }
@@ -50,7 +55,11 @@ function spawnSSEStream(svc: IssueService, args: string[], label?: string): Resp
       function safeClose() {
         if (closed) return
         closed = true
-        try { controller.close() } catch { /* already closed */ }
+        try {
+          controller.close()
+        } catch {
+          /* already closed */
+        }
       }
 
       const configArgs = svc.configPath ? ['--config', svc.configPath] : []
@@ -86,12 +95,17 @@ function spawnSSEStream(svc: IssueService, args: string[], label?: string): Resp
             const lines = buf.split('\n')
             buf = lines.pop() ?? ''
             for (const line of lines) {
-              const clean = line.replace(/\x1b\[[0-9;]*m/g, '')
+              // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+              const clean = line.replace(/\u001b\[[0-9;]*m/g, '')
               send({ type: streamName, line: clean })
             }
           }
           if (buf) {
-            send({ type: streamName, line: buf.replace(/\x1b\[[0-9;]*m/g, '') })
+            // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+            send({
+              type: streamName,
+              line: buf.replace(/\u001b\[[0-9;]*m/g, ''),
+            })
           }
         } finally {
           reader.releaseLock()
@@ -129,7 +143,7 @@ export function handleRunCommand(
   id: string,
   command: AllowedCommand,
 ): Response {
-  return spawnSSEStream(svc, [command, '--issue', id], command + ':' + id)
+  return spawnSSEStream(svc, [command, '--issue', id], `${command}:${id}`)
 }
 
 /**
@@ -144,9 +158,12 @@ export function handleRunAuto(svc: IssueService): Response {
  */
 export function handleStopActive(): Response {
   if (!activeProc) {
-    return new Response(JSON.stringify({ stopped: false, reason: 'no active process' }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({ stopped: false, reason: 'no active process' }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
   }
   const label = activeProc.label
   activeProc.proc.kill()
@@ -162,10 +179,15 @@ export function handleStopActive(): Response {
  */
 export function handleLogTail(svc: IssueService, issueId: string): Response {
   if (svc.config.disableLogStream) {
-    return new Response(JSON.stringify({ error: 'Stream logging is disabled (DISABLE_LOG_STREAM=true)' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({
+        error: 'Stream logging is disabled (DISABLE_LOG_STREAM=true)',
+      }),
+      {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
   }
 
   const logPath = join(svc.projectCwd, '.barf/streams', `${issueId}.jsonl`)
@@ -179,7 +201,7 @@ export function handleLogTail(svc: IssueService, issueId: string): Response {
       function send(data: object) {
         if (closed) return
         try {
-          controller.enqueue(enc.encode('data: ' + JSON.stringify(data) + '\n\n'))
+          controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`))
         } catch {
           closed = true
         }
@@ -210,10 +232,15 @@ export function handleLogTail(svc: IssueService, issueId: string): Response {
  */
 export function handleLogHistory(svc: IssueService, issueId: string): Response {
   if (svc.config.disableLogStream) {
-    return new Response(JSON.stringify({ error: 'Stream logging is disabled (DISABLE_LOG_STREAM=true)' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({
+        error: 'Stream logging is disabled (DISABLE_LOG_STREAM=true)',
+      }),
+      {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
   }
 
   const logPath = join(svc.projectCwd, '.barf/streams', `${issueId}.jsonl`)

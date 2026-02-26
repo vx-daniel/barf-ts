@@ -23,7 +23,10 @@ export async function triageCommand(
 ): Promise<void> {
   const result = await triageIssue(opts.issue, config, provider)
   if (result.isErr()) {
-    logger.error({ issueId: opts.issue, err: result.error.message }, 'triage failed')
+    logger.error(
+      { issueId: opts.issue, err: result.error.message },
+      'triage failed',
+    )
     process.exitCode = 1
     return
   }

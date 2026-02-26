@@ -57,8 +57,7 @@ function loadRulesContext(): string {
       { chars: rulesContext.length },
       'rules context truncated to avoid context overflow',
     )
-    rulesContext =
-      `${rulesContext.slice(0, MAX_RULES_CHARS)}\n[... truncated ...]`
+    rulesContext = `${rulesContext.slice(0, MAX_RULES_CHARS)}\n[... truncated ...]`
   }
   return rulesContext
 }

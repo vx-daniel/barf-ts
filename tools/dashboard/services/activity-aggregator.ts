@@ -39,7 +39,11 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
   const msg = raw as Record<string, unknown>
   const ts = Date.now()
 
-  if (msg.type === 'assistant' && typeof msg.message === 'object' && msg.message !== null) {
+  if (
+    msg.type === 'assistant' &&
+    typeof msg.message === 'object' &&
+    msg.message !== null
+  ) {
     const message = msg.message as Record<string, unknown>
     const content = message.content
 
@@ -54,9 +58,10 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
           data: {
             tool: block.name,
             toolUseId: typeof block.id === 'string' ? block.id : undefined,
-            args: typeof block.input === 'object' && block.input !== null
-              ? block.input as Record<string, unknown>
-              : undefined,
+            args:
+              typeof block.input === 'object' && block.input !== null
+                ? (block.input as Record<string, unknown>)
+                : undefined,
           },
         }
       }
@@ -81,7 +86,11 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
   }
 
   // Tool result: user message with tool_result content block
-  if (msg.type === 'user' && typeof msg.message === 'object' && msg.message !== null) {
+  if (
+    msg.type === 'user' &&
+    typeof msg.message === 'object' &&
+    msg.message !== null
+  ) {
     const message = msg.message as Record<string, unknown>
     const content = message.content
     if (Array.isArray(content) && content.length > 0) {
@@ -92,7 +101,10 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
           source: 'sdk',
           kind: 'tool_result',
           data: {
-            toolUseId: typeof block.tool_use_id === 'string' ? block.tool_use_id : undefined,
+            toolUseId:
+              typeof block.tool_use_id === 'string'
+                ? block.tool_use_id
+                : undefined,
             content: extractContent(block.content),
             isError: block.is_error === true,
           },

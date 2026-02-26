@@ -2,6 +2,7 @@
  * Config panel — form-based .barfrc editor rendered in a modal overlay.
  */
 import * as api from '../lib/api-client'
+import { getEl } from '../lib/dom'
 
 interface FieldDef {
   key: string
@@ -17,49 +18,146 @@ const FIELDS: FieldDef[] = [
   { key: 'planDir', label: 'Plan Directory', type: 'text', group: 'Paths' },
   { key: 'barfDir', label: 'Barf Directory', type: 'text', group: 'Paths' },
   { key: 'promptDir', label: 'Prompt Directory', type: 'text', group: 'Paths' },
-  { key: 'disableLogStream', label: 'Disable Stream Logging', type: 'boolean', group: 'Logging' },
+  {
+    key: 'disableLogStream',
+    label: 'Disable Stream Logging',
+    type: 'boolean',
+    group: 'Logging',
+  },
 
   // Orchestration
-  { key: 'contextUsagePercent', label: 'Context Usage %', type: 'number', group: 'Orchestration' },
-  { key: 'maxAutoSplits', label: 'Max Auto Splits', type: 'number', group: 'Orchestration' },
-  { key: 'maxVerifyRetries', label: 'Max Verify Retries', type: 'number', group: 'Orchestration' },
-  { key: 'maxIterations', label: 'Max Iterations (0=unlimited)', type: 'number', group: 'Orchestration' },
-  { key: 'claudeTimeout', label: 'Claude Timeout (seconds)', type: 'number', group: 'Orchestration' },
+  {
+    key: 'contextUsagePercent',
+    label: 'Context Usage %',
+    type: 'number',
+    group: 'Orchestration',
+  },
+  {
+    key: 'maxAutoSplits',
+    label: 'Max Auto Splits',
+    type: 'number',
+    group: 'Orchestration',
+  },
+  {
+    key: 'maxVerifyRetries',
+    label: 'Max Verify Retries',
+    type: 'number',
+    group: 'Orchestration',
+  },
+  {
+    key: 'maxIterations',
+    label: 'Max Iterations (0=unlimited)',
+    type: 'number',
+    group: 'Orchestration',
+  },
+  {
+    key: 'claudeTimeout',
+    label: 'Claude Timeout (seconds)',
+    type: 'number',
+    group: 'Orchestration',
+  },
 
   // Models
   { key: 'planModel', label: 'Plan Model', type: 'text', group: 'Models' },
   { key: 'buildModel', label: 'Build Model', type: 'text', group: 'Models' },
   { key: 'splitModel', label: 'Split Model', type: 'text', group: 'Models' },
-  { key: 'extendedContextModel', label: 'Extended Context Model', type: 'text', group: 'Models' },
+  {
+    key: 'extendedContextModel',
+    label: 'Extended Context Model',
+    type: 'text',
+    group: 'Models',
+  },
   { key: 'triageModel', label: 'Triage Model', type: 'text', group: 'Models' },
 
   // Audit
-  { key: 'auditProvider', label: 'Audit Provider', type: 'select', options: ['openai', 'gemini', 'claude', 'codex'], group: 'Audit' },
+  {
+    key: 'auditProvider',
+    label: 'Audit Provider',
+    type: 'select',
+    options: ['openai', 'gemini', 'claude', 'codex'],
+    group: 'Audit',
+  },
   { key: 'auditModel', label: 'Audit Model', type: 'text', group: 'Audit' },
-  { key: 'claudeAuditModel', label: 'Claude Audit Model', type: 'text', group: 'Audit' },
+  {
+    key: 'claudeAuditModel',
+    label: 'Claude Audit Model',
+    type: 'text',
+    group: 'Audit',
+  },
   { key: 'geminiModel', label: 'Gemini Model', type: 'text', group: 'Audit' },
-  { key: 'openaiApiKey', label: 'OpenAI API Key', type: 'password', group: 'Audit' },
-  { key: 'geminiApiKey', label: 'Gemini API Key', type: 'password', group: 'Audit' },
-  { key: 'anthropicApiKey', label: 'Anthropic API Key', type: 'password', group: 'Audit' },
+  {
+    key: 'openaiApiKey',
+    label: 'OpenAI API Key',
+    type: 'password',
+    group: 'Audit',
+  },
+  {
+    key: 'geminiApiKey',
+    label: 'Gemini API Key',
+    type: 'password',
+    group: 'Audit',
+  },
+  {
+    key: 'anthropicApiKey',
+    label: 'Anthropic API Key',
+    type: 'password',
+    group: 'Audit',
+  },
 
   // Testing & Git
-  { key: 'testCommand', label: 'Test Command', type: 'text', group: 'Testing & Git' },
-  { key: 'fixCommands', label: 'Fix Commands (comma-separated)', type: 'text', group: 'Testing & Git' },
-  { key: 'pushStrategy', label: 'Push Strategy', type: 'select', options: ['iteration', 'on_complete', 'manual'], group: 'Testing & Git' },
+  {
+    key: 'testCommand',
+    label: 'Test Command',
+    type: 'text',
+    group: 'Testing & Git',
+  },
+  {
+    key: 'fixCommands',
+    label: 'Fix Commands (comma-separated)',
+    type: 'text',
+    group: 'Testing & Git',
+  },
+  {
+    key: 'pushStrategy',
+    label: 'Push Strategy',
+    type: 'select',
+    options: ['iteration', 'on_complete', 'manual'],
+    group: 'Testing & Git',
+  },
 
   // Provider
-  { key: 'issueProvider', label: 'Issue Provider', type: 'select', options: ['local', 'github'], group: 'Provider' },
-  { key: 'githubRepo', label: 'GitHub Repo (owner/repo)', type: 'text', group: 'Provider' },
+  {
+    key: 'issueProvider',
+    label: 'Issue Provider',
+    type: 'select',
+    options: ['local', 'github'],
+    group: 'Provider',
+  },
+  {
+    key: 'githubRepo',
+    label: 'GitHub Repo (owner/repo)',
+    type: 'text',
+    group: 'Provider',
+  },
 
   // Logging
   { key: 'logFile', label: 'Log File', type: 'text', group: 'Logging' },
-  { key: 'logLevel', label: 'Log Level', type: 'select', options: ['trace', 'debug', 'info', 'warn', 'error', 'fatal'], group: 'Logging' },
+  {
+    key: 'logLevel',
+    label: 'Log Level',
+    type: 'select',
+    options: ['trace', 'debug', 'info', 'warn', 'error', 'fatal'],
+    group: 'Logging',
+  },
   { key: 'logPretty', label: 'Pretty Logs', type: 'boolean', group: 'Logging' },
 ]
 
 let configData: Record<string, unknown> = {}
 
-function renderForm(container: HTMLElement, data: Record<string, unknown>): void {
+function renderForm(
+  container: HTMLElement,
+  data: Record<string, unknown>,
+): void {
   container.textContent = ''
   let currentGroup = ''
 
@@ -106,7 +204,13 @@ function renderForm(container: HTMLElement, data: Record<string, unknown>): void
       row.appendChild(checkbox)
     } else {
       const input = document.createElement('input')
-      input.type = field.type === 'password' ? 'password' : field.type === 'number' ? 'number' : 'text'
+      if (field.type === 'password') {
+        input.type = 'password'
+      } else if (field.type === 'number') {
+        input.type = 'number'
+      } else {
+        input.type = 'text'
+      }
       input.className = 'config-input'
       input.id = `cfg-${field.key}`
       input.dataset.key = field.key
@@ -147,7 +251,10 @@ function collectForm(): Record<string, unknown> {
       }
     } else if (field.key === 'fixCommands') {
       const val = (el as HTMLInputElement).value
-      result[field.key] = val.split(',').map((s: string) => s.trim()).filter(Boolean)
+      result[field.key] = val
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter(Boolean)
     } else if (field.type === 'select') {
       result[field.key] = (el as HTMLSelectElement).value
     } else {
@@ -158,17 +265,17 @@ function collectForm(): Record<string, unknown> {
 }
 
 export function initConfigPanel(): void {
-  const overlay = document.getElementById('config-ov')!
-  const body = document.getElementById('config-body')!
-  const status = document.getElementById('config-status')!
+  const overlay = getEl('config-ov')
+  const body = getEl('config-body')
+  const status = getEl('config-status')
 
   document.getElementById('btn-config')?.addEventListener('click', async () => {
     status.textContent = ''
     try {
       configData = await api.fetchConfig()
-      document.getElementById('config-path')!.textContent = configData.configPath
+      getEl('config-path').textContent = configData.configPath
         ? String(configData.configPath)
-        : String(configData.projectCwd) + '/.barfrc'
+        : `${String(configData.projectCwd)}/.barfrc`
       renderForm(body, configData)
       overlay.classList.add('open')
     } catch (e) {
@@ -188,21 +295,23 @@ export function initConfigPanel(): void {
     overlay.classList.remove('open')
   })
 
-  document.getElementById('config-save')?.addEventListener('click', async () => {
-    const values = collectForm()
-    try {
-      status.textContent = 'Saving...'
-      await api.saveConfig(values)
-      status.textContent = 'Saved! Restart server to apply.'
-      status.style.color = '#22c55e'
-      setTimeout(() => {
-        overlay.classList.remove('open')
-        status.textContent = ''
-        status.style.color = ''
-      }, 1500)
-    } catch (e) {
-      status.textContent = 'Save failed: ' + (e instanceof Error ? e.message : String(e))
-      status.style.color = '#ef4444'
-    }
-  })
+  document
+    .getElementById('config-save')
+    ?.addEventListener('click', async () => {
+      const values = collectForm()
+      try {
+        status.textContent = 'Saving...'
+        await api.saveConfig(values)
+        status.textContent = 'Saved! Restart server to apply.'
+        status.style.color = '#22c55e'
+        setTimeout(() => {
+          overlay.classList.remove('open')
+          status.textContent = ''
+          status.style.color = ''
+        }, 1500)
+      } catch (e) {
+        status.textContent = `Save failed: ${e instanceof Error ? e.message : String(e)}`
+        status.style.color = '#ef4444'
+      }
+    })
 }

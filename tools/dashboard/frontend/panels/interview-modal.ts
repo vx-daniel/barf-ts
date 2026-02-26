@@ -3,6 +3,7 @@
  * Shows questions from triage, collects answers, submits to Claude for evaluation.
  */
 import * as api from '../lib/api-client'
+import { getEl } from '../lib/dom'
 import type { Issue } from '../lib/types'
 
 interface Question {
@@ -23,11 +24,11 @@ function el(tag: string, cls?: string): HTMLElement {
 }
 
 function getOverlay(): HTMLElement {
-  return document.getElementById('interview-ov')!
+  return getEl('interview-ov')
 }
 
 function getModal(): HTMLElement {
-  return document.getElementById('interview-modal')!
+  return getEl('interview-modal')
 }
 
 /**
@@ -84,7 +85,7 @@ function renderQuestion(): void {
   // Header
   const hdr = el('div', 'interview-hdr')
   const title = el('h2')
-  title.textContent = 'Interview: #' + (currentIssue?.id ?? '')
+  title.textContent = `Interview: #${currentIssue?.id ?? ''}`
   hdr.appendChild(title)
   const progress = el('span', 'interview-progress')
   progress.textContent = `Question ${currentIdx + 1} of ${questions.length}`
@@ -176,7 +177,7 @@ function renderQuestion(): void {
     nextBtn.textContent = 'Evaluating...'
 
     try {
-      const result = await api.submitInterview(currentIssue!.id, answers)
+      const result = await api.submitInterview(currentIssue?.id, answers)
       if (result.status === 'complete') {
         closeModal()
         onComplete?.()
@@ -191,7 +192,7 @@ function renderQuestion(): void {
       nextBtn.disabled = false
       nextBtn.textContent = 'Submit'
       const errEl = el('div', 'interview-err')
-      errEl.textContent = 'Error: ' + (e instanceof Error ? e.message : String(e))
+      errEl.textContent = `Error: ${e instanceof Error ? e.message : String(e)}`
       modal.appendChild(errEl)
     }
   })

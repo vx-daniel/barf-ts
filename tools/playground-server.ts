@@ -98,7 +98,7 @@ async function handleTransition(id: string, req: Request): Promise<Response> {
     return jsonError('Invalid JSON body')
   }
   const parsed = IssueStateSchema.safeParse(body.to)
-  if (!parsed.success) return jsonError('Invalid state: ' + body.to)
+  if (!parsed.success) return jsonError(`Invalid state: ${body.to}`)
   const result = await provider.transition(id, parsed.data)
   if (result.isErr()) return jsonError(result.error.message, 400)
   return json(result.value)
@@ -115,7 +115,7 @@ function handleRunCommand(id: string, command: AllowedCommand): Response {
       const enc = new TextEncoder()
 
       function send(data: object) {
-        controller.enqueue(enc.encode('data: ' + JSON.stringify(data) + '\n\n'))
+        controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`))
       }
 
       const configArgs = configPath ? ['--config', configPath] : []
@@ -153,15 +153,16 @@ function handleRunCommand(id: string, command: AllowedCommand): Response {
             const lines = buf.split('\n')
             buf = lines.pop() ?? ''
             for (const line of lines) {
-              // Strip ANSI escape codes
-              const clean = line.replace(/\x1b\[[0-9;]*m/g, '')
+              // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+              const clean = line.replace(/\u001b\[[0-9;]*m/g, '')
               send({ type: streamName, line: clean })
             }
           }
           if (buf) {
             send({
               type: streamName,
-              line: buf.replace(/\x1b\[[0-9;]*m/g, ''),
+              // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+              line: buf.replace(/\u001b\[[0-9;]*m/g, ''),
             })
           }
         } finally {
@@ -291,11 +292,16 @@ function startInterviewProc(
         const lines = buf.split('\n')
         buf = lines.pop() ?? ''
         for (const line of lines) {
-          send({ type: streamName, line: line.replace(/\x1b\[[0-9;]*m/g, '') })
+          // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+          send({
+            type: streamName,
+            line: line.replace(/\u001b\[[0-9;]*m/g, ''),
+          })
         }
       }
       if (buf)
-        send({ type: streamName, line: buf.replace(/\x1b\[[0-9;]*m/g, '') })
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+        send({ type: streamName, line: buf.replace(/\u001b\[[0-9;]*m/g, '') })
     } finally {
       reader.releaseLock()
     }
@@ -987,7 +993,7 @@ Bun.serve({
           typeof message === 'string'
             ? message
             : new TextDecoder().decode(message)
-        proc.stdin.write(line + '\n')
+        proc.stdin.write(`${line}\n`)
         proc.stdin.flush()
       }
     },

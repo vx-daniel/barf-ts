@@ -16,7 +16,8 @@ const MIME_TYPES: Record<string, string> = {
 }
 
 export function serveStatic(pathname: string): Response | null {
-  const filePath = pathname === '/' ? join(DIST_DIR, 'index.html') : join(DIST_DIR, pathname)
+  const filePath =
+    pathname === '/' ? join(DIST_DIR, 'index.html') : join(DIST_DIR, pathname)
 
   if (!filePath.startsWith(DIST_DIR)) {
     return new Response('Forbidden', { status: 403 })

@@ -43,7 +43,7 @@ export function readNewLines(
       } catch {
         // skip malformed lines
       }
-      currentOffset += Buffer.byteLength(raw + '\n', 'utf8')
+      currentOffset += Buffer.byteLength(`${raw}\n`, 'utf8')
     }
     return { lines, newOffset: stat.size }
   } finally {

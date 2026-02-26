@@ -59,10 +59,16 @@ export function startInterviewProc(
         const lines = buf.split('\n')
         buf = lines.pop() ?? ''
         for (const line of lines) {
-          send({ type: streamName, line: line.replace(/\x1b\[[0-9;]*m/g, '') })
+          // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+          send({
+            type: streamName,
+            line: line.replace(/\u001b\[[0-9;]*m/g, ''),
+          })
         }
       }
-      if (buf) send({ type: streamName, line: buf.replace(/\x1b\[[0-9;]*m/g, '') })
+      if (buf)
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
+        send({ type: streamName, line: buf.replace(/\u001b\[[0-9;]*m/g, '') })
     } finally {
       reader.releaseLock()
     }

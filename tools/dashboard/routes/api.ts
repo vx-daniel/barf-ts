@@ -6,7 +6,7 @@ import type { IssueService } from '@dashboard/services/issue-service'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { injectTemplateVars } from '@/core/context'
-import { parseIssue, serializeIssue, VALID_TRANSITIONS } from '@/core/issue'
+import { VALID_TRANSITIONS } from '@/core/issue'
 import { resolvePromptTemplate } from '@/core/prompts'
 import { IssueStateSchema } from '@/types'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
@@ -98,7 +98,7 @@ export async function handleTransition(
     return jsonError('Invalid JSON body')
   }
   const parsed = IssueStateSchema.safeParse(body.to)
-  if (!parsed.success) return jsonError('Invalid state: ' + body.to)
+  if (!parsed.success) return jsonError(`Invalid state: ${body.to}`)
   const result = await svc.provider.transition(id, parsed.data)
   if (result.isErr()) return jsonError(result.error.message, 400)
   return json(result.value)

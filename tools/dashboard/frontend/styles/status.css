@@ -20,25 +20,37 @@
   align-items: center;
   gap: 8px;
   padding: 3px 10px;
-  background: rgba(249, 115, 22, .1);
-  border: 1px solid rgba(249, 115, 22, .3);
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.3);
   border-radius: var(--radius);
 }
 
-#sb-command.visible { display: flex; }
+#sb-command.visible {
+  display: flex;
+}
 
 #sb-command .spinner {
-  width: 10px; height: 10px;
+  width: 10px;
+  height: 10px;
   border: 2px solid var(--border);
   border-top-color: #f97316;
   border-radius: 50%;
-  animation: spin .8s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-#sb-cmd-text { color: #f97316; font-weight: 600; }
-#sb-cmd-timer { color: var(--text-muted); }
+#sb-cmd-text {
+  color: #f97316;
+  font-weight: 600;
+}
+#sb-cmd-timer {
+  color: var(--text-muted);
+}
 
 /* Selected issue info — right side of command or standalone */
 #sb-issue {
@@ -47,7 +59,9 @@
   gap: 12px;
 }
 
-#sb-issue.visible { display: flex; }
+#sb-issue.visible {
+  display: flex;
+}
 
 #sb-issue-label {
   color: var(--text-muted);
@@ -84,7 +98,7 @@
   color: var(--text-muted);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
 }
 
 .sb-stat-value {
@@ -92,9 +106,15 @@
   color: var(--text);
 }
 
-.sb-stat-value.healthy { color: #22c55e; }
-.sb-stat-value.warning { color: #f59e0b; }
-.sb-stat-value.danger { color: #ef4444; }
+.sb-stat-value.healthy {
+  color: #22c55e;
+}
+.sb-stat-value.warning {
+  color: #f59e0b;
+}
+.sb-stat-value.danger {
+  color: #ef4444;
+}
 
 /* Summary section — issue count chips by state */
 .sb-summary {
@@ -103,7 +123,9 @@
   gap: 6px;
 }
 
-.sb-summary.visible { display: flex; }
+.sb-summary.visible {
+  display: flex;
+}
 
 .sb-state-chip {
   padding: 1px 8px;
@@ -111,6 +133,6 @@
   border: 1px solid;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }

@@ -16,9 +16,9 @@
   <div id="header">
     <h1>&#9672; barf dashboard</h1>
     <span id="project-path"></span>
-    <button class="hbtn" id="btn-auto">&#x25B6; Auto</button>
-    <button class="hbtn" id="btn-new">+ New Issue</button>
-    <button class="hbtn" id="btn-config">&#x2699; Config</button>
+    <button type="button" class="hbtn" id="btn-auto">&#x25B6; Auto</button>
+    <button type="button" class="hbtn" id="btn-new">+ New Issue</button>
+    <button type="button" class="hbtn" id="btn-config">&#x2699; Config</button>
     <span id="refresh-ind">&#x27F3; 5s</span>
   </div>
 
@@ -36,7 +36,7 @@
       <div id="editor-header">
         <span id="editor-id"></span>
         <span id="editor-title"></span>
-        <button id="editor-close">&#x2715;</button>
+        <button type="button" id="editor-close">&#x2715;</button>
       </div>
       <div id="editor-state-row">
         <span id="editor-state-lbl"></span>
@@ -47,9 +47,9 @@
         <div id="editor-children-row" class="rel-row"></div>
       </div>
       <div id="editor-tabs">
-        <button class="editor-tab active" data-tab="preview">Preview</button>
-        <button class="editor-tab" data-tab="edit">Edit</button>
-        <button class="editor-tab" data-tab="metadata">Metadata</button>
+        <button type="button" class="editor-tab active" data-tab="preview">Preview</button>
+        <button type="button" class="editor-tab" data-tab="edit">Edit</button>
+        <button type="button" class="editor-tab" data-tab="metadata">Metadata</button>
       </div>
       <div id="editor-content">
         <div id="editor-preview"></div>
@@ -73,8 +73,8 @@
     <label for="modal-bdy">Body (optional)</label>
     <textarea id="modal-bdy" rows="5" placeholder="## Description&#10;..."></textarea>
     <div id="modal-btns">
-      <button class="mbtn" id="modal-cancel">Cancel</button>
-      <button class="mbtn primary" id="modal-submit">Create</button>
+      <button type="button" class="mbtn" id="modal-cancel">Cancel</button>
+      <button type="button" class="mbtn primary" id="modal-submit">Create</button>
     </div>
   </div>
 </div>
@@ -90,13 +90,13 @@
     <div id="config-header">
       <h2>&#x2699; Configuration</h2>
       <span id="config-path"></span>
-      <button id="config-close">&#x2715;</button>
+      <button type="button" id="config-close">&#x2715;</button>
     </div>
     <div id="config-body"></div>
     <div id="config-footer">
       <span id="config-status"></span>
-      <button class="mbtn" id="config-cancel">Cancel</button>
-      <button class="mbtn primary" id="config-save">Save</button>
+      <button type="button" class="mbtn" id="config-cancel">Cancel</button>
+      <button type="button" class="mbtn primary" id="config-save">Save</button>
     </div>
   </div>
 </div>

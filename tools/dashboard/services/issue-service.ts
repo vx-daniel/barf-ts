@@ -23,7 +23,9 @@ export class IssueService {
   constructor(init: IssueServiceInit) {
     this.projectCwd = init.projectCwd
     this.configPath = init.configPath
-    this.config = loadConfig(init.configPath ?? join(init.projectCwd, '.barfrc'))
+    this.config = loadConfig(
+      init.configPath ?? join(init.projectCwd, '.barfrc'),
+    )
     this.issuesDir = resolve(init.projectCwd, this.config.issuesDir)
     this.barfDir = resolve(init.projectCwd, this.config.barfDir)
     this.provider = new LocalIssueProvider(this.issuesDir, this.barfDir)

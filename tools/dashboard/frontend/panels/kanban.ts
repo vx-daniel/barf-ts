@@ -3,7 +3,16 @@
  */
 import type { Issue } from '../lib/types'
 
-const STATE_ORDER = ['NEW', 'GROOMED', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED', 'STUCK', 'SPLIT'] as const
+const STATE_ORDER = [
+  'NEW',
+  'GROOMED',
+  'PLANNED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'VERIFIED',
+  'STUCK',
+  'SPLIT',
+] as const
 
 const STATE_COLORS: Record<string, string> = {
   NEW: '#6b7280',
@@ -72,7 +81,11 @@ export interface KanbanCallbacks {
   runningId: string | null
 }
 
-export function renderBoard(container: HTMLElement, issues: Issue[], cb: KanbanCallbacks): void {
+export function renderBoard(
+  container: HTMLElement,
+  issues: Issue[],
+  cb: KanbanCallbacks,
+): void {
   container.textContent = ''
   for (const state of STATE_ORDER) {
     const stateIssues = issues.filter((i) => i.state === state)
@@ -80,7 +93,11 @@ export function renderBoard(container: HTMLElement, issues: Issue[], cb: KanbanC
   }
 }
 
-function buildCol(state: string, stateIssues: Issue[], cb: KanbanCallbacks): HTMLElement {
+function buildCol(
+  state: string,
+  stateIssues: Issue[],
+  cb: KanbanCallbacks,
+): HTMLElement {
   const color = STATE_COLORS[state]
   const col = el('div', 'col')
 
@@ -105,12 +122,12 @@ function buildCol(state: string, stateIssues: Issue[], cb: KanbanCallbacks): HTM
 
 function buildCard(issue: Issue, cb: KanbanCallbacks): HTMLElement {
   const color = STATE_COLORS[issue.state]
-  const card = el('div', 'card' + (issue.id === cb.runningId ? ' running' : ''))
-  card.id = 'card-' + issue.id
+  const card = el('div', `card${issue.id === cb.runningId ? ' running' : ''}`)
+  card.id = `card-${issue.id}`
   card.style.setProperty('--sc', color)
 
   const idEl = el('div', 'card-id')
-  idEl.textContent = '#' + issue.id
+  idEl.textContent = `#${issue.id}`
   card.appendChild(idEl)
 
   const titleEl = el('div', 'card-title')
@@ -119,43 +136,53 @@ function buildCard(issue: Issue, cb: KanbanCallbacks): HTMLElement {
 
   if (issue.context_usage_percent != null) {
     const pct = issue.context_usage_percent
-    const fillColor = pct > 80 ? '#ef4444' : pct > 60 ? '#f97316' : '#22c55e'
+    let fillColor: string
+    if (pct > 80) {
+      fillColor = '#ef4444'
+    } else if (pct > 60) {
+      fillColor = '#f97316'
+    } else {
+      fillColor = '#22c55e'
+    }
     const meta = el('div', 'card-meta')
     const pbar = el('div', 'pbar')
     const fill = el('div', 'pbar-fill')
-    fill.style.width = pct + '%'
+    fill.style.width = `${pct}%`
     fill.style.background = fillColor
     pbar.appendChild(fill)
     const lbl2 = el('span', 'pbar-lbl')
-    lbl2.textContent = pct + '%'
+    lbl2.textContent = `${pct}%`
     meta.appendChild(pbar)
     meta.appendChild(lbl2)
     card.appendChild(meta)
   }
 
   // Parent / children badges
-  const hasParent = issue.parent && issue.parent.trim()
+  const hasParent = issue.parent?.trim()
   const hasChildren = issue.children && issue.children.length > 0
   if (hasParent || hasChildren) {
     const relRow = el('div', 'card-rel')
     if (hasParent) {
       const pt = el('span', 'card-rel-tag')
-      pt.textContent = '\u2191 ' + issue.parent
+      pt.textContent = `\u2191 ${issue.parent}`
       relRow.appendChild(pt)
     }
     if (hasChildren) {
       const ct = el('span', 'card-rel-tag')
-      ct.textContent = '\u21d3 ' + issue.children.length
+      ct.textContent = `\u21d3 ${issue.children.length}`
       relRow.appendChild(ct)
     }
     card.appendChild(relRow)
   }
 
-  const actions = issue.state === 'NEW' ? getNewIssueActions(issue) : (CMD_ACTIONS[issue.state] ?? [])
+  const actions =
+    issue.state === 'NEW'
+      ? getNewIssueActions(issue)
+      : (CMD_ACTIONS[issue.state] ?? [])
   if (actions.length > 0) {
     const actDiv = el('div', 'card-actions')
     for (const cmd of actions) {
-      const btn = el('button', 'abtn ' + CMD_CLASS[cmd]) as HTMLButtonElement
+      const btn = el('button', `abtn ${CMD_CLASS[cmd]}`) as HTMLButtonElement
       btn.textContent = cmd
       btn.disabled = cb.runningId !== null
       btn.addEventListener('click', (e) => {

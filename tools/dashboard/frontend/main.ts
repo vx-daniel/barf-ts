@@ -6,7 +6,12 @@ import * as api from './lib/api-client'
 import { SSEClient } from './lib/sse-client'
 import { WSClient } from './lib/ws-client'
 import { renderBoard } from './panels/kanban'
-import { mountStatus, updateStatus, updateSummary, setActiveCommand } from './panels/status'
+import {
+  mountStatus,
+  updateStatus,
+  updateSummary,
+  setActiveCommand,
+} from './panels/status'
 import {
   mountActivityLog,
   appendActivity,
@@ -16,10 +21,11 @@ import {
   openActivityPanel,
   closeActivityPanel,
 } from './panels/activity-log'
-import { initEditor, openIssue, closeSidebar, getCurrentIssueId } from './panels/editor'
+import { initEditor, openIssue, closeSidebar } from './panels/editor'
 import { initConfigPanel } from './panels/config'
 import { openInterview } from './panels/interview-modal'
 import { mountSidebarResizer, mountBottomResizer } from './lib/resizer'
+import { getEl } from './lib/dom'
 
 // ── State ────────────────────────────────────────────────────────────────────
 let issues: Issue[] = []
@@ -34,8 +40,8 @@ const wsClient = new WSClient()
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
 // Mount panels
-mountStatus(document.getElementById('statusbar')!)
-mountActivityLog(document.getElementById('bottom')!)
+mountStatus(getEl('statusbar'))
+mountActivityLog(getEl('bottom'))
 mountSidebarResizer()
 mountBottomResizer()
 initConfigPanel()
@@ -52,7 +58,9 @@ initEditor({
     updateStatus(null, models ?? undefined)
   },
   getIssues: () => issues,
-  get runningId() { return runningId },
+  get runningId() {
+    return runningId
+  },
 })
 
 // Activity panel close button
@@ -70,16 +78,19 @@ document.getElementById('term-input')?.addEventListener('keydown', (e) => {
   const input = e.target as HTMLInputElement
   const val = input.value
   input.value = ''
-  termLog('info', '> ' + val)
+  termLog('info', `> ${val}`)
   wsClient.send(val)
 })
 
 // Load config + set project path
-api.fetchConfig().then((c) => {
-  models = c
-  const pathEl = document.getElementById('project-path')
-  if (pathEl && c.projectCwd) pathEl.textContent = c.projectCwd
-}).catch(() => {})
+api
+  .fetchConfig()
+  .then((c) => {
+    models = c
+    const pathEl = document.getElementById('project-path')
+    if (pathEl && c.projectCwd) pathEl.textContent = c.projectCwd
+  })
+  .catch(() => {})
 
 // ── Data fetching ────────────────────────────────────────────────────────────
 
@@ -100,7 +111,7 @@ async function fetchIssues(): Promise<void> {
 }
 
 function refreshBoard(): void {
-  renderBoard(document.getElementById('board')!, issues, {
+  renderBoard(getEl('board'), issues, {
     onCardClick: openCard,
     onRunCommand: runCommand,
     runningId,
@@ -131,7 +142,10 @@ async function doTransition(id: string, to: string): Promise<void> {
     await api.transitionIssue(id, to)
     await fetchIssues()
   } catch (e) {
-    termLog('error', 'Transition failed: ' + (e instanceof Error ? e.message : String(e)))
+    termLog(
+      'error',
+      `Transition failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
   }
 }
 
@@ -142,7 +156,10 @@ async function deleteIssue(id: string): Promise<void> {
     selectedId = null
     await fetchIssues()
   } catch (e) {
-    termLog('error', 'Delete failed: ' + (e instanceof Error ? e.message : String(e)))
+    termLog(
+      'error',
+      `Delete failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
   }
 }
 
@@ -175,7 +192,10 @@ function stopActive(): void {
 
 function onCommandDone(exitCode: number): void {
   const ok = exitCode === 0
-  termLog(ok ? 'done' : 'error', ok ? 'Done (exit 0)' : 'Failed (exit ' + exitCode + ')')
+  termLog(
+    ok ? 'done' : 'error',
+    ok ? 'Done (exit 0)' : `Failed (exit ${exitCode})`,
+  )
   runningId = null
   pauseRefresh = false
   setTermInput(false)
@@ -185,7 +205,11 @@ function onCommandDone(exitCode: number): void {
   fetchIssues()
 }
 
-function applyLiveStats(stats: { totalInputTokens: number; totalOutputTokens: number; contextSize: number }): void {
+function applyLiveStats(stats: {
+  totalInputTokens: number
+  totalOutputTokens: number
+  contextSize: number
+}): void {
   if (!runningId) return
   const issue = issues.find((i) => i.id === runningId)
   if (issue) {
@@ -199,8 +223,13 @@ function applyLiveStats(stats: { totalInputTokens: number; totalOutputTokens: nu
 }
 
 function handleMsg(data: Record<string, unknown>): void {
-  const activeIssue = runningId && runningId !== '__auto__' ? issues.find((i) => i.id === runningId) : undefined
-  const issueCtx = activeIssue ? { issueId: activeIssue.id, issueName: activeIssue.title } : {}
+  const activeIssue =
+    runningId && runningId !== '__auto__'
+      ? issues.find((i) => i.id === runningId)
+      : undefined
+  const issueCtx = activeIssue
+    ? { issueId: activeIssue.id, issueName: activeIssue.title }
+    : {}
 
   if (data.type === 'stdout') {
     const line = data.line as string
@@ -208,7 +237,9 @@ function handleMsg(data: Record<string, unknown>): void {
       try {
         const stats = JSON.parse(line.slice('__BARF_STATS__:'.length))
         applyLiveStats(stats)
-      } catch { /* malformed — ignore */ }
+      } catch {
+        /* malformed — ignore */
+      }
       return
     }
     if (line?.startsWith('__BARF_STATE__:')) {
@@ -242,7 +273,7 @@ function handleMsg(data: Record<string, unknown>): void {
   } else if (data.type === 'done') {
     onCommandDone(data.exitCode as number)
   } else if (data.type === 'error') {
-    termLog('error', 'Error: ' + data.message)
+    termLog('error', `Error: ${data.message}`)
     runningId = null
     pauseRefresh = false
     setTermInput(false)
@@ -270,14 +301,14 @@ function runCommand(id: string, cmd: string): void {
   runningId = id
   refreshBoard()
   refreshSidebar()
-  openActivityPanel('barf ' + cmd + ' --issue ' + id)
+  openActivityPanel(`barf ${cmd} --issue ${id}`)
   clearLog()
-  termLog('info', 'Starting barf ' + cmd + ' --issue ' + id + ' ...')
-  setActiveCommand(cmd + ' #' + id)
+  termLog('info', `Starting barf ${cmd} --issue ${id} ...`)
+  setActiveCommand(`${cmd} #${id}`)
 
   // Also start JSONL log tailing if available
   const logSSE = new SSEClient()
-  logSSE.connect('/api/issues/' + id + '/logs', (data) => {
+  logSSE.connect(`/api/issues/${id}/logs`, (data) => {
     const entry = data as import('./lib/types').ActivityEntry
     const issue = issues.find((i) => i.id === id)
     appendActivity({
@@ -286,13 +317,16 @@ function runCommand(id: string, cmd: string): void {
       issueName: entry.issueName ?? issue?.title,
     })
   })
-    sseClient.connect('/api/issues/' + id + '/run/' + cmd, (data) => {
+  sseClient.connect(
+    `/api/issues/${id}/run/${cmd}`,
+    (data) => {
       handleMsg(data)
       if (data.type === 'done' || data.type === 'error') {
         sseClient.close()
         logSSE.close()
       }
-    }, () => {
+    },
+    () => {
       termLog('error', 'SSE connection lost')
       sseClient.close()
       logSSE.close()
@@ -300,7 +334,8 @@ function runCommand(id: string, cmd: string): void {
       pauseRefresh = false
       setActiveCommand(null)
       refreshBoard()
-    })
+    },
+  )
 }
 
 // ── Auto command ─────────────────────────────────────────────────────────────
@@ -348,18 +383,22 @@ function runAuto(): void {
   setActiveCommand('auto')
   setAutoBtn('stop')
 
-  sseClient.connect('/api/auto', (data) => {
-    handleMsg(data)
-    if (data.type === 'done' || data.type === 'error') {
+  sseClient.connect(
+    '/api/auto',
+    (data) => {
+      handleMsg(data)
+      if (data.type === 'done' || data.type === 'error') {
+        sseClient.close()
+        resetAfterAuto()
+      }
+    },
+    () => {
+      termLog('error', 'SSE connection lost')
       sseClient.close()
       resetAfterAuto()
-    }
-  }, () => {
-    termLog('error', 'SSE connection lost')
-    sseClient.close()
-    resetAfterAuto()
-    refreshBoard()
-  })
+      refreshBoard()
+    },
+  )
 }
 
 autoBtn?.addEventListener('click', runAuto)
@@ -369,23 +408,29 @@ autoBtn?.addEventListener('click', runAuto)
 document.getElementById('btn-new')?.addEventListener('click', () => {
   ;(document.getElementById('modal-ttl') as HTMLInputElement).value = ''
   ;(document.getElementById('modal-bdy') as HTMLTextAreaElement).value = ''
-  document.getElementById('modal-ov')!.classList.add('open')
-  setTimeout(() => (document.getElementById('modal-ttl') as HTMLInputElement).focus(), 50)
+  document.getElementById('modal-ov')?.classList.add('open')
+  setTimeout(
+    () => (document.getElementById('modal-ttl') as HTMLInputElement).focus(),
+    50,
+  )
 })
 
 document.getElementById('modal-ov')?.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) document.getElementById('modal-ov')!.classList.remove('open')
+  if (e.target === e.currentTarget)
+    document.getElementById('modal-ov')?.classList.remove('open')
 })
 
 document.getElementById('modal-cancel')?.addEventListener('click', () => {
-  document.getElementById('modal-ov')!.classList.remove('open')
+  document.getElementById('modal-ov')?.classList.remove('open')
 })
 
 document.getElementById('modal-ttl')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') submitNewIssue()
 })
 
-document.getElementById('modal-submit')?.addEventListener('click', submitNewIssue)
+document
+  .getElementById('modal-submit')
+  ?.addEventListener('click', submitNewIssue)
 
 async function submitNewIssue(): Promise<void> {
   const titleInput = document.getElementById('modal-ttl') as HTMLInputElement
@@ -398,10 +443,10 @@ async function submitNewIssue(): Promise<void> {
   }
   try {
     await api.createIssue(title, body || undefined)
-    document.getElementById('modal-ov')!.classList.remove('open')
+    document.getElementById('modal-ov')?.classList.remove('open')
     await fetchIssues()
   } catch (e) {
-    alert('Create failed: ' + (e instanceof Error ? e.message : String(e)))
+    alert(`Create failed: ${e instanceof Error ? e.message : String(e)}`)
   }
 }
 
@@ -409,22 +454,28 @@ async function submitNewIssue(): Promise<void> {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (document.getElementById('config-ov')!.classList.contains('open')) {
-      document.getElementById('config-ov')!.classList.remove('open')
+    if (document.getElementById('config-ov')?.classList.contains('open')) {
+      document.getElementById('config-ov')?.classList.remove('open')
       return
     }
-    if (document.getElementById('modal-ov')!.classList.contains('open')) {
-      document.getElementById('modal-ov')!.classList.remove('open')
+    if (document.getElementById('modal-ov')?.classList.contains('open')) {
+      document.getElementById('modal-ov')?.classList.remove('open')
       return
     }
-    if (!document.getElementById('app')!.classList.contains('no-sidebar')) {
+    if (!document.getElementById('app')?.classList.contains('no-sidebar')) {
       closeSidebar()
       selectedId = null
       return
     }
   }
-  if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && document.activeElement === document.body) {
-    document.getElementById('btn-new')!.click()
+  if (
+    e.key === 'n' &&
+    !e.ctrlKey &&
+    !e.metaKey &&
+    !e.altKey &&
+    document.activeElement === document.body
+  ) {
+    document.getElementById('btn-new')?.click()
   }
 })
 

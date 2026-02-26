@@ -9,12 +9,13 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { basicSetup, EditorView } from 'codemirror'
 import { marked } from 'marked'
 import * as api from '../lib/api-client'
+import { getEl } from '../lib/dom'
 import type { Issue } from '../lib/types'
 
 let editorView: EditorView | null = null
 let currentIssueId: string | null = null
 let currentBody: string = ''
-let dirty = false
+let _dirty = false
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   NEW: ['GROOMED', 'STUCK'],
@@ -117,14 +118,14 @@ export function initEditor(cb: EditorCallbacks): void {
     const target = e.target as HTMLElement
     if (!target.classList.contains('editor-tab')) return
     const tab = target.dataset.tab
-    document
-      .querySelectorAll('.editor-tab')
-      .forEach((t) => t.classList.remove('active'))
+    document.querySelectorAll('.editor-tab').forEach((t) => {
+      t.classList.remove('active')
+    })
     target.classList.add('active')
 
-    const cm = document.getElementById('editor-cm')!
-    const preview = document.getElementById('editor-preview')!
-    const metadata = document.getElementById('editor-metadata')!
+    const cm = getEl('editor-cm')
+    const preview = getEl('editor-preview')
+    const metadata = getEl('editor-metadata')
 
     if (tab === 'edit') {
       if (!editorView) mountCodeMirror(currentBody)
@@ -158,37 +159,37 @@ export function initEditor(cb: EditorCallbacks): void {
 
 export function openIssue(issue: Issue): void {
   currentIssueId = issue.id
-  dirty = false
+  _dirty = false
 
-  const app = document.getElementById('app')!
+  const app = getEl('app')
   app.classList.remove('no-sidebar')
 
-  document.getElementById('editor-id')!.textContent = '#' + issue.id
-  document.getElementById('editor-title')!.textContent = issue.title
+  getEl('editor-id').textContent = `#${issue.id}`
+  getEl('editor-title').textContent = issue.title
 
   const color = STATE_COLORS[issue.state] ?? '#6b7280'
-  const stLbl = document.getElementById('editor-state-lbl')!
+  const stLbl = getEl('editor-state-lbl')
   stLbl.textContent = STATE_LABELS[issue.state] ?? issue.state
   stLbl.style.color = color
   stLbl.style.borderColor = color
 
-  const transDiv = document.getElementById('editor-trans')!
+  const transDiv = getEl('editor-trans')
   transDiv.textContent = ''
   for (const to of VALID_TRANSITIONS[issue.state] ?? []) {
     const btn = el('button', 'tbtn')
-    btn.textContent = '\u2192 ' + (STATE_LABELS[to] ?? to)
+    btn.textContent = `\u2192 ${STATE_LABELS[to] ?? to}`
     btn.addEventListener('click', () => callbacks?.onTransition(issue.id, to))
     transDiv.appendChild(btn)
   }
 
   // Relationships
   const issues = callbacks?.getIssues() ?? []
-  const hasParent = issue.parent && issue.parent.trim()
+  const hasParent = issue.parent?.trim()
   const hasChildren = issue.children && issue.children.length > 0
-  const relsEl = document.getElementById('editor-rels')!
+  const relsEl = getEl('editor-rels')
   relsEl.style.display = hasParent || hasChildren ? 'flex' : 'none'
 
-  const parentRow = document.getElementById('editor-parent-row')!
+  const parentRow = getEl('editor-parent-row')
   parentRow.textContent = ''
   parentRow.style.display = 'none'
   if (hasParent) {
@@ -200,7 +201,7 @@ export function openIssue(issue: Issue): void {
     parentRow.style.display = 'flex'
   }
 
-  const childrenRow = document.getElementById('editor-children-row')!
+  const childrenRow = getEl('editor-children-row')
   childrenRow.textContent = ''
   childrenRow.style.display = 'none'
   if (hasChildren) {
@@ -222,10 +223,10 @@ export function openIssue(issue: Issue): void {
     editorView.destroy()
     editorView = null
   }
-  document.getElementById('editor-cm')!.textContent = ''
+  getEl('editor-cm').textContent = ''
 
   // Actions
-  const actsDiv = document.getElementById('editor-actions')!
+  const actsDiv = getEl('editor-actions')
   actsDiv.textContent = ''
 
   const saveBtn = el('button', 'mbtn primary') as HTMLButtonElement
@@ -272,10 +273,10 @@ export function openIssue(issue: Issue): void {
     for (const cmd of actions) {
       const btn = el(
         'button',
-        'abtn ' + (CMD_CLASS[cmd] ?? ''),
+        `abtn ${CMD_CLASS[cmd] ?? ''}`,
       ) as HTMLButtonElement
       btn.style.cssText = 'font-size:12px;padding:5px 14px'
-      btn.textContent = 'Run ' + cmd
+      btn.textContent = `Run ${cmd}`
       btn.disabled = callbacks?.runningId !== null
       btn.addEventListener('click', () =>
         callbacks?.onRunCommand(issue.id, cmd),
@@ -289,8 +290,7 @@ export function openIssue(issue: Issue): void {
     'font-size:12px;padding:5px 14px;border-color:#6b7280;color:#6b7280'
   delBtn.textContent = 'Delete'
   delBtn.addEventListener('click', () => {
-    if (confirm('Delete issue #' + issue.id + '?'))
-      callbacks?.onDelete(issue.id)
+    if (confirm(`Delete issue #${issue.id}?`)) callbacks?.onDelete(issue.id)
   })
   actsDiv.appendChild(delBtn)
 
@@ -309,9 +309,9 @@ export function openIssue(issue: Issue): void {
   document
     .querySelector('.editor-tab[data-tab="preview"]')
     ?.classList.add('active')
-  document.getElementById('editor-cm')!.style.display = 'none'
-  document.getElementById('editor-preview')!.style.display = 'block'
-  document.getElementById('editor-metadata')!.style.display = 'none'
+  document.getElementById('editor-cm')?.style.display = 'none'
+  document.getElementById('editor-preview')?.style.display = 'block'
+  document.getElementById('editor-metadata')?.style.display = 'none'
   updatePreview()
 }
 
@@ -323,13 +323,13 @@ function buildRelChip(id: string, issue?: Issue): HTMLElement {
     chip.appendChild(dot)
   }
   const idSpan = el('span', 'rel-id')
-  idSpan.textContent = '#' + id
+  idSpan.textContent = `#${id}`
   chip.appendChild(idSpan)
   if (issue) {
     const titleSpan = el('span')
     titleSpan.textContent =
       issue.title.length > 28
-        ? issue.title.slice(0, 28) + '\u2026'
+        ? `${issue.title.slice(0, 28)}\u2026`
         : issue.title
     chip.appendChild(titleSpan)
   }
@@ -338,7 +338,7 @@ function buildRelChip(id: string, issue?: Issue): HTMLElement {
 }
 
 function mountCodeMirror(content: string): void {
-  const parent = document.getElementById('editor-cm')!
+  const parent = getEl('editor-cm')
   parent.textContent = ''
 
   if (editorView) {
@@ -354,7 +354,7 @@ function mountCodeMirror(content: string): void {
       oneDark,
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
-          dirty = true
+          _dirty = true
           const saveBtn = document.getElementById('editor-save-btn')
           if (saveBtn) saveBtn.style.display = ''
           const status = document.getElementById('editor-save-status')
@@ -388,7 +388,7 @@ async function saveIssue(): Promise<void> {
   try {
     if (status) status.textContent = 'saving...'
     await api.updateIssue(currentIssueId, { body })
-    dirty = false
+    _dirty = false
     const saveBtn = document.getElementById('editor-save-btn')
     if (saveBtn) saveBtn.style.display = 'none'
     if (status) status.textContent = 'saved'
@@ -397,14 +397,13 @@ async function saveIssue(): Promise<void> {
     }, 2000)
   } catch (e) {
     if (status)
-      status.textContent =
-        'save failed: ' + (e instanceof Error ? e.message : String(e))
+      status.textContent = `save failed: ${e instanceof Error ? e.message : String(e)}`
   }
 }
 
 export function closeSidebar(): void {
   currentIssueId = null
-  const app = document.getElementById('app')!
+  const app = getEl('app')
   app.classList.add('no-sidebar')
   app.style.gridTemplateColumns = ''
   if (editorView) {

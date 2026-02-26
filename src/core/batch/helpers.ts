@@ -10,7 +10,6 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import type { Config } from '@/types'
 import type { OverflowDecision } from '@/types/schema/batch-schema'
-import type { LoopMode } from '@/types/schema/mode-schema'
 import type { IssueProvider } from '@/core/issue/base'
 import { createLogger } from '@/utils/logger'
 
@@ -97,7 +96,7 @@ export async function planSplitChildren(
   childIds: string[],
   config: Config,
   provider: IssueProvider,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- circular type: runLoop references planSplitChildren
+  // biome-ignore lint/suspicious/noExplicitAny: circular type — runLoop references planSplitChildren
   runLoop: (...args: any[]) => any,
   deps: Record<string, unknown>,
 ): Promise<void> {

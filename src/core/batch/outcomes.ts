@@ -10,9 +10,7 @@
  */
 import { existsSync } from 'fs'
 import { join } from 'path'
-import type { Config, DisplayContext, SessionStats } from '@/types'
-import type { LoopMode } from '@/types/schema/mode-schema'
-import type { IterationResult } from '@/types/schema/claude-schema'
+import type { Config } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { type runPreComplete, toFixSteps } from '@/core/pre-complete'
 import type { verifyIssue } from '@/core/verification'
@@ -89,9 +87,9 @@ export async function handleSplitCompletion(
   config: Config,
   provider: IssueProvider,
   state: LoopState,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- circular type: runLoop references planSplitChildren
+  // biome-ignore lint/suspicious/noExplicitAny: circular type — runLoop references planSplitChildren
   planSplitChildren: (...args: any[]) => Promise<void>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- circular type between loop.ts and helpers.ts
+  // biome-ignore lint/suspicious/noExplicitAny: circular type between loop.ts and helpers.ts
   runLoop: any,
   deps: Record<string, unknown>,
 ): Promise<'return' | 'break'> {
@@ -243,9 +241,6 @@ export async function handleBuildCompletion(
     return 'break'
   }
 
-  logger.warn(
-    { issueId, iteration },
-    'pre-complete failed — continuing',
-  )
+  logger.warn({ issueId, iteration }, 'pre-complete failed — continuing')
   return 'continue'
 }

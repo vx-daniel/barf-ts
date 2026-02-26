@@ -15,7 +15,10 @@ export async function fetchIssue(id: string): Promise<Issue> {
   return r.json()
 }
 
-export async function createIssue(title: string, body?: string): Promise<Issue> {
+export async function createIssue(
+  title: string,
+  body?: string,
+): Promise<Issue> {
   const r = await fetch('/api/issues', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -28,7 +31,10 @@ export async function createIssue(title: string, body?: string): Promise<Issue> 
   return r.json()
 }
 
-export async function updateIssue(id: string, fields: { title?: string; body?: string }): Promise<Issue> {
+export async function updateIssue(
+  id: string,
+  fields: { title?: string; body?: string },
+): Promise<Issue> {
   const r = await fetch(`/api/issues/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -68,7 +74,9 @@ export async function fetchConfig(): Promise<Record<string, string>> {
   return r.json()
 }
 
-export async function saveConfig(config: Record<string, unknown>): Promise<void> {
+export async function saveConfig(
+  config: Record<string, unknown>,
+): Promise<void> {
   const r = await fetch('/api/config', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
