@@ -5,39 +5,40 @@
  * State lives in {@link module:lib/state}; business logic in
  * {@link module:lib/actions}. This file is intentionally thin.
  */
-import { render } from 'preact'
+
+import { KanbanBoard } from '@dashboard/frontend/components/KanbanBoard'
+import { StatusBar } from '@dashboard/frontend/components/StatusBar'
 import {
-  issues,
-  selectedId,
-  runningId,
-  pauseRefresh,
-} from '@dashboard/frontend/lib/state'
-import {
-  fetchIssues,
-  fetchConfig,
-  navigateToIssue,
-  doTransition,
   deleteIssue,
-  runCommand,
-  runAuto,
-  stopAndReset,
+  doTransition,
+  fetchConfig,
+  fetchIssues,
+  navigateToIssue,
   onActivityClose,
+  runAuto,
+  runCommand,
+  stopAndReset,
   submitNewIssue,
   wsClient,
 } from '@dashboard/frontend/lib/actions'
-import { KanbanBoard } from '@dashboard/frontend/components/KanbanBoard'
-import { StatusBar } from '@dashboard/frontend/components/StatusBar'
+import { getEl } from '@dashboard/frontend/lib/dom'
+import {
+  mountBottomResizer,
+  mountSidebarResizer,
+} from '@dashboard/frontend/lib/resizer'
+import {
+  issues,
+  pauseRefresh,
+  runningId,
+  selectedId,
+} from '@dashboard/frontend/lib/state'
 import {
   mountActivityLog,
   termLog,
 } from '@dashboard/frontend/panels/activity-log'
-import { initEditor, closeSidebar } from '@dashboard/frontend/panels/editor'
 import { initConfigPanel } from '@dashboard/frontend/panels/config'
-import {
-  mountSidebarResizer,
-  mountBottomResizer,
-} from '@dashboard/frontend/lib/resizer'
-import { getEl } from '@dashboard/frontend/lib/dom'
+import { closeSidebar, initEditor } from '@dashboard/frontend/panels/editor'
+import { render } from 'preact'
 
 // ── Mount Preact components ───────────────────────────────────────────────────
 // Signals read inside components auto-subscribe them — no manual effects needed.

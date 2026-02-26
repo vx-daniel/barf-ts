@@ -64,7 +64,6 @@ export function mountSidebarResizer(): void {
  * explicit pixel height on `#bottom`.
  */
 export function mountBottomResizer(): void {
-  const _app = getEl('app')
   const bottom = getEl('bottom')
 
   const handle = document.createElement('div')

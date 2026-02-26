@@ -33,7 +33,7 @@ import { openInterview } from '@dashboard/frontend/panels/interview-modal'
 // Module-level singletons so stopActive() can always reach the live connection.
 
 /** SSE client for command stdout/stderr streams and the auto-loop stream. */
-export const sseClient = new SSEClient()
+const sseClient = new SSEClient()
 
 /** WebSocket client used for interactive command input (interview step). */
 export const wsClient = new WSClient()
@@ -42,7 +42,7 @@ export const wsClient = new WSClient()
  * Per-command JSONL log SSE, tailing `{issueId}.jsonl` during a command run.
  * Separate from `sseClient` so it can be closed independently.
  */
-export const logSSE = new SSEClient()
+const logSSE = new SSEClient()
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
@@ -109,7 +109,7 @@ export function navigateToIssue(id: string): void {
  * any server-side field updates. Not reactive — `openIssue` resets
  * CodeMirror and would discard unsaved edits on every poll cycle.
  */
-export function refreshSidebar(): void {
+function refreshSidebar(): void {
   if (selectedId.value) {
     const issue = issues.value.find((i) => i.id === selectedId.value)
     if (issue) openIssue(issue)
@@ -161,7 +161,7 @@ export async function deleteIssue(id: string): Promise<void> {
  * Does NOT reset signal values — call {@link stopAndReset} or
  * {@link resetAfterAuto} afterwards if signal cleanup is also needed.
  */
-export function stopActive(): void {
+function stopActive(): void {
   sseClient.close()
   wsClient.close()
   logSSE.close()
@@ -192,7 +192,7 @@ export function stopAndReset(): void {
  * Resets all running-state signals after the auto-loop ends or is stopped.
  * Fetches a fresh issue list to reflect any changes made during the run.
  */
-export function resetAfterAuto(): void {
+function resetAfterAuto(): void {
   runningId.value = null
   pauseRefresh.value = false
   setAutoBtn('auto')
@@ -204,7 +204,7 @@ export function resetAfterAuto(): void {
  * Stops the auto-loop by sending a stop request to the server, closing the
  * SSE connection, and resetting all running-state signals.
  */
-export function stopAutoRun(): void {
+function stopAutoRun(): void {
   api.stopActive().catch((e: unknown) => {
     termLog(
       'error',
@@ -225,7 +225,7 @@ export function stopAutoRun(): void {
  *
  * @param stats - Parsed stats payload from the stdout stream
  */
-export function applyLiveStats(stats: {
+function applyLiveStats(stats: {
   totalInputTokens: number
   totalOutputTokens: number
   contextSize: number
@@ -254,7 +254,7 @@ export function applyLiveStats(stats: {
  *
  * @param data - Parsed JSON object from the SSE `data:` field
  */
-export function handleMsg(data: Record<string, unknown>): void {
+function handleMsg(data: Record<string, unknown>): void {
   const activeIssue =
     runningId.value && runningId.value !== '__auto__'
       ? issues.value.find((i) => i.id === runningId.value)
@@ -412,7 +412,7 @@ const autoBtn = document.getElementById('btn-auto') as HTMLButtonElement | null
  *
  * @param mode - `'auto'` for idle state, `'stop'` for running state
  */
-export function setAutoBtn(mode: 'auto' | 'stop'): void {
+function setAutoBtn(mode: 'auto' | 'stop'): void {
   if (!autoBtn) return
   if (mode === 'stop') {
     autoBtn.textContent = '\u25A0 Stop'

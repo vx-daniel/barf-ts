@@ -15,18 +15,6 @@ export async function fetchIssues(): Promise<Issue[]> {
 }
 
 /**
- * Fetches a single issue by ID from `GET /api/issues/:id`.
- *
- * @param id - The issue ID to fetch.
- * @returns The matching issue.
- */
-export async function fetchIssue(id: string): Promise<Issue> {
-  const r = await fetch(`/api/issues/${id}`)
-  if (!r.ok) throw new Error(`fetchIssue: ${r.status}`)
-  return r.json()
-}
-
-/**
  * Creates a new issue via `POST /api/issues`.
  *
  * @param title - Required issue title.
@@ -179,15 +167,3 @@ export async function submitInterview(
   return r.json()
 }
 
-/**
- * Fetches historical log entries for an issue via `GET /api/issues/:issueId/logs/history`.
- * Returns an empty array on failure so callers can treat it as best-effort.
- *
- * @param issueId - The issue whose log history to retrieve.
- * @returns Array of raw log event objects, empty if the endpoint is unavailable.
- */
-export async function fetchLogHistory(issueId: string): Promise<unknown[]> {
-  const r = await fetch(`/api/issues/${issueId}/logs/history`)
-  if (!r.ok) return []
-  return r.json()
-}

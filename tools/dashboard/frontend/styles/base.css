@@ -92,11 +92,6 @@ body {
   border-color: var(--color-accent);
 }
 
-#refresh-ind {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-
 /* ── Main area ──────────────────────────────────────────────────── */
 #main {
   grid-area: main;

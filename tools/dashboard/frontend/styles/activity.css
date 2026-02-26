@@ -152,8 +152,7 @@
 .pino-warn .pino-msg {
   color: var(--color-warning-light);
 }
-.pino-error .pino-msg,
-.pino-fatal .pino-msg {
+.pino-error .pino-msg {
   color: var(--color-danger-light);
 }
 
@@ -216,7 +215,6 @@
 .tool-card,
 .agent-card,
 .skill-card,
-.pinpo-row,
 .token-row,
 .error-row {
   border-left: 3px solid transparent;
@@ -288,12 +286,6 @@
 }
 
 /* Terminal output in activity */
-.t-stdout {
-  color: var(--color-text);
-}
-.t-stderr {
-  color: var(--color-danger-light);
-}
 .t-info {
   color: var(--color-info);
   font-style: italic;

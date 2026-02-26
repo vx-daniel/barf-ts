@@ -409,9 +409,3 @@ export function closeSidebar(): void {
   callbacks?.onClose()
 }
 
-/**
- * Returns the ID of the issue currently open in the editor, or `null` if none.
- */
-export function getCurrentIssueId(): string | null {
-  return currentIssueId
-}

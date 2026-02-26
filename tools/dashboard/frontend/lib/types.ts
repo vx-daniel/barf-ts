@@ -35,27 +35,6 @@ export interface ActivityEntry {
 }
 
 /**
- * Snapshot of the currently active barf run, pushed over SSE and rendered
- * in the status panel. All fields may be null/zero when no run is active.
- */
-export interface StatusData {
-  issueId: string | null
-  state: string
-  totalInputTokens: number
-  totalOutputTokens: number
-  contextUsagePercent: number | null
-  runCount: number
-  totalDurationSeconds: number
-  activeCommand: string | null
-  commandStartTime: number | null
-  models: {
-    planModel: string
-    buildModel: string
-    auditModel: string
-  } | null
-}
-
-/**
  * Represents a barf issue as returned by the `/api/issues` REST endpoints.
  * Mirrors the frontmatter fields parsed by the issue provider.
  */
