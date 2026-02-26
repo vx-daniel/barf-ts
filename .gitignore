@@ -3,3 +3,4 @@ dist
 .barf/
 .env
 barf.log
+.worktrees/
