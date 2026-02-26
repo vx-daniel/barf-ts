@@ -20,6 +20,7 @@ import { ContextOverflowError, RateLimitError } from '@/core/context'
 import type { DisplayContext } from '@/types'
 import type { IterationResult } from '@/types/schema/claude-schema'
 import { createLogger } from '@/utils/logger'
+import { addBreadcrumb } from '@/utils/sentry'
 import { clearProgress, writeHeader, writeProgress } from './display'
 
 const logger = createLogger('claude')
@@ -167,6 +168,12 @@ export async function consumeSDKQuery(
     }
   } catch (e) {
     if (e instanceof ContextOverflowError) {
+      addBreadcrumb({
+        category: 'claude',
+        message: `Context overflow at ${e.tokens} tokens`,
+        data: { tokens: e.tokens, threshold },
+        level: 'warning',
+      })
       return {
         outcome: 'overflow',
         tokens: e.tokens,
@@ -174,6 +181,12 @@ export async function consumeSDKQuery(
       }
     }
     if (e instanceof RateLimitError) {
+      addBreadcrumb({
+        category: 'claude',
+        message: `Rate limited${e.resetsAt ? ` until ${new Date(e.resetsAt * 1000).toISOString()}` : ''}`,
+        data: { resetsAt: e.resetsAt },
+        level: 'warning',
+      })
       return {
         outcome: 'rate_limited',
         tokens: lastTokens,

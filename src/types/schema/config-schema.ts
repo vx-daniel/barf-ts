@@ -96,6 +96,12 @@ export const ConfigSchema = z.object({
   logLevel: z.string().default('info'),
   /** Enable pretty-printed log output (for development). */
   logPretty: z.boolean().default(false),
+  /** Sentry DSN for error monitoring and operational observability. Empty means disabled. */
+  sentryDsn: z.string().default(''),
+  /** Sentry environment tag (e.g. 'production', 'development'). */
+  sentryEnvironment: z.string().default('development'),
+  /** Sentry traces sample rate (0.0–1.0). Controls what fraction of transactions are sent. */
+  sentryTracesSampleRate: z.coerce.number().min(0).max(1).default(0.2),
 })
 
 /**

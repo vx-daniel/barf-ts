@@ -8,6 +8,7 @@
  */
 import { join } from 'path'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { spawnSync } from 'bun'
 
 const ROOT = import.meta.dir
 const FRONTEND = join(ROOT, 'frontend')
@@ -35,19 +36,26 @@ if (!result.success) {
 
 console.log('JS bundle:', result.outputs.map((o) => o.path).join(', '))
 
-// Copy and concatenate CSS files
-const cssFiles = [
-  'base.css',
-  'kanban.css',
-  'editor.css',
-  'status.css',
-  'activity.css',
-]
-const cssContent = cssFiles
-  .map((f) => readFileSync(join(FRONTEND, 'styles', f), 'utf8'))
-  .join('\n')
-writeFileSync(join(DIST, 'styles.css'), cssContent)
-console.log('CSS bundle: styles.css')
+// Build CSS via Tailwind CLI (handles @import chain + utility scanning + minification)
+const tw = spawnSync(
+  [
+    process.execPath,
+    'x',
+    '--bun',
+    '@tailwindcss/cli',
+    '-i',
+    join(FRONTEND, 'styles', 'index.css'),
+    '-o',
+    join(DIST, 'styles.css'),
+    '--minify',
+  ],
+  { stdout: 'inherit', stderr: 'inherit' },
+)
+if (tw.exitCode !== 0) {
+  console.error('Tailwind build failed')
+  process.exit(1)
+}
+console.log('CSS bundle: styles.css (Tailwind v4)')
 
 // Read source HTML and rewrite asset paths for dist
 let html = readFileSync(join(FRONTEND, 'index.html'), 'utf8')

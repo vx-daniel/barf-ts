@@ -7,30 +7,32 @@
  * Serves an interactive dashboard for a barf project: kanban board, issue editor,
  * status panel, and activity log. REST API + SSE + WebSocket.
  */
-import { resolve } from 'path'
-import { IssueService } from '@dashboard/services/issue-service'
+
 import {
-  handleListIssues,
-  handleGetIssue,
   handleCreateIssue,
-  handleUpdateIssue,
   handleDeleteIssue,
-  handleTransition,
-  handleInterview,
   handleGetConfig,
+  handleGetIssue,
+  handleInterview,
+  handleListIssues,
   handleSaveConfig,
+  handleTransition,
+  handleUpdateIssue,
   jsonError,
 } from '@dashboard/routes/api'
 import {
-  handleRunCommand,
-  handleRunAuto,
-  handleStopActive,
-  handleLogTail,
   handleLogHistory,
+  handleLogTail,
+  handleRunAuto,
+  handleRunCommand,
+  handleStopActive,
   isAllowedCommand,
 } from '@dashboard/routes/sse'
-import { startInterviewProc, wsProcs } from '@dashboard/routes/ws'
 import { serveStatic } from '@dashboard/routes/static'
+import { startInterviewProc, wsProcs } from '@dashboard/routes/ws'
+import { IssueService } from '@dashboard/services/issue-service'
+import * as Sentry from '@sentry/node'
+import { resolve } from 'path'
 
 // ── CLI arg parsing ──────────────────────────────────────────────────────────
 
@@ -54,6 +56,16 @@ function parseArgs(): {
 
 const { projectCwd, configPath, port } = parseArgs()
 const svc = new IssueService({ projectCwd, configPath })
+
+// Initialise Sentry when a DSN is configured
+if (svc.config.sentryDsn) {
+  Sentry.init({
+    dsn: svc.config.sentryDsn,
+    environment: svc.config.sentryEnvironment,
+    tracesSampleRate: svc.config.sentryTracesSampleRate,
+    release: 'barf-dashboard@2.0.0',
+  })
+}
 
 // ── Router ───────────────────────────────────────────────────────────────────
 
@@ -130,7 +142,10 @@ Bun.serve({
       const upgraded = server.upgrade(req, { data: { issueId: wsMatch[1] } })
       if (upgraded) return undefined
     }
-    return router(req)
+    return router(req).catch((error: unknown) => {
+      Sentry.captureException(error)
+      return new Response('Internal server error', { status: 500 })
+    })
   },
   websocket: {
     open(ws) {

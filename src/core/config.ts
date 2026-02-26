@@ -36,6 +36,9 @@ const KEY_MAP: Record<string, keyof Config> = {
   LOG_FILE: 'logFile',
   LOG_LEVEL: 'logLevel',
   LOG_PRETTY: 'logPretty',
+  SENTRY_DSN: 'sentryDsn',
+  SENTRY_ENVIRONMENT: 'sentryEnvironment',
+  SENTRY_TRACES_SAMPLE_RATE: 'sentryTracesSampleRate',
 }
 
 // Zod schema that coerces string values (all .barfrc values are strings)
@@ -62,6 +65,7 @@ const RawConfigSchema = ConfigSchema.extend({
   logPretty: z
     .preprocess((v) => v === '1' || v === 'true' || v === true, z.boolean())
     .default(false),
+  sentryTracesSampleRate: z.coerce.number().min(0).max(1).default(0.2),
 })
 
 /**

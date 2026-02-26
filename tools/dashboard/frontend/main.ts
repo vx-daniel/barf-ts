@@ -1,58 +1,55 @@
 /**
- * Dashboard main entry — initializes panels, SSE/WS connections, and polling.
+ * Dashboard main entry — mounts Preact components, wires DOM events,
+ * and kicks off the initial data fetch.
+ *
+ * State lives in {@link module:lib/state}; business logic in
+ * {@link module:lib/actions}. This file is intentionally thin.
  */
-import type { Issue } from '@dashboard/frontend/lib/types'
-import * as api from '@dashboard/frontend/lib/api-client'
-import { SSEClient } from '@dashboard/frontend/lib/sse-client'
-import { WSClient } from '@dashboard/frontend/lib/ws-client'
-import { renderBoard } from '@dashboard/frontend/panels/kanban'
+import { render } from 'preact'
+import { html } from 'htm/preact'
+import { issues, selectedId, runningId, pauseRefresh } from '@dashboard/frontend/lib/state'
 import {
-  mountStatus,
-  updateStatus,
-  updateSummary,
-  setActiveCommand,
-} from '@dashboard/frontend/panels/status'
+  fetchIssues,
+  fetchConfig,
+  openCard,
+  navigateToIssue,
+  doTransition,
+  deleteIssue,
+  runCommand,
+  runAuto,
+  stopAndReset,
+  onActivityClose,
+  submitNewIssue,
+  wsClient,
+} from '@dashboard/frontend/lib/actions'
+import { KanbanBoard } from '@dashboard/frontend/components/KanbanBoard'
+import { StatusBar } from '@dashboard/frontend/components/StatusBar'
 import {
   mountActivityLog,
-  appendActivity,
   termLog,
-  clearLog,
-  setTermInput,
-  openActivityPanel,
-  closeActivityPanel,
 } from '@dashboard/frontend/panels/activity-log'
-import { initEditor, openIssue, closeSidebar } from '@dashboard/frontend/panels/editor'
+import { initEditor, closeSidebar } from '@dashboard/frontend/panels/editor'
 import { initConfigPanel } from '@dashboard/frontend/panels/config'
-import { openInterview } from '@dashboard/frontend/panels/interview-modal'
 import { mountSidebarResizer, mountBottomResizer } from '@dashboard/frontend/lib/resizer'
 import { getEl } from '@dashboard/frontend/lib/dom'
-import type { ActivityEntry } from '@dashboard/frontend/lib/types'
 
-// ── State ────────────────────────────────────────────────────────────────────
-// issues: current fetched issue list; selectedId: open editor card;
-// runningId: actively running barf command (or '__auto__'); pauseRefresh:
-// suppresses poll while a command SSE stream is active; models: config map.
-let issues: Issue[] = []
-let selectedId: string | null = null
-let runningId: string | null = null
-let pauseRefresh = false
-let models: Record<string, string> | null = null
+// ── Mount Preact components ───────────────────────────────────────────────────
+// Signals read inside components auto-subscribe them — no manual effects needed.
 
-const sseClient = new SSEClient()
-const wsClient = new WSClient()
-/** Per-command JSONL log SSE, separate from the command SSE. Closed by {@link stopActive}. */
-const logSSE = new SSEClient()
+render(html`<${KanbanBoard} />`, getEl('board'))
+render(html`<${StatusBar} />`, getEl('statusbar'))
 
-// ── Boot ─────────────────────────────────────────────────────────────────────
+// ── Mount imperative panels ───────────────────────────────────────────────────
+// Activity log, editor, and config remain imperative — they manage complex
+// streaming state and CodeMirror that are better handled outside Preact.
 
-// Mount panels
-mountStatus(getEl('statusbar'))
 mountActivityLog(getEl('bottom'))
 mountSidebarResizer()
 mountBottomResizer()
 initConfigPanel()
 
-// Init editor callbacks
+// ── Init editor ───────────────────────────────────────────────────────────────
+
 initEditor({
   onTransition: doTransition,
   onDelete: deleteIssue,
@@ -60,25 +57,18 @@ initEditor({
   onStop: stopAndReset,
   onNavigate: navigateToIssue,
   onClose: () => {
-    selectedId = null
-    updateStatus(null, models ?? undefined)
+    selectedId.value = null
   },
-  getIssues: () => issues,
+  getIssues: () => issues.value,
   get runningId() {
-    return runningId
+    return runningId.value
   },
 })
 
-// Activity panel close button
-document.getElementById('activity-close')?.addEventListener('click', () => {
-  closeActivityPanel()
-  stopActive()
-  runningId = null
-  pauseRefresh = false
-  refreshBoard()
-})
+// ── DOM event wiring ──────────────────────────────────────────────────────────
 
-// Interview input
+document.getElementById('activity-close')?.addEventListener('click', onActivityClose)
+
 document.getElementById('term-input')?.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return
   const input = e.target as HTMLInputElement
@@ -88,364 +78,19 @@ document.getElementById('term-input')?.addEventListener('keydown', (e) => {
   wsClient.send(val)
 })
 
-// Load config + set project path
-api
-  .fetchConfig()
-  .then((c) => {
-    models = c
-    const pathEl = document.getElementById('project-path')
-    if (pathEl && c.projectCwd) pathEl.textContent = c.projectCwd
-  })
-  .catch(() => {})
+document.getElementById('btn-auto')?.addEventListener('click', runAuto)
 
-// ── Data fetching ────────────────────────────────────────────────────────────
-
-async function fetchIssues(): Promise<void> {
-  try {
-    issues = await api.fetchIssues()
-    refreshBoard()
-    updateSummary(issues)
-    if (selectedId) {
-      const updated = issues.find((i) => i.id === selectedId)
-      if (updated) {
-        updateStatus(updated, models ?? undefined)
-      }
-    }
-  } catch (e) {
-    termLog('error', `fetch issues: ${e instanceof Error ? e.message : String(e)}`)
-  }
-}
-
-function refreshBoard(): void {
-  renderBoard(getEl('board'), issues, {
-    onCardClick: openCard,
-    onRunCommand: runCommand,
-    runningId,
-  })
-}
-
-let refreshInterval: ReturnType<typeof setInterval> | null = null
-
-function scheduleRefresh(): void {
-  if (refreshInterval !== null) clearInterval(refreshInterval)
-  refreshInterval = setInterval(() => {
-    if (!pauseRefresh) fetchIssues()
-  }, 5000)
-}
-
-// ── Issue operations ─────────────────────────────────────────────────────────
-
-function openCard(issue: Issue): void {
-  selectedId = issue.id
-  openIssue(issue)
-  updateStatus(issue, models ?? undefined)
-}
-
-function navigateToIssue(id: string): void {
-  const issue = issues.find((i) => i.id === id)
-  if (issue) openCard(issue)
-}
-
-async function doTransition(id: string, to: string): Promise<void> {
-  try {
-    await api.transitionIssue(id, to)
-    await fetchIssues()
-  } catch (e) {
-    termLog(
-      'error',
-      `Transition failed: ${e instanceof Error ? e.message : String(e)}`,
-    )
-  }
-}
-
-async function deleteIssue(id: string): Promise<void> {
-  try {
-    await api.deleteIssue(id)
-    closeSidebar()
-    selectedId = null
-    await fetchIssues()
-  } catch (e) {
-    termLog(
-      'error',
-      `Delete failed: ${e instanceof Error ? e.message : String(e)}`,
-    )
-  }
-}
-
-// ── Commands ─────────────────────────────────────────────────────────────────
-
-function refreshSidebar(): void {
-  if (selectedId) {
-    const issue = issues.find((i) => i.id === selectedId)
-    if (issue) openIssue(issue)
-  }
-}
-
-function stopAndReset(): void {
-  api.stopActive().catch((e: unknown) => {
-    termLog('error', `Stop request failed: ${e instanceof Error ? e.message : String(e)}`)
-  })
-  stopActive()
-  termLog('info', 'Stopped.')
-  runningId = null
-  pauseRefresh = false
-  setActiveCommand(null)
-  refreshSidebar()
-  fetchIssues()
-}
-
-function stopActive(): void {
-  sseClient.close()
-  wsClient.close()
-  logSSE.close()
-  setTermInput(false)
-  setActiveCommand(null)
-}
-
-function onCommandDone(exitCode: number): void {
-  const ok = exitCode === 0
-  termLog(
-    ok ? 'done' : 'error',
-    ok ? 'Done (exit 0)' : `Failed (exit ${exitCode})`,
-  )
-  runningId = null
-  pauseRefresh = false
-  setTermInput(false)
-  setActiveCommand(null)
-  setAutoBtn('auto')
-  refreshSidebar()
-  fetchIssues()
-}
-
-function applyLiveStats(stats: {
-  totalInputTokens: number
-  totalOutputTokens: number
-  contextSize: number
-  contextUsagePercent?: number
-}): void {
-  if (!runningId) return
-  const issue = issues.find((i) => i.id === runningId)
-  if (issue) {
-    issue.total_input_tokens = stats.totalInputTokens
-    issue.total_output_tokens = stats.totalOutputTokens
-    if (stats.contextUsagePercent != null) {
-      issue.context_usage_percent = stats.contextUsagePercent
-    }
-  }
-  updateSummary(issues)
-  if (selectedId === runningId && issue) {
-    updateStatus(issue, models ?? undefined)
-  }
-}
-
-function handleMsg(data: Record<string, unknown>): void {
-  const activeIssue =
-    runningId && runningId !== '__auto__'
-      ? issues.find((i) => i.id === runningId)
-      : undefined
-  const issueCtx = activeIssue
-    ? { issueId: activeIssue.id, issueName: activeIssue.title }
-    : {}
-
-  if (data.type === 'stdout') {
-    const line = data.line as string
-    if (line?.startsWith('__BARF_STATS__:')) {
-      try {
-        const stats = JSON.parse(line.slice('__BARF_STATS__:'.length))
-        applyLiveStats(stats)
-      } catch {
-        /* malformed — ignore */
-      }
-      return
-    }
-    if (line?.startsWith('__BARF_STATE__:')) {
-      // Forward as stdout so activity-log can render a state banner
-      appendActivity({
-        timestamp: Date.now(),
-        source: 'command',
-        kind: 'stdout',
-        ...issueCtx,
-        data: { line },
-      })
-      return
-    }
-    if (line?.trim()) {
-      appendActivity({
-        timestamp: Date.now(),
-        source: 'command',
-        kind: 'stdout',
-        ...issueCtx,
-        data: { line },
-      })
-    }
-  } else if (data.type === 'stderr' && (data.line as string)?.trim()) {
-    appendActivity({
-      timestamp: Date.now(),
-      source: 'command',
-      kind: 'stderr',
-      ...issueCtx,
-      data: { line: data.line },
-    })
-  } else if (data.type === 'done') {
-    onCommandDone(data.exitCode as number)
-  } else if (data.type === 'error') {
-    termLog('error', `Error: ${data.message}`)
-    runningId = null
-    pauseRefresh = false
-    setTermInput(false)
-    setActiveCommand(null)
-  }
-}
-
-function runCommand(id: string, cmd: string): void {
-  // Interview opens a modal instead of spawning a subprocess
-  if (cmd === 'interview') {
-    const issue = issues.find((i) => i.id === id)
-    if (!issue) return
-    openInterview(issue, () => {
-      fetchIssues()
-      if (selectedId === id) {
-        const updated = issues.find((i) => i.id === id)
-        if (updated) openIssue(updated)
-      }
-    })
-    return
-  }
-
-  stopActive()
-  pauseRefresh = true
-  runningId = id
-  refreshBoard()
-  refreshSidebar()
-  openActivityPanel(`barf ${cmd} --issue ${id}`)
-  clearLog()
-  termLog('info', `Starting barf ${cmd} --issue ${id} ...`)
-  setActiveCommand(`${cmd} #${id}`)
-
-  // Also start JSONL log tailing if available
-  logSSE.connect(`/api/issues/${id}/logs`, (data) => {
-    // Cast is safe: the /logs SSE endpoint always emits ActivityEntry-shaped JSONL
-    const entry = data as unknown as ActivityEntry
-    const issue = issues.find((i) => i.id === id)
-    appendActivity({
-      ...entry,
-      issueId: entry.issueId ?? id,
-      issueName: entry.issueName ?? issue?.title,
-    })
-    // Keep status bar IN/OUT live from token_update entries (polled every 500ms
-    // from the JSONL stream log — more reliable than the __BARF_STATS__ stdout protocol)
-    if (entry.kind === 'token_update' && issue) {
-      issue.total_input_tokens += Number(entry.data.input_tokens ?? 0)
-      issue.total_output_tokens += Number(entry.data.output_tokens ?? 0)
-      updateSummary(issues)
-      if (selectedId === id) {
-        updateStatus(issue, models ?? undefined)
-      }
-    }
-  })
-  sseClient.connect(
-    `/api/issues/${id}/run/${cmd}`,
-    (data) => {
-      handleMsg(data)
-      if (data.type === 'done' || data.type === 'error') {
-        sseClient.close()
-        logSSE.close()
-      }
-    },
-    () => {
-      termLog('error', 'SSE connection lost')
-      sseClient.close()
-      logSSE.close()
-      runningId = null
-      pauseRefresh = false
-      setActiveCommand(null)
-      refreshBoard()
-    },
-  )
-}
-
-// ── Auto command ─────────────────────────────────────────────────────────────
-
-const autoBtn = document.getElementById('btn-auto') as HTMLButtonElement | null
-
-function setAutoBtn(mode: 'auto' | 'stop'): void {
-  if (!autoBtn) return
-  if (mode === 'stop') {
-    autoBtn.textContent = '\u25A0 Stop'
-    autoBtn.classList.add('active')
-  } else {
-    autoBtn.textContent = '\u25B6 Auto'
-    autoBtn.classList.remove('active')
-  }
-}
-
-function resetAfterAuto(): void {
-  runningId = null
-  pauseRefresh = false
-  setAutoBtn('auto')
-  setActiveCommand(null)
-  fetchIssues()
-}
-
-function stopAutoRun(): void {
-  api.stopActive().catch((e: unknown) => {
-    termLog('error', `Stop request failed: ${e instanceof Error ? e.message : String(e)}`)
-  })
-  sseClient.close()
-  termLog('info', 'Stopped.')
-  resetAfterAuto()
-}
-
-function runAuto(): void {
-  if (runningId !== null) {
-    stopAutoRun()
-    return
-  }
-  stopActive()
-  pauseRefresh = true
-  runningId = '__auto__'
-  refreshBoard()
-  openActivityPanel('barf auto')
-  clearLog()
-  termLog('info', 'Starting barf auto ...')
-  setActiveCommand('auto')
-  setAutoBtn('stop')
-
-  sseClient.connect(
-    '/api/auto',
-    (data) => {
-      handleMsg(data)
-      if (data.type === 'done' || data.type === 'error') {
-        sseClient.close()
-        resetAfterAuto()
-      }
-    },
-    () => {
-      termLog('error', 'SSE connection lost')
-      sseClient.close()
-      resetAfterAuto()
-      refreshBoard()
-    },
-  )
-}
-
-autoBtn?.addEventListener('click', runAuto)
-
-// ── New Issue Modal ──────────────────────────────────────────────────────────
+// ── New Issue Modal ───────────────────────────────────────────────────────────
 
 document.getElementById('btn-new')?.addEventListener('click', () => {
   ;(document.getElementById('modal-ttl') as HTMLInputElement).value = ''
   ;(document.getElementById('modal-bdy') as HTMLTextAreaElement).value = ''
   document.getElementById('modal-ov')?.classList.add('open')
-  setTimeout(
-    () => (document.getElementById('modal-ttl') as HTMLInputElement).focus(),
-    50,
-  )
+  setTimeout(() => (document.getElementById('modal-ttl') as HTMLInputElement).focus(), 50)
 })
 
 document.getElementById('modal-ov')?.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget)
-    document.getElementById('modal-ov')?.classList.remove('open')
+  if (e.target === e.currentTarget) document.getElementById('modal-ov')?.classList.remove('open')
 })
 
 document.getElementById('modal-cancel')?.addEventListener('click', () => {
@@ -453,32 +98,12 @@ document.getElementById('modal-cancel')?.addEventListener('click', () => {
 })
 
 document.getElementById('modal-ttl')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') submitNewIssue()
+  if (e.key === 'Enter') void submitNewIssue()
 })
 
-document
-  .getElementById('modal-submit')
-  ?.addEventListener('click', submitNewIssue)
+document.getElementById('modal-submit')?.addEventListener('click', () => void submitNewIssue())
 
-async function submitNewIssue(): Promise<void> {
-  const titleInput = document.getElementById('modal-ttl') as HTMLInputElement
-  const bodyInput = document.getElementById('modal-bdy') as HTMLTextAreaElement
-  const title = titleInput.value.trim()
-  const body = bodyInput.value.trim()
-  if (!title) {
-    titleInput.focus()
-    return
-  }
-  try {
-    await api.createIssue(title, body || undefined)
-    document.getElementById('modal-ov')?.classList.remove('open')
-    await fetchIssues()
-  } catch (e) {
-    termLog('error', `Create failed: ${e instanceof Error ? e.message : String(e)}`)
-  }
-}
-
-// ── Keyboard shortcuts ───────────────────────────────────────────────────────
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -492,7 +117,7 @@ document.addEventListener('keydown', (e) => {
     }
     if (!document.getElementById('app')?.classList.contains('no-sidebar')) {
       closeSidebar()
-      selectedId = null
+      selectedId.value = null
       return
     }
   }
@@ -507,6 +132,19 @@ document.addEventListener('keydown', (e) => {
   }
 })
 
-// ── Start ────────────────────────────────────────────────────────────────────
-fetchIssues()
+// ── Polling ───────────────────────────────────────────────────────────────────
+
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+
+function scheduleRefresh(): void {
+  if (refreshInterval !== null) clearInterval(refreshInterval)
+  refreshInterval = setInterval(() => {
+    if (!pauseRefresh.value) void fetchIssues()
+  }, 5000)
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+
+void fetchConfig()
+void fetchIssues()
 scheduleRefresh()
