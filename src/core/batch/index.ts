@@ -6,7 +6,7 @@
  * persistence) are not exported — they are implementation details of the
  * orchestration loop.
  *
- * @module batch
+ * @module Orchestration
  */
 
 export { runLoop, type RunLoopDeps } from './loop'

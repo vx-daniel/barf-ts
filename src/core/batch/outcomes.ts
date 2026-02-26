@@ -6,7 +6,7 @@
  * By extracting these into named functions, the main loop becomes a
  * clean dispatcher that's easy to read and test.
  *
- * @module batch/outcomes
+ * @module Orchestration
  */
 import { existsSync } from 'fs'
 import { join } from 'path'

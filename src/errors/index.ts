@@ -6,7 +6,7 @@
  * thrown. The one exception is at the CLI boundary (`src/index.ts`) where
  * errors are caught and displayed to the user.
  *
- * @module errors
+ * @module Configuration
  */
 import type { IssueState } from '@/types/schema/issue-schema'
 

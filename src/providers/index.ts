@@ -1,3 +1,4 @@
+/** @module Audit Providers */
 import { AuditProvider } from '@/providers/base'
 import { OpenAIAuditProvider } from '@/providers/openai'
 import { GeminiAuditProvider } from '@/providers/gemini'

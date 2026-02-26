@@ -1,3 +1,4 @@
+/** @module CLI Commands */
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { injectTemplateVars } from '@/core/context'

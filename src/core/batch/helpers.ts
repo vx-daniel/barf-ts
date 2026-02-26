@@ -4,7 +4,7 @@
  * These are stateless, side-effect-free functions that support the orchestration
  * loop without managing any I/O or state transitions themselves.
  *
- * @module batch/helpers
+ * @module Orchestration
  */
 import { existsSync } from 'fs'
 import { join } from 'path'

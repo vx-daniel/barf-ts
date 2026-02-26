@@ -6,7 +6,7 @@
  * template. The result is either `needs_interview=false` (ready for planning)
  * or `needs_interview=true` with appended interview questions.
  *
- * @module triage/triage
+ * @module Triage
  */
 import { existsSync } from 'fs'
 import { join } from 'path'

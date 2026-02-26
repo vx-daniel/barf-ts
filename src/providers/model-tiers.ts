@@ -1,3 +1,4 @@
+/** @module Audit Providers */
 import type { ModelTier } from '@/types/schema/provider-schema'
 
 /**

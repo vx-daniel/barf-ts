@@ -11,7 +11,7 @@
  * - `settingSources: []` — SDK isolation; no CLAUDE.md loaded, all context from prompt
  * - `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '100'` — disables auto-compact so barf controls context
  *
- * @module claude/iteration
+ * @module Orchestration
  */
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import { mkdirSync } from 'fs'

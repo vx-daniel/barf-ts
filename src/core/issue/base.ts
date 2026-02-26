@@ -1,3 +1,4 @@
+/** @module Issue Model */
 import { ResultAsync, errAsync } from 'neverthrow'
 import type { Issue, IssueState, LockMode } from '@/types'
 import type { AutoSelectMode } from '@/types/schema/mode-schema'

@@ -5,7 +5,7 @@
  * knowing the internal schema directory structure. All Zod schemas live
  * in `@/types/schema/` and error classes live in `@/errors/`.
  *
- * @module types
+ * @module Configuration
  */
 
 // ── Schemas (all Zod schemas and inferred types) ─────────────────────────────

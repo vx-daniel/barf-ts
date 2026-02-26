@@ -1,3 +1,4 @@
+/** @module Issue Providers */
 import { errAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 import { IssueProvider } from '@/core/issue/base'

@@ -1,7 +1,7 @@
 /**
  * Verification module — public API for post-completion verification.
  *
- * @module verification
+ * @module Verification
  */
 
 export {

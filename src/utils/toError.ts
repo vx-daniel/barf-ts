@@ -1,3 +1,5 @@
+/** @module Utilities */
+
 /**
  * Coerces an unknown thrown value into a proper {@link Error} instance.
  *

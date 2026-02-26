@@ -1,3 +1,4 @@
+/** @module Utilities */
 import pino from 'pino'
 import type { Config } from '@/types/index'
 

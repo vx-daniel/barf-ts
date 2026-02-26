@@ -1,3 +1,4 @@
+/** @module Issue Providers */
 import type { ResultAsync } from 'neverthrow'
 import { IssueProvider } from '@/core/issue/base'
 import {

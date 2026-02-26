@@ -1,3 +1,4 @@
+/** @module Issue Model */
 import { err, ok, type Result } from 'neverthrow'
 import type { z } from 'zod'
 import {

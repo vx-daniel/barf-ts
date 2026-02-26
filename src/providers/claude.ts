@@ -1,3 +1,4 @@
+/** @module Audit Providers */
 import Anthropic from '@anthropic-ai/sdk'
 import { ok, type Result, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'

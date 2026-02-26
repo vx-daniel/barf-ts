@@ -5,7 +5,7 @@
  * details. This module formats those details into a structured markdown body
  * with code-fenced output sections and acceptance criteria checkboxes.
  *
- * @module verification/format
+ * @module Verification
  */
 import type { VerifyFailure } from '@/types'
 

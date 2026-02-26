@@ -1,3 +1,4 @@
+/** @module Utilities */
 import { spawn } from 'bun'
 import type { ExecResult } from '@/types/schema/exec-schema'
 

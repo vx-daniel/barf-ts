@@ -12,7 +12,7 @@
  * toward the threshold — sub-agent tokens are ignored to prevent premature
  * interruption during tool calls.
  *
- * @module claude/stream
+ * @module Orchestration
  */
 import type { Query } from '@anthropic-ai/claude-agent-sdk'
 import { createWriteStream, type WriteStream } from 'fs'

@@ -1,3 +1,4 @@
+/** @module Audit Providers */
 import { ok, okAsync, type Result, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
 import { createLogger } from '@/utils/logger'

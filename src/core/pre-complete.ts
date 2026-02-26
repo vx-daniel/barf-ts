@@ -1,3 +1,4 @@
+/** @module Verification */
 import { ResultAsync } from 'neverthrow'
 import type { ExecFn } from '@/core/verification'
 import type { FixStep, PreCompleteResult } from '@/types'

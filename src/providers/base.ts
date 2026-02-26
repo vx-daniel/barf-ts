@@ -1,3 +1,4 @@
+/** @module Audit Providers */
 import { type Result, ResultAsync, errAsync } from 'neverthrow'
 import type { ZodType } from 'zod'
 import { toError } from '@/utils/toError'

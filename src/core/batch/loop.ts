@@ -11,7 +11,7 @@
  * - Prompt template resolution and variable injection
  * - Session stats persistence (best-effort, in `finally`)
  *
- * @module batch/loop
+ * @module Orchestration
  */
 import { ResultAsync } from 'neverthrow'
 import { runClaudeIteration } from '@/core/claude'

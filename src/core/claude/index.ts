@@ -5,7 +5,7 @@
  * Internal implementation details (display formatting, stream processing)
  * are not exported from this barrel — they are implementation details.
  *
- * @module claude
+ * @module Orchestration
  */
 
 export {

@@ -1,3 +1,4 @@
+/** @module CLI Commands */
 export * from './audit'
 export * from './auto'
 export * from './build'

@@ -9,7 +9,7 @@
  * Stats persistence is best-effort: failures are logged but never propagate,
  * because losing stats should not crash a successful build.
  *
- * @module batch/stats
+ * @module Orchestration
  */
 import type { SessionStats } from '@/types'
 import { formatSessionStatsBlock } from '@/types'

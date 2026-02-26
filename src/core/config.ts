@@ -1,3 +1,4 @@
+/** @module Configuration */
 import { readFileSync } from 'fs'
 import { err, ok, type Result } from 'neverthrow'
 import { homedir } from 'os'

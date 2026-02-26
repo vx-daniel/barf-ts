@@ -1,3 +1,4 @@
+/** @module CLI Commands */
 import { runLoop } from '@/core/batch'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types/index'

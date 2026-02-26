@@ -9,6 +9,14 @@ barf audit       # audit completed work with an AI provider
 barf auto        # orchestrate all stages automatically
 ```
 
+## Documentation
+
+- [Architecture Overview](docs/architecture.md) — system design, layer diagram, data flows
+- [Adding a Command](docs/guides/adding-a-command.md) — how to add a new CLI command
+- [Adding an Audit Provider](docs/guides/adding-an-audit-provider.md) — how to extend the audit system
+- [Issue Lifecycle](docs/guides/issue-lifecycle.md) — deep dive on the state machine
+- [API Reference](docs/api/) — generated from source with TypeDoc (`bun run docs`)
+
 ## How it works
 
 Each issue is a markdown file with frontmatter. The full lifecycle:

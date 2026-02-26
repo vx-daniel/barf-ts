@@ -5,7 +5,7 @@
  * This module handles parsing that response, stripping markdown code fences,
  * and formatting interview questions as markdown for the issue body.
  *
- * @module triage/parse
+ * @module Triage
  */
 import { z } from 'zod'
 import { toError } from '@/utils/toError'

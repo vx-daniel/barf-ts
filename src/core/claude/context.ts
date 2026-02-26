@@ -8,7 +8,7 @@
  * The token limit registry is mutable so tests can register custom models
  * and new models can be added at runtime without recompilation.
  *
- * @module claude/context
+ * @module Orchestration
  */
 
 /**

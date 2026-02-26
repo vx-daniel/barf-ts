@@ -5,7 +5,7 @@
  * flow: run checks, and based on the outcome either transition to VERIFIED,
  * create a fix sub-issue, or mark the issue as verify-exhausted.
  *
- * @module verification/orchestration
+ * @module Verification
  */
 import { ResultAsync } from 'neverthrow'
 import type { Config } from '@/types'

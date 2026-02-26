@@ -1,30 +1,22 @@
 {
   "entryPoints": ["src"],
   "entryPointStrategy": "expand",
-  "out": "docs",
+  "out": "docs/api",
   "tsconfig": "./tsconfig.typedoc.json",
   "excludePrivate": true,
   "excludeInternal": true,
-  "readme": "none",
+  "readme": "./docs/architecture.md",
   "validation": {
     "notExported": true,
     "invalidLink": true
   },
-  "ignoredHighlightLanguages": ["mermaid"],
   "plugin": [
-    "@boneskull/typedoc-plugin-mermaid",
-    "typedoc-theme-hierarchy",
+    "typedoc-plugin-markdown",
     "typedoc-plugin-zod",
     "typedoc-plugin-mdn-links",
-    "typedoc-github-theme",
-    // "typedoc-plugin-missing-exports",
-    // "typedoc-rhineai-theme",
     "typedoc-plugin-coverage"
-
-    // "typedoc-plugin-markdown",
   ],
-  "theme": "typedoc-github-theme",
-
+  "outputFileStrategy": "modules",
   "resolveUtilityTypes": true,
   "externalSymbolLinkMappings": {
     "@anthropic-ai/claude-agent-sdk": { "Query": "#" },

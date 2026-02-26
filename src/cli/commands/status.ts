@@ -1,3 +1,4 @@
+/** @module CLI Commands */
 import type { IssueProvider } from '@/core/issue/base'
 import { createLogger } from '@/utils/logger'
 

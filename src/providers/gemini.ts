@@ -1,3 +1,4 @@
+/** @module Audit Providers */
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { type Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'

@@ -1,3 +1,4 @@
+/** @module Issue Model */
 import { type Result, ok, err } from 'neverthrow'
 import type { Config } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'

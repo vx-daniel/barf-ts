@@ -8,7 +8,7 @@
  * Extracted from the stream consumer so display logic is independently
  * testable and the stream module can focus on message processing.
  *
- * @module claude/display
+ * @module Orchestration
  */
 import type { DisplayContext } from '@/types'
 

@@ -1,3 +1,4 @@
+/** @module Utilities */
 import { ResultAsync } from 'neverthrow'
 import { toError } from '@/utils/toError'
 

@@ -5,7 +5,7 @@
  * barf issue states. This module provides the mapping tables and conversion
  * functions used by {@link GitHubIssueProvider}.
  *
- * @module issue/providers/github-labels
+ * @module Issue Providers
  */
 import { z } from 'zod'
 import type { Issue, IssueState } from '@/types'

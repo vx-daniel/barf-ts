@@ -5,7 +5,7 @@
  * codebase. All Zod schemas live in this directory (`src/types/schema/`)
  * and are re-exported here for convenience.
  *
- * @module schema
+ * @module Configuration
  */
 
 // ── Issue Model ──────────────────────────────────────────────────────────────

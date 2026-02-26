@@ -1,3 +1,4 @@
+/** @module CLI Commands */
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config, IssueState } from '@/types'
 import { runLoop } from '@/core/batch'

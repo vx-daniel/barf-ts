@@ -1,3 +1,4 @@
+/** @module CLI Commands */
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types/index'

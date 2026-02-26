@@ -1,3 +1,4 @@
+/** @module Audit Providers */
 import OpenAI from 'openai'
 import { type Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'

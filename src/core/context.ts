@@ -1,3 +1,5 @@
+/** @module Orchestration */
+
 /**
  * Thrown when cumulative token usage reaches the configured context threshold.
  * Caught and converted to an `'overflow'` outcome by `runClaudeIteration`.

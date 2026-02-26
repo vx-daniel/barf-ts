@@ -5,7 +5,7 @@
  * sequentially and collects all failures before returning. It never throws —
  * verification failures are represented as data in the return value.
  *
- * @module verification/checks
+ * @module Verification
  */
 import { ResultAsync } from 'neverthrow'
 import type { VerifyCheck, VerifyFailure, VerifyResult } from '@/types'
