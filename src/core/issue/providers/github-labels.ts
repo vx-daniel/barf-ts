@@ -3,7 +3,7 @@
  *
  * The GitHub issue provider uses labels prefixed with `barf:` to represent
  * barf issue states. This module provides the mapping tables and conversion
- * functions used by {@link GitHubIssueProvider}.
+ * functions used by `GitHubIssueProvider`.
  *
  * @module Issue Providers
  */
@@ -13,7 +13,7 @@ import type { Issue, IssueState } from '@/types'
 /**
  * Maps barf issue states to their corresponding GitHub label names.
  *
- * Every state in the {@link IssueStateSchema} has a corresponding label.
+ * Every state in the `IssueStateSchema` has a corresponding label.
  * Labels use the `barf:` prefix followed by a lowercase hyphenated version
  * of the state name.
  *

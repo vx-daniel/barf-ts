@@ -1,0 +1,172 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>barf</title><meta name="description" content="Documentation for barf"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">barf</a><div id="tsd-toolbar-links"><a href="../architecture.md">Architecture</a><a href="../guides/issue-lifecycle.md">Guides</a><a href="https://github.com/your-org/barf-ts">GitHub</a></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>barf</h1></div><div class="tsd-panel tsd-typography"><h1 id="barf-architecture" class="tsd-anchor-link">barf Architecture<a href="#barf-architecture" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<p>AI issue orchestration CLI — feeds issues to Claude one at a time, tracks state through a lifecycle, and handles context overflow automatically. This document is the entry point for both the generated API docs and human readers.</p>
+<h2 id="system-overview" class="tsd-anchor-link">System Overview<a href="#system-overview" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>barf manages a queue of issues (markdown files or GitHub Issues), each with a state machine governing its lifecycle. The CLI dispatches Claude agent SDK sessions to plan, build, and verify each issue. When Claude's context window fills up, barf either splits the issue into smaller pieces or escalates to a larger model.</p>
+<h2 id="layer-diagram" class="tsd-anchor-link">Layer Diagram<a href="#layer-diagram" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="mermaid"><span class="hl-0">graph TD</span><br/><span class="hl-0">    CLI[&quot;CLI Layer&lt;br/&gt;&lt;code&gt;src/index.ts&lt;/code&gt;&lt;br/&gt;&lt;code&gt;src/cli/commands/*&lt;/code&gt;&quot;]</span><br/><span class="hl-0">    ORCH[&quot;Orchestration Layer&lt;br/&gt;&lt;code&gt;core/batch/*&lt;/code&gt;&lt;br/&gt;&lt;code&gt;core/claude/*&lt;/code&gt;&quot;]</span><br/><span class="hl-0">    DOMAIN[&quot;Domain Layer&lt;br/&gt;&lt;code&gt;core/issue/*&lt;/code&gt;&lt;br/&gt;&lt;code&gt;core/triage/*&lt;/code&gt;&lt;br/&gt;&lt;code&gt;core/verification/*&lt;/code&gt;&quot;]</span><br/><span class="hl-0">    PROVIDERS[&quot;Provider Layer&lt;br/&gt;&lt;code&gt;core/issue/providers/*&lt;/code&gt;&lt;br/&gt;&lt;code&gt;providers/*&lt;/code&gt;&quot;]</span><br/><span class="hl-0">    EXTERNAL[&quot;External Systems&lt;br/&gt;Claude SDK · GitHub CLI · OpenAI · Gemini&quot;]</span><br/><br/><span class="hl-0">    CLI --&gt; ORCH</span><br/><span class="hl-0">    ORCH --&gt; DOMAIN</span><br/><span class="hl-0">    DOMAIN --&gt; PROVIDERS</span><br/><span class="hl-0">    PROVIDERS --&gt; EXTERNAL</span>
+</code><button type="button">Copy</button></pre>
+
+<p><strong>CLI Layer</strong> — Parses arguments (commander), loads config, creates the issue provider, and delegates to command functions. Thin handlers that own <code>process.exitCode</code> and nothing else.</p>
+<p><strong>Orchestration Layer</strong> — The <code>runLoop</code> function drives Claude iterations on an issue until completion or overflow. <code>core/claude/*</code> manages SDK queries, stream consumption, token tracking, and display. <code>core/batch/*</code> handles the loop state machine, outcome branching, and stats persistence.</p>
+<p><strong>Domain Layer</strong> — Issue parsing/serialization, the state machine (<code>VALID_TRANSITIONS</code>), triage evaluation, and post-completion verification. Pure business logic with no I/O dependencies.</p>
+<p><strong>Provider Layer</strong> — Pluggable backends for issue storage (<code>LocalIssueProvider</code>, <code>GitHubIssueProvider</code>) and audit reviews (<code>OpenAIAuditProvider</code>, <code>GeminiAuditProvider</code>, <code>ClaudeAuditProvider</code>, <code>CodexAuditProvider</code>).</p>
+<h2 id="data-flow" class="tsd-anchor-link">Data Flow: <code>barf plan 001</code><a href="#data-flow" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code><span class="hl-1">1.</span><span class="hl-0"> </span><span class="hl-2">CLI</span><span class="hl-0"> </span><span class="hl-3">parses</span><span class="hl-0"> </span><span class="hl-3">args</span><span class="hl-0"> → </span><span class="hl-4">loadConfig</span><span class="hl-0">() → </span><span class="hl-4">createIssueProvider</span><span class="hl-0">()</span><br/><span class="hl-1">2.</span><span class="hl-0"> </span><span class="hl-4">planCommand</span><span class="hl-0">() </span><span class="hl-3">calls</span><span class="hl-0"> </span><span class="hl-4">runLoop</span><span class="hl-0">(</span><span class="hl-5">&quot;001&quot;</span><span class="hl-0">, </span><span class="hl-5">&quot;plan&quot;</span><span class="hl-0">, </span><span class="hl-3">config</span><span class="hl-0">, </span><span class="hl-3">provider</span><span class="hl-0">)</span><br/><span class="hl-1">3.</span><span class="hl-0"> </span><span class="hl-6">runLoop</span><span class="hl-0">:</span><br/><span class="hl-0">   </span><span class="hl-3">a</span><span class="hl-0">. </span><span class="hl-3">provider</span><span class="hl-0">.</span><span class="hl-4">fetchIssue</span><span class="hl-0">(</span><span class="hl-5">&quot;001&quot;</span><span class="hl-0">) → </span><span class="hl-3">Issue</span><span class="hl-0"> { </span><span class="hl-6">state</span><span class="hl-0">: </span><span class="hl-2">NEW</span><span class="hl-0"> }</span><br/><span class="hl-0">   </span><span class="hl-3">b</span><span class="hl-0">. </span><span class="hl-4">validateTransition</span><span class="hl-0">(</span><span class="hl-2">NEW</span><span class="hl-0"> → </span><span class="hl-2">IN_PROGRESS</span><span class="hl-0">) ✓</span><br/><span class="hl-0">   </span><span class="hl-3">c</span><span class="hl-0">. </span><span class="hl-3">provider</span><span class="hl-0">.</span><span class="hl-4">lockIssue</span><span class="hl-0">(</span><span class="hl-5">&quot;001&quot;</span><span class="hl-0">)</span><br/><span class="hl-0">   </span><span class="hl-3">d</span><span class="hl-0">. </span><span class="hl-4">resolvePromptTemplate</span><span class="hl-0">(</span><span class="hl-5">&quot;plan&quot;</span><span class="hl-0">, </span><span class="hl-3">issue</span><span class="hl-0">, </span><span class="hl-3">config</span><span class="hl-0">) → </span><span class="hl-3">prompt</span><span class="hl-0"> </span><span class="hl-3">string</span><br/><span class="hl-0">   </span><span class="hl-3">e</span><span class="hl-0">. </span><span class="hl-4">runClaudeIteration</span><span class="hl-0">(</span><span class="hl-3">prompt</span><span class="hl-0">, </span><span class="hl-3">config</span><span class="hl-0">) → </span><span class="hl-2">SDK</span><span class="hl-0"> </span><span class="hl-3">Query</span><br/><span class="hl-0">   </span><span class="hl-3">f</span><span class="hl-0">. </span><span class="hl-4">consumeSDKQuery</span><span class="hl-0">() </span><span class="hl-3">streams</span><span class="hl-0"> </span><span class="hl-3">messages</span><span class="hl-0">, </span><span class="hl-3">tracks</span><span class="hl-0"> </span><span class="hl-3">tokens</span><br/><span class="hl-0">   </span><span class="hl-3">g</span><span class="hl-0">. </span><span class="hl-3">If</span><span class="hl-0"> </span><span class="hl-3">tokens</span><span class="hl-0"> &gt; </span><span class="hl-3">threshold</span><span class="hl-0"> → </span><span class="hl-3">ContextOverflowError</span><span class="hl-0"> → </span><span class="hl-3">split</span><span class="hl-0"> </span><span class="hl-3">or</span><span class="hl-0"> </span><span class="hl-3">escalate</span><br/><span class="hl-0">   </span><span class="hl-3">h</span><span class="hl-0">. </span><span class="hl-3">On</span><span class="hl-0"> </span><span class="hl-6">success</span><span class="hl-0">: </span><span class="hl-3">issue</span><span class="hl-0">.</span><span class="hl-3">state</span><span class="hl-0"> = </span><span class="hl-2">PLANNED</span><br/><span class="hl-0">   </span><span class="hl-3">i</span><span class="hl-0">. </span><span class="hl-3">provider</span><span class="hl-0">.</span><span class="hl-4">updateIssue</span><span class="hl-0">(</span><span class="hl-3">issue</span><span class="hl-0">) + </span><span class="hl-3">provider</span><span class="hl-0">.</span><span class="hl-4">unlockIssue</span><span class="hl-0">(</span><span class="hl-5">&quot;001&quot;</span><span class="hl-0">)</span><br/><span class="hl-1">4.</span><span class="hl-0"> </span><span class="hl-2">CLI</span><span class="hl-0"> </span><span class="hl-3">exits</span><span class="hl-0"> </span><span class="hl-7">with</span><span class="hl-0"> </span><span class="hl-3">code</span><span class="hl-0"> </span><span class="hl-1">0</span>
+</code><button>Copy</button></pre>
+
+<h2 id="issue-state-machine" class="tsd-anchor-link">Issue State Machine<a href="#issue-state-machine" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="mermaid"><span class="hl-0">stateDiagram-v2</span><br/><span class="hl-0">    [*] --&gt; NEW</span><br/><span class="hl-0">    NEW --&gt; PLANNED</span><br/><span class="hl-0">    PLANNED --&gt; IN_PROGRESS</span><br/><span class="hl-0">    PLANNED --&gt; STUCK</span><br/><span class="hl-0">    PLANNED --&gt; SPLIT</span><br/><span class="hl-0">    IN_PROGRESS --&gt; COMPLETED</span><br/><span class="hl-0">    IN_PROGRESS --&gt; STUCK</span><br/><span class="hl-0">    IN_PROGRESS --&gt; SPLIT</span><br/><span class="hl-0">    STUCK --&gt; PLANNED</span><br/><span class="hl-0">    STUCK --&gt; NEW</span><br/><span class="hl-0">    STUCK --&gt; SPLIT</span><br/><span class="hl-0">    COMPLETED --&gt; VERIFIED</span><br/><span class="hl-0">    VERIFIED --&gt; [*]</span><br/><span class="hl-0">    SPLIT --&gt; [*]</span>
+</code><button type="button">Copy</button></pre>
+
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NEW</code></td>
+<td>Created, awaiting triage</td>
+</tr>
+<tr>
+<td><code>PLANNED</code></td>
+<td>Plan file exists, ready to build</td>
+</tr>
+<tr>
+<td><code>IN_PROGRESS</code></td>
+<td>Claude is actively working</td>
+</tr>
+<tr>
+<td><code>STUCK</code></td>
+<td>Blocked — needs human help or re-planning</td>
+</tr>
+<tr>
+<td><code>SPLIT</code></td>
+<td>Decomposed into child issues (terminal)</td>
+</tr>
+<tr>
+<td><code>COMPLETED</code></td>
+<td>Acceptance criteria met; awaiting verification</td>
+</tr>
+<tr>
+<td><code>VERIFIED</code></td>
+<td>Build + lint + tests pass (terminal)</td>
+</tr>
+</tbody>
+</table>
+<p>Transitions are enforced by <code>validateTransition()</code> in <code>core/issue/index.ts</code> against the <code>VALID_TRANSITIONS</code> map. Direct state mutation is never allowed.</p>
+<h2 id="key-abstractions" class="tsd-anchor-link">Key Abstractions<a href="#key-abstractions" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="issueprovider-" class="tsd-anchor-link">IssueProvider (<code>core/issue/base.ts</code>)<a href="#issueprovider-" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Abstract class defining the contract for issue storage. Methods: <code>listIssues</code>, <code>fetchIssue</code>, <code>updateIssue</code>, <code>createIssue</code>, <code>lockIssue</code>, <code>unlockIssue</code>. Two implementations:</p>
+<ul>
+<li><strong><code>LocalIssueProvider</code></strong> — Markdown files on disk with POSIX <code>mkdir</code>-based locking</li>
+<li><strong><code>GitHubIssueProvider</code></strong> — GitHub Issues via <code>gh</code> CLI, labels for state, <code>barf:locked</code> label for locking</li>
+</ul>
+<h3 id="auditprovider-" class="tsd-anchor-link">AuditProvider (<code>providers/base.ts</code>)<a href="#auditprovider-" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Abstract class for AI-powered code review. Methods: <code>audit(issueBody, diff, rules)</code>. Implementations wrap OpenAI, Gemini, Claude, and Codex (OpenAI responses API) APIs.</p>
+<h3 id="config-" class="tsd-anchor-link">Config (<code>core/config.ts</code>)<a href="#config-" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Parsed from <code>.barfrc</code> (KEY=VALUE format). Validated with Zod schemas. All operational values (models, thresholds, directories) flow through this single config object.</p>
+<h3 id="prompt-templates-" class="tsd-anchor-link">Prompt Templates (<code>core/prompts.ts</code>)<a href="#prompt-templates-" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Runtime resolution of mode-specific prompts (<code>plan</code>, <code>build</code>, <code>split</code>, <code>audit</code>, <code>triage</code>). Checks <code>PROMPT_DIR</code> for custom overrides, falls back to compiled-in <code>.md</code> templates.</p>
+<h2 id="where-do-i-look-table" class="tsd-anchor-link">&quot;Where Do I Look?&quot; Table<a href="#where-do-i-look-table" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Entry point</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add a CLI command</td>
+<td><code>src/cli/commands/</code> — see <a href="media/adding-a-command.md">Adding a Command</a></td>
+</tr>
+<tr>
+<td>Add an audit provider</td>
+<td><code>src/providers/</code> — see <a href="media/adding-an-audit-provider.md">Adding an Audit Provider</a></td>
+</tr>
+<tr>
+<td>Change state transitions</td>
+<td><code>src/core/issue/index.ts</code> → <code>VALID_TRANSITIONS</code></td>
+</tr>
+<tr>
+<td>Modify Claude interaction</td>
+<td><code>src/core/claude/iteration.ts</code> (setup), <code>stream.ts</code> (consumption)</td>
+</tr>
+<tr>
+<td>Change orchestration loop</td>
+<td><code>src/core/batch/loop.ts</code> (main loop), <code>outcomes.ts</code> (outcome handlers)</td>
+</tr>
+<tr>
+<td>Add a config option</td>
+<td><code>src/types/schema/config-schema.ts</code> → <code>ConfigSchema</code>, then <code>src/core/config.ts</code></td>
+</tr>
+<tr>
+<td>Modify issue format</td>
+<td><code>src/types/schema/issue-schema.ts</code> → <code>IssueSchema</code>, then <code>src/core/issue/index.ts</code></td>
+</tr>
+<tr>
+<td>Change verification checks</td>
+<td><code>src/core/verification/checks.ts</code></td>
+</tr>
+<tr>
+<td>Modify triage behavior</td>
+<td><code>src/core/triage/triage.ts</code></td>
+</tr>
+<tr>
+<td>Edit prompt templates</td>
+<td><code>src/prompts/PROMPT_*.md</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="module-map" class="tsd-anchor-link">Module Map<a href="#module-map" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>The API docs are organized by these logical modules (set via <code>@module</code> tags):</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Issue Model</strong></td>
+<td>Parsing, serialization, state machine, transitions</td>
+</tr>
+<tr>
+<td><strong>Issue Providers</strong></td>
+<td>Local filesystem and GitHub issue backends</td>
+</tr>
+<tr>
+<td><strong>Orchestration</strong></td>
+<td>Batch loop, Claude SDK integration, context management, prompts</td>
+</tr>
+<tr>
+<td><strong>Verification</strong></td>
+<td>Post-completion checks (build/lint/test) and fix-issue creation</td>
+</tr>
+<tr>
+<td><strong>Triage</strong></td>
+<td>One-shot evaluation of NEW issues for interview needs</td>
+</tr>
+<tr>
+<td><strong>CLI Commands</strong></td>
+<td><code>init</code>, <code>status</code>, <code>plan</code>, <code>build</code>, <code>auto</code>, <code>audit</code></td>
+</tr>
+<tr>
+<td><strong>Audit Providers</strong></td>
+<td>OpenAI, Gemini, Claude, Codex audit backends</td>
+</tr>
+<tr>
+<td><strong>Configuration</strong></td>
+<td>Config loading, Zod schemas, type definitions, error classes</td>
+</tr>
+<tr>
+<td><strong>Utilities</strong></td>
+<td>Logger, subprocess helpers, error coercion</td>
+</tr>
+</tbody>
+</table>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#barf-architecture"><span>barf <wbr/>Architecture</span></a><ul><li><a href="#system-overview"><span>System <wbr/>Overview</span></a></li><li><a href="#layer-diagram"><span>Layer <wbr/>Diagram</span></a></li><li><a href="#data-flow"><span>Data <wbr/>Flow: </span></a></li><li><a href="#issue-state-machine"><span>Issue <wbr/>State <wbr/>Machine</span></a></li><li><a href="#key-abstractions"><span>Key <wbr/>Abstractions</span></a></li><li><ul><li><a href="#issueprovider-"><span>Issue<wbr/>Provider ()</span></a></li><li><a href="#auditprovider-"><span>Audit<wbr/>Provider ()</span></a></li><li><a href="#config-"><span>Config ()</span></a></li><li><a href="#prompt-templates-"><span>Prompt <wbr/>Templates ()</span></a></li></ul></li><li><a href="#where-do-i-look-table"><span>&quot;<wbr/>Where <wbr/>Do <wbr/>I <wbr/>Look?&quot; <wbr/>Table</span></a></li><li><a href="#module-map"><span>Module <wbr/>Map</span></a></li></ul></div></details></div><div class="site-menu"><nav id="tsd-sidebar-links" class="tsd-navigation"><a href="../architecture.md" class="tsd-nav-link">Architecture</a><a href="../guides/issue-lifecycle.md" class="tsd-nav-link">Guides</a><a href="https://github.com/your-org/barf-ts" class="tsd-nav-link">GitHub</a></nav><nav class="tsd-navigation"><a href="modules.html">barf</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>

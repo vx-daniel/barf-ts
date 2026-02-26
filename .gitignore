@@ -1,5 +1,4 @@
 node_modules
-# docs/api/
 dist
 .barf/
 .env

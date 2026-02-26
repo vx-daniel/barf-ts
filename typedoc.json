@@ -11,12 +11,16 @@
     "invalidLink": true
   },
   "plugin": [
-    "typedoc-plugin-markdown",
     "typedoc-plugin-zod",
     "typedoc-plugin-mdn-links",
     "typedoc-plugin-coverage"
   ],
-  "outputFileStrategy": "modules",
+  "navigationLinks": {
+    "Architecture": "../architecture.md",
+    "Guides": "../guides/issue-lifecycle.md",
+    "GitHub": "https://github.com/your-org/barf-ts"
+  },
+  "highlightLanguages": ["bash", "typescript", "javascript", "mermaid"],
   "resolveUtilityTypes": true,
   "externalSymbolLinkMappings": {
     "@anthropic-ai/claude-agent-sdk": { "Query": "#" },

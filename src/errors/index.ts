@@ -12,7 +12,7 @@ import type { IssueState } from '@/types/schema/issue-schema'
 
 /**
  * Thrown by `validateTransition` when a state change is not permitted
- * by the {@link IssueStateSchema} state machine.
+ * by the `IssueStateSchema` state machine.
  *
  * The state machine defines which transitions are valid (e.g. `NEW → PLANNED`
  * is valid, but `NEW → VERIFIED` is not). This error provides a clear message

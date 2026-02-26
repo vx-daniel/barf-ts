@@ -14,7 +14,7 @@
 /**
  * Fallback context-window token limit for models not in the registry.
  *
- * Used when a model identifier isn't found in {@link MODEL_CONTEXT_LIMITS}.
+ * Used when a model identifier isn't found in `MODEL_CONTEXT_LIMITS`.
  * Set to 200,000 tokens which matches current Claude model context windows.
  *
  * @category Claude Agent
@@ -36,7 +36,7 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
 /**
  * Returns the context-window token limit for a given model.
  *
- * Looks up the model in the {@link MODEL_CONTEXT_LIMITS} registry and
+ * Looks up the model in the `MODEL_CONTEXT_LIMITS` registry and
  * falls back to {@link DEFAULT_CONTEXT_LIMIT} for unregistered models.
  *
  * @param model - Claude model identifier string (e.g. `'claude-sonnet-4-6'`).
