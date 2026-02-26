@@ -7,27 +7,19 @@
  *
  * Active command indicator overlays on top in either mode.
  */
-import type { Issue } from '../lib/types'
+import type { Issue } from '@dashboard/frontend/lib/types'
+import { el } from '@dashboard/frontend/lib/dom'
+import { stateColor } from '@dashboard/frontend/lib/constants'
 
 let timerInterval: ReturnType<typeof setInterval> | null = null
 let commandStartTime: number | null = null
 
-function el(tag: string, cls?: string): HTMLElement {
-  const e = document.createElement(tag)
-  if (cls) e.className = cls
-  return e
-}
-
-const STATE_COLORS: Record<string, string> = {
-  NEW: '#6b7280',
-  PLANNED: '#f59e0b',
-  IN_PROGRESS: '#f97316',
-  COMPLETED: '#22c55e',
-  VERIFIED: '#10b981',
-  STUCK: '#ef4444',
-  SPLIT: '#a855f7',
-}
-
+/**
+ * Mounts the status bar DOM structure into `container`. Must be called once
+ * at boot before any update functions are used.
+ *
+ * @param container - The host element (e.g. `#statusbar`) to populate
+ */
 export function mountStatus(container: HTMLElement): void {
   container.textContent = ''
   container.classList.remove('hidden')
@@ -103,8 +95,10 @@ function fmtDuration(seconds: number): string {
 }
 
 /**
- * Update the summary section with issue counts by state.
- * Called on every refresh cycle.
+ * Refreshes the summary section with per-state issue counts and aggregate
+ * token/run/duration totals. Called on every poll cycle.
+ *
+ * @param issues - Current full issue list from the server
  */
 export function updateSummary(issues: Issue[]): void {
   const summary = document.getElementById('sb-summary')
@@ -135,8 +129,8 @@ export function updateSummary(issues: Issue[]): void {
     const count = counts[state]
     if (!count) continue
     const chip = el('span', 'sb-state-chip')
-    chip.style.borderColor = STATE_COLORS[state] ?? '#6b7280'
-    chip.style.color = STATE_COLORS[state] ?? '#6b7280'
+    chip.style.borderColor = stateColor(state)
+    chip.style.color = stateColor(state)
     chip.textContent = `${state.replace('_', ' ')} ${count}`
     summary.appendChild(chip)
   }
@@ -165,7 +159,11 @@ export function updateSummary(issues: Issue[]): void {
 }
 
 /**
- * Show stats for a specific selected issue, or revert to summary mode.
+ * Switches the status bar between issue mode and summary mode.
+ * Pass an issue to display its stats; pass `null` to revert to summary mode.
+ *
+ * @param issue - The selected issue, or `null` to clear selection
+ * @param _models - Reserved for future model-label display; currently unused
  */
 export function updateStatus(
   issue: Issue | null,
@@ -211,6 +209,12 @@ export function updateStatus(
     stDuration.textContent = fmtDuration(issue.total_duration_seconds)
 }
 
+/**
+ * Shows or hides the active-command indicator in the status bar and starts
+ * or stops the elapsed-time ticker.
+ *
+ * @param cmd - Command label to display (e.g. `"build #42"`), or `null` to hide
+ */
 export function setActiveCommand(cmd: string | null): void {
   const cmdEl = document.getElementById('sb-command')
   const cmdText = document.getElementById('sb-cmd-text')

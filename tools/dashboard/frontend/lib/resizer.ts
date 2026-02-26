@@ -5,14 +5,18 @@
  * CSS grid template sizes on #app.
  */
 
-import { getEl } from './dom'
+import { getEl } from '@dashboard/frontend/lib/dom'
 
 const MIN_SIDEBAR_W = 280
 const MAX_SIDEBAR_W = 800
 const MIN_BOTTOM_H = 100
 const MAX_BOTTOM_H = 600
 
-/** Mount sidebar resize handle (vertical bar between main and sidebar). */
+/**
+ * Mounts the sidebar resize handle, allowing users to drag the vertical divider
+ * to adjust sidebar width. Clamps width between {@link MIN_SIDEBAR_W} and
+ * {@link MAX_SIDEBAR_W} and writes the result directly to `#app`'s grid template.
+ */
 export function mountSidebarResizer(): void {
   const app = getEl('app')
   const sidebar = getEl('sidebar')
@@ -53,7 +57,12 @@ export function mountSidebarResizer(): void {
   })
 }
 
-/** Mount bottom panel resize handle (horizontal bar above bottom). */
+/**
+ * Mounts the bottom panel resize handle, allowing users to drag the horizontal
+ * divider to adjust the activity log height. Clamps height between
+ * {@link MIN_BOTTOM_H} and {@link MAX_BOTTOM_H} and applies the value as an
+ * explicit pixel height on `#bottom`.
+ */
 export function mountBottomResizer(): void {
   const _app = getEl('app')
   const bottom = getEl('bottom')

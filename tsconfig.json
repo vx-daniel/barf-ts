@@ -12,5 +12,5 @@
       "@dashboard/*": ["./tools/dashboard/*"]
     }
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*", "tools/**/*"]
 }

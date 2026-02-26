@@ -1,17 +1,17 @@
 /**
  * Dashboard main entry — initializes panels, SSE/WS connections, and polling.
  */
-import type { Issue } from './lib/types'
-import * as api from './lib/api-client'
-import { SSEClient } from './lib/sse-client'
-import { WSClient } from './lib/ws-client'
-import { renderBoard } from './panels/kanban'
+import type { Issue } from '@dashboard/frontend/lib/types'
+import * as api from '@dashboard/frontend/lib/api-client'
+import { SSEClient } from '@dashboard/frontend/lib/sse-client'
+import { WSClient } from '@dashboard/frontend/lib/ws-client'
+import { renderBoard } from '@dashboard/frontend/panels/kanban'
 import {
   mountStatus,
   updateStatus,
   updateSummary,
   setActiveCommand,
-} from './panels/status'
+} from '@dashboard/frontend/panels/status'
 import {
   mountActivityLog,
   appendActivity,
@@ -20,14 +20,18 @@ import {
   setTermInput,
   openActivityPanel,
   closeActivityPanel,
-} from './panels/activity-log'
-import { initEditor, openIssue, closeSidebar } from './panels/editor'
-import { initConfigPanel } from './panels/config'
-import { openInterview } from './panels/interview-modal'
-import { mountSidebarResizer, mountBottomResizer } from './lib/resizer'
-import { getEl } from './lib/dom'
+} from '@dashboard/frontend/panels/activity-log'
+import { initEditor, openIssue, closeSidebar } from '@dashboard/frontend/panels/editor'
+import { initConfigPanel } from '@dashboard/frontend/panels/config'
+import { openInterview } from '@dashboard/frontend/panels/interview-modal'
+import { mountSidebarResizer, mountBottomResizer } from '@dashboard/frontend/lib/resizer'
+import { getEl } from '@dashboard/frontend/lib/dom'
+import type { ActivityEntry } from '@dashboard/frontend/lib/types'
 
 // ── State ────────────────────────────────────────────────────────────────────
+// issues: current fetched issue list; selectedId: open editor card;
+// runningId: actively running barf command (or '__auto__'); pauseRefresh:
+// suppresses poll while a command SSE stream is active; models: config map.
 let issues: Issue[] = []
 let selectedId: string | null = null
 let runningId: string | null = null
@@ -36,6 +40,8 @@ let models: Record<string, string> | null = null
 
 const sseClient = new SSEClient()
 const wsClient = new WSClient()
+/** Per-command JSONL log SSE, separate from the command SSE. Closed by {@link stopActive}. */
+const logSSE = new SSEClient()
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
@@ -106,7 +112,7 @@ async function fetchIssues(): Promise<void> {
       }
     }
   } catch (e) {
-    console.error('fetch issues:', e)
+    termLog('error', `fetch issues: ${e instanceof Error ? e.message : String(e)}`)
   }
 }
 
@@ -118,8 +124,11 @@ function refreshBoard(): void {
   })
 }
 
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+
 function scheduleRefresh(): void {
-  setInterval(() => {
+  if (refreshInterval !== null) clearInterval(refreshInterval)
+  refreshInterval = setInterval(() => {
     if (!pauseRefresh) fetchIssues()
   }, 5000)
 }
@@ -173,7 +182,9 @@ function refreshSidebar(): void {
 }
 
 function stopAndReset(): void {
-  api.stopActive()
+  api.stopActive().catch((e: unknown) => {
+    termLog('error', `Stop request failed: ${e instanceof Error ? e.message : String(e)}`)
+  })
   stopActive()
   termLog('info', 'Stopped.')
   runningId = null
@@ -186,6 +197,7 @@ function stopAndReset(): void {
 function stopActive(): void {
   sseClient.close()
   wsClient.close()
+  logSSE.close()
   setTermInput(false)
   setActiveCommand(null)
 }
@@ -209,12 +221,16 @@ function applyLiveStats(stats: {
   totalInputTokens: number
   totalOutputTokens: number
   contextSize: number
+  contextUsagePercent?: number
 }): void {
   if (!runningId) return
   const issue = issues.find((i) => i.id === runningId)
   if (issue) {
     issue.total_input_tokens = stats.totalInputTokens
     issue.total_output_tokens = stats.totalOutputTokens
+    if (stats.contextUsagePercent != null) {
+      issue.context_usage_percent = stats.contextUsagePercent
+    }
   }
   updateSummary(issues)
   if (selectedId === runningId && issue) {
@@ -307,15 +323,25 @@ function runCommand(id: string, cmd: string): void {
   setActiveCommand(`${cmd} #${id}`)
 
   // Also start JSONL log tailing if available
-  const logSSE = new SSEClient()
   logSSE.connect(`/api/issues/${id}/logs`, (data) => {
-    const entry = data as import('./lib/types').ActivityEntry
+    // Cast is safe: the /logs SSE endpoint always emits ActivityEntry-shaped JSONL
+    const entry = data as unknown as ActivityEntry
     const issue = issues.find((i) => i.id === id)
     appendActivity({
       ...entry,
       issueId: entry.issueId ?? id,
       issueName: entry.issueName ?? issue?.title,
     })
+    // Keep status bar IN/OUT live from token_update entries (polled every 500ms
+    // from the JSONL stream log — more reliable than the __BARF_STATS__ stdout protocol)
+    if (entry.kind === 'token_update' && issue) {
+      issue.total_input_tokens += Number(entry.data.input_tokens ?? 0)
+      issue.total_output_tokens += Number(entry.data.output_tokens ?? 0)
+      updateSummary(issues)
+      if (selectedId === id) {
+        updateStatus(issue, models ?? undefined)
+      }
+    }
   })
   sseClient.connect(
     `/api/issues/${id}/run/${cmd}`,
@@ -362,7 +388,9 @@ function resetAfterAuto(): void {
 }
 
 function stopAutoRun(): void {
-  api.stopActive()
+  api.stopActive().catch((e: unknown) => {
+    termLog('error', `Stop request failed: ${e instanceof Error ? e.message : String(e)}`)
+  })
   sseClient.close()
   termLog('info', 'Stopped.')
   resetAfterAuto()
@@ -446,7 +474,7 @@ async function submitNewIssue(): Promise<void> {
     document.getElementById('modal-ov')?.classList.remove('open')
     await fetchIssues()
   } catch (e) {
-    alert(`Create failed: ${e instanceof Error ? e.message : String(e)}`)
+    termLog('error', `Create failed: ${e instanceof Error ? e.message : String(e)}`)
   }
 }
 

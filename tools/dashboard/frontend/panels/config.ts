@@ -1,8 +1,9 @@
 /**
  * Config panel — form-based .barfrc editor rendered in a modal overlay.
  */
-import * as api from '../lib/api-client'
-import { getEl } from '../lib/dom'
+import * as api from '@dashboard/frontend/lib/api-client'
+import { getEl } from '@dashboard/frontend/lib/dom'
+import { termLog } from '@dashboard/frontend/panels/activity-log'
 
 interface FieldDef {
   key: string
@@ -264,6 +265,11 @@ function collectForm(): Record<string, unknown> {
   return result
 }
 
+/**
+ * Wires up the config panel overlay, populating the form from the current `.barfrc`
+ * on open and persisting changes via {@link api.saveConfig} on save.
+ * Must be called once at application startup.
+ */
 export function initConfigPanel(): void {
   const overlay = getEl('config-ov')
   const body = getEl('config-body')
@@ -279,7 +285,7 @@ export function initConfigPanel(): void {
       renderForm(body, configData)
       overlay.classList.add('open')
     } catch (e) {
-      console.error('Failed to load config:', e)
+      termLog('error', `Failed to load config: ${e instanceof Error ? e.message : String(e)}`)
     }
   })
 
