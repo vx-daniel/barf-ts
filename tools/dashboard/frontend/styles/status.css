@@ -1,0 +1,116 @@
+/* ── Persistent Status Bar (between header and board) ──────────── */
+#statusbar {
+  grid-area: statusbar;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Always visible — never hidden now */
+
+/* Active command indicator — left side */
+#sb-command {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  background: rgba(249, 115, 22, .1);
+  border: 1px solid rgba(249, 115, 22, .3);
+  border-radius: var(--radius);
+}
+
+#sb-command.visible { display: flex; }
+
+#sb-command .spinner {
+  width: 10px; height: 10px;
+  border: 2px solid var(--border);
+  border-top-color: #f97316;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#sb-cmd-text { color: #f97316; font-weight: 600; }
+#sb-cmd-timer { color: var(--text-muted); }
+
+/* Selected issue info — right side of command or standalone */
+#sb-issue {
+  display: none;
+  align-items: center;
+  gap: 12px;
+}
+
+#sb-issue.visible { display: flex; }
+
+#sb-issue-label {
+  color: var(--text-muted);
+}
+
+#sb-issue-id {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#sb-issue-title {
+  color: var(--text);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Stats row */
+.sb-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.sb-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sb-stat-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.sb-stat-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sb-stat-value.healthy { color: #22c55e; }
+.sb-stat-value.warning { color: #f59e0b; }
+.sb-stat-value.danger { color: #ef4444; }
+
+/* Summary section — issue count chips by state */
+.sb-summary {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.sb-summary.visible { display: flex; }
+
+.sb-state-chip {
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}

@@ -1,0 +1,216 @@
+/**
+ * REST API routes — CRUD issues, transitions, config.
+ */
+import { writeFileSync, readFileSync } from 'fs'
+import { join } from 'path'
+import { IssueStateSchema } from '../../../src/types'
+import { VALID_TRANSITIONS, parseIssue, serializeIssue } from '../../../src/core/issue'
+import type { IssueService } from '../services/issue-service'
+
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function jsonError(message: string, status = 400): Response {
+  return json({ error: message }, status)
+}
+
+export { json, jsonError }
+
+export async function handleListIssues(svc: IssueService): Promise<Response> {
+  const result = await svc.provider.listIssues()
+  if (result.isErr()) return jsonError(result.error.message, 500)
+  return json(result.value)
+}
+
+export async function handleGetIssue(svc: IssueService, id: string): Promise<Response> {
+  const result = await svc.provider.fetchIssue(id)
+  if (result.isErr()) return jsonError(result.error.message, 404)
+  return json(result.value)
+}
+
+export async function handleCreateIssue(svc: IssueService, req: Request): Promise<Response> {
+  let body: { title?: string; body?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+  if (!body.title?.trim()) return jsonError('title is required')
+  const result = await svc.provider.createIssue({
+    title: body.title.trim(),
+    body: body.body,
+  })
+  if (result.isErr()) return jsonError(result.error.message, 500)
+  return json(result.value, 201)
+}
+
+export async function handleUpdateIssue(
+  svc: IssueService,
+  id: string,
+  req: Request,
+): Promise<Response> {
+  let body: { title?: string; body?: string; state?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+  const fields: Record<string, unknown> = {}
+  if (body.title !== undefined) fields.title = body.title
+  if (body.body !== undefined) fields.body = body.body
+  const result = await svc.provider.writeIssue(id, fields)
+  if (result.isErr()) return jsonError(result.error.message, 500)
+  return json(result.value)
+}
+
+export async function handleDeleteIssue(svc: IssueService, id: string): Promise<Response> {
+  const result = await svc.provider.deleteIssue(id)
+  if (result.isErr()) return jsonError(result.error.message, 500)
+  return json({ ok: true })
+}
+
+export async function handleTransition(
+  svc: IssueService,
+  id: string,
+  req: Request,
+): Promise<Response> {
+  let body: { to?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+  const parsed = IssueStateSchema.safeParse(body.to)
+  if (!parsed.success) return jsonError('Invalid state: ' + body.to)
+  const result = await svc.provider.transition(id, parsed.data)
+  if (result.isErr()) return jsonError(result.error.message, 400)
+  return json(result.value)
+}
+
+export function handleGetConfig(svc: IssueService): Response {
+  const c = svc.config
+  return json({
+    projectCwd: svc.projectCwd,
+    configPath: svc.configPath,
+    ...c,
+    // Mask API keys — send a placeholder if set, empty if not
+    openaiApiKey: c.openaiApiKey ? '••••••••' : '',
+    geminiApiKey: c.geminiApiKey ? '••••••••' : '',
+    anthropicApiKey: c.anthropicApiKey ? '••••••••' : '',
+  })
+}
+
+export function getValidTransitions(): Record<string, string[]> {
+  return VALID_TRANSITIONS
+}
+
+/** Reverse map: camelCase config key → SCREAMING_SNAKE .barfrc key */
+const REVERSE_KEY_MAP: Record<string, string> = {
+  issuesDir: 'ISSUES_DIR',
+  planDir: 'PLAN_DIR',
+  contextUsagePercent: 'CONTEXT_USAGE_PERCENT',
+  maxAutoSplits: 'MAX_AUTO_SPLITS',
+  maxIterations: 'MAX_ITERATIONS',
+  maxVerifyRetries: 'MAX_VERIFY_RETRIES',
+  claudeTimeout: 'CLAUDE_TIMEOUT',
+  testCommand: 'TEST_COMMAND',
+  fixCommands: 'FIX_COMMANDS',
+  auditModel: 'AUDIT_MODEL',
+  triageModel: 'TRIAGE_MODEL',
+  planModel: 'PLAN_MODEL',
+  buildModel: 'BUILD_MODEL',
+  splitModel: 'SPLIT_MODEL',
+  openaiApiKey: 'OPENAI_API_KEY',
+  auditProvider: 'AUDIT_PROVIDER',
+  geminiApiKey: 'GEMINI_API_KEY',
+  geminiModel: 'GEMINI_MODEL',
+  anthropicApiKey: 'ANTHROPIC_API_KEY',
+  claudeAuditModel: 'CLAUDE_AUDIT_MODEL',
+  extendedContextModel: 'EXTENDED_CONTEXT_MODEL',
+  pushStrategy: 'PUSH_STRATEGY',
+  issueProvider: 'ISSUE_PROVIDER',
+  githubRepo: 'GITHUB_REPO',
+  streamLogDir: 'STREAM_LOG_DIR',
+  barfDir: 'BARF_DIR',
+  promptDir: 'PROMPT_DIR',
+  logFile: 'LOG_FILE',
+  logLevel: 'LOG_LEVEL',
+  logPretty: 'LOG_PRETTY',
+}
+
+const MASKED = '••••••••'
+
+export async function handleSaveConfig(
+  svc: IssueService,
+  req: Request,
+): Promise<Response> {
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+
+  const rcPath = svc.configPath ?? join(svc.projectCwd, '.barfrc')
+
+  // Read existing file to preserve comments and unknown keys
+  let existingLines: string[] = []
+  try {
+    existingLines = readFileSync(rcPath, 'utf8').split('\n')
+  } catch {
+    // File doesn't exist yet — start fresh
+  }
+
+  // Build set of keys we'll write
+  const written = new Set<string>()
+  const outputLines: string[] = []
+
+  for (const line of existingLines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) {
+      outputLines.push(line)
+      continue
+    }
+    const eq = trimmed.indexOf('=')
+    if (eq === -1) {
+      outputLines.push(line)
+      continue
+    }
+    const envKey = trimmed.slice(0, eq).trim()
+    // Find camelCase key for this env key
+    const camelKey = Object.entries(REVERSE_KEY_MAP).find(([, v]) => v === envKey)?.[0]
+    if (camelKey && camelKey in body) {
+      const val = body[camelKey]
+      // Skip masked API keys — keep existing value
+      if (typeof val === 'string' && val === MASKED) {
+        outputLines.push(line)
+      } else {
+        const serialized = Array.isArray(val) ? val.join(',') : String(val)
+        outputLines.push(`${envKey}=${serialized}`)
+      }
+      written.add(camelKey)
+    } else {
+      outputLines.push(line)
+    }
+  }
+
+  // Append new keys not in existing file
+  for (const [camelKey, envKey] of Object.entries(REVERSE_KEY_MAP)) {
+    if (written.has(camelKey) || !(camelKey in body)) continue
+    const val = body[camelKey]
+    if (typeof val === 'string' && val === MASKED) continue
+    const serialized = Array.isArray(val) ? val.join(',') : String(val)
+    outputLines.push(`${envKey}=${serialized}`)
+  }
+
+  try {
+    writeFileSync(rcPath, outputLines.join('\n'))
+    return json({ ok: true, path: rcPath })
+  } catch (e) {
+    return jsonError(`Failed to write config: ${e instanceof Error ? e.message : String(e)}`, 500)
+  }
+}
