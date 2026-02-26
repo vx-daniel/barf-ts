@@ -1,10 +1,10 @@
-import { join } from 'path'
-import { mkdirSync, createWriteStream, type WriteStream } from 'fs'
+import { type Query, query } from '@anthropic-ai/claude-agent-sdk'
+import { createWriteStream, mkdirSync, type WriteStream } from 'fs'
 import { ResultAsync } from 'neverthrow'
-import { query, type Query } from '@anthropic-ai/claude-agent-sdk'
+import { join } from 'path'
+import { ContextOverflowError, RateLimitError } from '@/core/context'
 import type { Config, DisplayContext } from '@/types'
 import type { IterationResult } from '@/types/schema/claude-schema'
-import { ContextOverflowError, RateLimitError } from '@/core/context'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 
@@ -92,6 +92,7 @@ export async function consumeSDKQuery(
   displayContext?: DisplayContext,
 ): Promise<IterationResult> {
   let lastTokens = 0
+  let lastOutputTokens = 0
   let lastTool = ''
   const logStream: WriteStream | null = streamLogFile
     ? createWriteStream(streamLogFile, { flags: 'a' })
@@ -132,6 +133,10 @@ export async function consumeSDKQuery(
             (usage.input_tokens ?? 0) +
             (usage.cache_creation_input_tokens ?? 0) +
             (usage.cache_read_input_tokens ?? 0)
+          const outTokens = (usage.output_tokens as number | undefined) ?? 0
+          if (outTokens > lastOutputTokens) {
+            lastOutputTokens = outTokens
+          }
           if (tokens > lastTokens) {
             lastTokens = tokens
             logger.debug({ tokens, threshold }, 'context update')
@@ -165,7 +170,11 @@ export async function consumeSDKQuery(
           stderrWrite(displayContext ? '\r\x1b[K\x1b[1A\r\x1b[K' : '\r\x1b[K')
         }
         if (msg.subtype === 'success') {
-          return { outcome: 'success', tokens: lastTokens }
+          return {
+            outcome: 'success',
+            tokens: lastTokens,
+            outputTokens: lastOutputTokens,
+          }
         }
         // Error subtypes — check errors array for rate limit keywords
         if (
@@ -174,7 +183,11 @@ export async function consumeSDKQuery(
         ) {
           throw new RateLimitError(undefined)
         }
-        return { outcome: 'error', tokens: lastTokens }
+        return {
+          outcome: 'error',
+          tokens: lastTokens,
+          outputTokens: lastOutputTokens,
+        }
       }
     }
 
@@ -184,17 +197,30 @@ export async function consumeSDKQuery(
     }
     if (signal.aborted) {
       logger.warn({ threshold }, 'claude timed out')
-      return { outcome: 'error', tokens: lastTokens }
+      return {
+        outcome: 'error',
+        tokens: lastTokens,
+        outputTokens: lastOutputTokens,
+      }
     }
-    return { outcome: 'success', tokens: lastTokens }
+    return {
+      outcome: 'success',
+      tokens: lastTokens,
+      outputTokens: lastOutputTokens,
+    }
   } catch (e) {
     if (e instanceof ContextOverflowError) {
-      return { outcome: 'overflow', tokens: e.tokens }
+      return {
+        outcome: 'overflow',
+        tokens: e.tokens,
+        outputTokens: lastOutputTokens,
+      }
     }
     if (e instanceof RateLimitError) {
       return {
         outcome: 'rate_limited',
         tokens: lastTokens,
+        outputTokens: lastOutputTokens,
         rateLimitResetsAt: e.resetsAt,
       }
     }

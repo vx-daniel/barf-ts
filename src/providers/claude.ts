@@ -1,19 +1,19 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { type Result, ok, ResultAsync } from 'neverthrow'
+import { ok, type Result, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
-import { createLogger } from '@/utils/logger'
-import { toError } from '@/utils/toError'
-import { inferTier, CLAUDE_TIERS } from '@/providers/model-tiers'
+import { CLAUDE_TIERS, inferTier } from '@/providers/model-tiers'
 import type { Config } from '@/types'
 import {
-  toTokenUsage,
-  type ChatResult,
   type ChatOptions,
+  type ChatResult,
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage,
+  toTokenUsage,
 } from '@/types/schema/provider-schema'
+import { createLogger } from '@/utils/logger'
+import { toError } from '@/utils/toError'
 
 /** Factory that constructs an Anthropic SDK client given an API key. Injectable for tests. */
 export type AnthropicFactory = (apiKey: string) => Anthropic

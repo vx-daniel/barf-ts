@@ -1,6 +1,12 @@
 import { z } from 'zod'
 import { LoopModeSchema } from '@/types/schema/mode-schema'
 
+export type { SessionStats } from '@/types/schema/session-stats-schema'
+export {
+  formatSessionStatsBlock,
+  SessionStatsSchema,
+} from '@/types/schema/session-stats-schema'
+
 // ── Issue ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -68,6 +74,16 @@ export const IssueSchema = z.object({
   is_verify_fix: z.boolean().optional(),
   /** When `true`, `verify_count` exceeded `maxVerifyRetries`; issue is left as COMPLETED without VERIFIED. */
   verify_exhausted: z.boolean().optional(),
+  /** Cumulative input tokens (base + cache) across all runs. */
+  total_input_tokens: z.number().nonnegative().default(0),
+  /** Cumulative output tokens across all runs. */
+  total_output_tokens: z.number().nonnegative().default(0),
+  /** Cumulative wall-clock duration in seconds across all runs. */
+  total_duration_seconds: z.number().nonnegative().default(0),
+  /** Total iterations across all runs. */
+  total_iterations: z.number().int().nonnegative().default(0),
+  /** Number of runs/sessions executed on this issue. */
+  run_count: z.number().int().nonnegative().default(0),
   body: z.string(),
 })
 /**
@@ -136,6 +152,7 @@ export const ConfigSchema = z.object({
   maxIterations: z.number().int().default(0),
   claudeTimeout: z.number().int().default(3600),
   testCommand: z.string().default(''),
+  fixCommands: z.array(z.string()).default([]),
   triageModel: z.string().default('claude-haiku-4-5-20251001'),
   auditModel: z.string().default('gpt-4o'),
   openaiApiKey: z.string().default(''),

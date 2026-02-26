@@ -15,19 +15,23 @@ import {
 import { serializeIssue } from '@/core/issue'
 
 const mockVerifyIssue = () => okAsync(undefined)
+const mockRunPreComplete = () =>
+  ResultAsync.fromSafePromise(Promise.resolve({ passed: true } as const))
 
 // Controllable mock: reassign `mockOutcomes` to control runClaudeIteration per-test
 // Each call pops the first element; once empty, repeats the last.
 let mockOutcomes: Array<{
   outcome: string
   tokens: number
+  outputTokens: number
   rateLimitResetsAt?: number
-}> = [{ outcome: 'success', tokens: 100 }]
+}> = [{ outcome: 'success', tokens: 100, outputTokens: 10 }]
 let mockIterationErr: Error | null = null
 
 function nextOutcome(): {
   outcome: string
   tokens: number
+  outputTokens: number
   rateLimitResetsAt?: number
 } {
   if (mockOutcomes.length > 1) {
@@ -68,11 +72,12 @@ function writeIssueFile(issuesDir: string, issue: Issue): void {
 const deps = {
   runClaudeIteration: mockRunClaudeIteration as never,
   verifyIssue: mockVerifyIssue as never,
+  runPreComplete: mockRunPreComplete as never,
 }
 
 describe('runLoop', () => {
   beforeEach(() => {
-    mockOutcomes = [{ outcome: 'success', tokens: 100 }]
+    mockOutcomes = [{ outcome: 'success', tokens: 100, outputTokens: 10 }]
     mockIterationErr = null
   })
 
@@ -313,7 +318,7 @@ describe('runLoop', () => {
   // ── Outcome: error ─────────────────────────────────────────────────────
 
   it('stops loop on error outcome', async () => {
-    mockOutcomes = [{ outcome: 'error', tokens: 50 }]
+    mockOutcomes = [{ outcome: 'error', tokens: 50, outputTokens: 5 }]
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
@@ -335,7 +340,7 @@ describe('runLoop', () => {
 
   it('returns err on rate_limited outcome', async () => {
     mockOutcomes = [
-      { outcome: 'rate_limited', tokens: 50, rateLimitResetsAt: 1700000000 },
+      { outcome: 'rate_limited', tokens: 50, outputTokens: 5, rateLimitResetsAt: 1700000000 },
     ]
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
@@ -362,8 +367,8 @@ describe('runLoop', () => {
     let transitionTargets: string[] = []
     // First call returns overflow, second returns success (for split iteration)
     mockOutcomes = [
-      { outcome: 'overflow', tokens: 150_000 },
-      { outcome: 'success', tokens: 100 },
+      { outcome: 'overflow', tokens: 150_000, outputTokens: 1000 },
+      { outcome: 'success', tokens: 100, outputTokens: 10 },
     ]
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
@@ -402,7 +407,7 @@ describe('runLoop', () => {
   it('escalates when split count exceeds maxAutoSplits', async () => {
     // overflow → escalate changes model, then continues. Second iteration returns error to stop.
     mockOutcomes = [
-      { outcome: 'overflow', tokens: 150_000 },
+      { outcome: 'overflow', tokens: 150_000, outputTokens: 1000 },
       { outcome: 'error', tokens: 100 },
     ]
     const config = { ...defaultConfig(), maxAutoSplits: 0 }
@@ -422,7 +427,7 @@ describe('runLoop', () => {
   // ── force_split ─────────────────────────────────────────────────────
 
   it('enters split flow immediately on force_split', async () => {
-    mockOutcomes = [{ outcome: 'success', tokens: 100 }]
+    mockOutcomes = [{ outcome: 'success', tokens: 100, outputTokens: 10 }]
     let transitionTargets: string[] = []
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
@@ -463,7 +468,7 @@ describe('runLoop', () => {
   // ── force_split with escalate ─────────────────────────────────────
 
   it('escalates on force_split when split_count >= maxAutoSplits', async () => {
-    mockOutcomes = [{ outcome: 'success', tokens: 100 }]
+    mockOutcomes = [{ outcome: 'success', tokens: 100, outputTokens: 10 }]
     const config = { ...defaultConfig(), maxAutoSplits: 0, maxIterations: 1 }
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
@@ -487,7 +492,7 @@ describe('runLoop', () => {
   // ── Split with children → planSplitChildren ────────────────────────
 
   it('plans split children after split completes', async () => {
-    mockOutcomes = [{ outcome: 'success', tokens: 100 }]
+    mockOutcomes = [{ outcome: 'success', tokens: 100, outputTokens: 10 }]
     let fetchCount = 0
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
@@ -656,5 +661,58 @@ describe('runLoop', () => {
     )
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr().message).toBe('disk error')
+  })
+
+  // ── Pre-complete integration ──────────────────────────────────────
+
+  it('runs pre-complete before COMPLETED transition', async () => {
+    let preCompleteRan = false
+    const customDeps = {
+      ...deps,
+      runPreComplete: () => {
+        preCompleteRan = true
+        return ResultAsync.fromSafePromise(Promise.resolve({ passed: true } as const))
+      },
+    }
+    const provider = makeProvider({
+      lockIssue: () => okAsync(undefined),
+      unlockIssue: () => okAsync(undefined),
+      fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      transition: () => okAsync(makeIssue({ state: 'COMPLETED' })),
+      checkAcceptanceCriteria: () => okAsync(true),
+      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+    })
+
+    await runLoop('001', 'build', defaultConfig(), provider, customDeps)
+    expect(preCompleteRan).toBe(true)
+  })
+
+  it('continues loop when pre-complete test gate fails', async () => {
+    const config = { ...defaultConfig(), maxIterations: 1, testCommand: 'bun test' }
+    const customDeps = {
+      ...deps,
+      runPreComplete: () =>
+        ResultAsync.fromSafePromise(
+          Promise.resolve({
+            passed: false as const,
+            testFailure: { stdout: '', stderr: 'fail', exitCode: 1 },
+          }),
+        ),
+    }
+    let transitionTargets: string[] = []
+    const provider = makeProvider({
+      lockIssue: () => okAsync(undefined),
+      unlockIssue: () => okAsync(undefined),
+      fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      transition: (_id: string, to: string) => {
+        transitionTargets.push(to)
+        return okAsync(makeIssue({ state: to as any }))
+      },
+      checkAcceptanceCriteria: () => okAsync(true),
+      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+    })
+
+    await runLoop('001', 'build', config, provider, customDeps)
+    expect(transitionTargets).not.toContain('COMPLETED')
   })
 })

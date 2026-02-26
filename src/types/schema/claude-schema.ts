@@ -21,14 +21,15 @@ export type IterationOutcome = z.infer<typeof IterationOutcomeSchema>
 /**
  * Result of a single Claude agent iteration, returned by `runClaudeIteration`.
  *
- * `tokens` is always populated. `rateLimitResetsAt` is set only when
- * `outcome === 'rate_limited'`.
+ * `tokens` (input) and `outputTokens` are always populated.
+ * `rateLimitResetsAt` is set only when `outcome === 'rate_limited'`.
  *
  * @category Claude Agent
  */
 export const IterationResultSchema = z.object({
   outcome: IterationOutcomeSchema,
   tokens: z.number(),
+  outputTokens: z.number(),
   rateLimitResetsAt: z.number().optional(),
 })
 /** A validated iteration result. Derived from {@link IterationResultSchema}. */

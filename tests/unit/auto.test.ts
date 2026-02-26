@@ -14,7 +14,7 @@ const mockVerifyIssue = () => okAsync(undefined)
 
 const mockRunClaudeIteration = () =>
   ResultAsync.fromSafePromise(
-    Promise.resolve({ outcome: 'success', tokens: 0 }),
+    Promise.resolve({ outcome: 'success', tokens: 0, outputTokens: 0 }),
   )
 
 const deps = {

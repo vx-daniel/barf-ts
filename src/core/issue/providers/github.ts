@@ -1,8 +1,8 @@
+import { errAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
-import { ResultAsync, errAsync } from 'neverthrow'
 import { IssueProvider } from '@/core/issue/base'
 import type { Issue, IssueState, LockMode } from '@/types'
-import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
+import { type ExecResult, execFileNoThrow } from '@/utils/execFileNoThrow'
 import { toError } from '@/utils/toError'
 
 /**
@@ -22,6 +22,7 @@ const STATE_TO_LABEL: Record<IssueState, string> = {
   COMPLETED: 'barf:completed',
   VERIFIED: 'barf:verified',
 }
+
 const LABEL_TO_STATE: Record<string, IssueState> = Object.fromEntries(
   (Object.entries(STATE_TO_LABEL) as [IssueState, string][]).map(([s, l]) => [
     l,
@@ -44,12 +45,14 @@ type GHIssue = z.infer<typeof GHIssueSchema>
 
 function ghToIssue(gh: GHIssue): Issue {
   const stateLabel = gh.labels.find((l) => LABEL_TO_STATE[l.name])
-  const state: IssueState =
-    gh.state === 'closed'
-      ? 'COMPLETED'
-      : stateLabel
-        ? LABEL_TO_STATE[stateLabel.name]
-        : 'NEW'
+  let state: IssueState
+  if (gh.state === 'closed') {
+    state = 'COMPLETED'
+  } else if (stateLabel) {
+    state = LABEL_TO_STATE[stateLabel.name]
+  } else {
+    state = 'NEW'
+  }
   return {
     id: String(gh.number),
     title: gh.title,

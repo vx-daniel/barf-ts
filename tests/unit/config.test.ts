@@ -162,6 +162,21 @@ describe('parseBarfrc', () => {
     }
   })
 
+  it('parses FIX_COMMANDS from .barfrc', () => {
+    const result = parseBarfrc('FIX_COMMANDS=biome check --apply,bun run lint --fix')
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().fixCommands).toEqual([
+      'biome check --apply',
+      'bun run lint --fix',
+    ])
+  })
+
+  it('defaults fixCommands to empty array', () => {
+    const result = parseBarfrc('')
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().fixCommands).toEqual([])
+  })
+
   it('defaults logPretty to false', () => {
     const result = parseBarfrc('')
     expect(result.isOk()).toBe(true)

@@ -1,9 +1,9 @@
-import { z } from 'zod'
-import { type Result, ok, err } from 'neverthrow'
-import { ConfigSchema, type Config } from '@/types/index'
 import { readFileSync } from 'fs'
-import { join, resolve } from 'path'
+import { err, ok, type Result } from 'neverthrow'
 import { homedir } from 'os'
+import { join, resolve } from 'path'
+import { z } from 'zod'
+import { type Config, ConfigSchema } from '@/types/index'
 
 const KEY_MAP: Record<string, keyof Config> = {
   ISSUES_DIR: 'issuesDir',
@@ -13,6 +13,7 @@ const KEY_MAP: Record<string, keyof Config> = {
   MAX_ITERATIONS: 'maxIterations',
   CLAUDE_TIMEOUT: 'claudeTimeout',
   TEST_COMMAND: 'testCommand',
+  FIX_COMMANDS: 'fixCommands',
   AUDIT_MODEL: 'auditModel',
   TRIAGE_MODEL: 'triageModel',
   PLAN_MODEL: 'planModel',
@@ -43,6 +44,18 @@ const RawConfigSchema = ConfigSchema.extend({
   maxIterations: z.coerce.number().int().default(0),
   claudeTimeout: z.coerce.number().int().default(3600),
   streamLogDir: z.coerce.string().default(''),
+  fixCommands: z
+    .preprocess(
+      (v) =>
+        typeof v === 'string'
+          ? v
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : (v ?? []),
+      z.array(z.string()),
+    )
+    .default([]),
   logPretty: z
     .preprocess((v) => v === '1' || v === 'true' || v === true, z.boolean())
     .default(false),
@@ -103,10 +116,7 @@ function readCodexToken(): string {
     const tokens = auth.tokens
     if (typeof tokens === 'object' && tokens !== null) {
       const t = tokens as Record<string, unknown>
-      if (
-        typeof t.access_token === 'string' &&
-        t.access_token.length > 0
-      ) {
+      if (typeof t.access_token === 'string' && t.access_token.length > 0) {
         return t.access_token
       }
     }

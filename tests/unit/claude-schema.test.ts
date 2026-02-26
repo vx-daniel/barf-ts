@@ -24,10 +24,11 @@ describe('IterationResultSchema', () => {
     const result = IterationResultSchema.safeParse({
       outcome: 'success',
       tokens: 1500,
+      outputTokens: 200,
     })
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data).toEqual({ outcome: 'success', tokens: 1500 })
+      expect(result.data).toEqual({ outcome: 'success', tokens: 1500, outputTokens: 200 })
     }
   })
 
@@ -35,6 +36,7 @@ describe('IterationResultSchema', () => {
     const input = {
       outcome: 'rate_limited',
       tokens: 800,
+      outputTokens: 100,
       rateLimitResetsAt: 1700000000,
     }
     const result = IterationResultSchema.safeParse(input)

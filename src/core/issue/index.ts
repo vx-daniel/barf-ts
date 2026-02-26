@@ -90,6 +90,15 @@ export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
       if (!Number.isNaN(parsed)) {
         fields[key] = parsed
       }
+    } else if (
+      key === 'total_input_tokens' ||
+      key === 'total_output_tokens' ||
+      key === 'total_duration_seconds' ||
+      key === 'total_iterations' ||
+      key === 'run_count'
+    ) {
+      const parsed = Number(val)
+      fields[key] = Number.isNaN(parsed) ? 0 : parsed
     } else {
       fields[key] = val
     }
@@ -128,6 +137,11 @@ export function serializeIssue(issue: Issue): string {
   if (issue.verify_exhausted !== undefined) {
     fm.push(`verify_exhausted=${issue.verify_exhausted}`)
   }
+  fm.push(`total_input_tokens=${issue.total_input_tokens}`)
+  fm.push(`total_output_tokens=${issue.total_output_tokens}`)
+  fm.push(`total_duration_seconds=${issue.total_duration_seconds}`)
+  fm.push(`total_iterations=${issue.total_iterations}`)
+  fm.push(`run_count=${issue.run_count}`)
   return `---\n${fm.join('\n')}\n---\n\n${issue.body}\n`
 }
 

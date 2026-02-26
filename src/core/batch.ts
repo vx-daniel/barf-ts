@@ -1,20 +1,21 @@
-import { ResultAsync } from 'neverthrow'
 import { existsSync } from 'fs'
+import { ResultAsync } from 'neverthrow'
 import { join } from 'path'
-import type { Config, DisplayContext } from '@/types/index'
-import type { IssueProvider } from '@/core/issue/base'
-import type { LoopMode } from '@/types/schema/mode-schema'
-import type { OverflowDecision } from '@/types/schema/batch-schema'
 import { runClaudeIteration } from '@/core/claude'
-import { verifyIssue } from '@/core/verification'
 import { injectTemplateVars } from '@/core/context'
+import type { IssueProvider } from '@/core/issue/base'
+import { runPreComplete, toFixSteps } from '@/core/pre-complete'
 import { resolvePromptTemplate } from '@/core/prompts'
-import { execFileNoThrow } from '@/utils/execFileNoThrow'
+import { verifyIssue } from '@/core/verification'
+import type { Config, DisplayContext, SessionStats } from '@/types/index'
+import { formatSessionStatsBlock } from '@/types/index'
+import type { OverflowDecision } from '@/types/schema/batch-schema'
+import type { LoopMode } from '@/types/schema/mode-schema'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 
-export type { LoopMode } from '@/types/schema/mode-schema'
 export type { OverflowDecision } from '@/types/schema/batch-schema'
+export type { LoopMode } from '@/types/schema/mode-schema'
 
 /**
  * Injectable deps for {@link runLoop}. Pass mocks in tests.
@@ -23,6 +24,7 @@ export type { OverflowDecision } from '@/types/schema/batch-schema'
 export type RunLoopDeps = {
   runClaudeIteration?: typeof runClaudeIteration
   verifyIssue?: typeof verifyIssue
+  runPreComplete?: typeof runPreComplete
 }
 
 const logger = createLogger('batch')
@@ -99,6 +101,53 @@ async function planSplitChildren(
   }
 }
 
+/**
+ * Persists session stats to the issue: updates cumulative frontmatter totals
+ * and appends a per-run stats block to the body.
+ * Failures are logged but do not propagate — stats are best-effort.
+ */
+async function persistSessionStats(
+  issueId: string,
+  stats: SessionStats,
+  provider: IssueProvider,
+): Promise<void> {
+  try {
+    const current = await provider.fetchIssue(issueId)
+    if (current.isErr()) {
+      logger.warn(
+        { issueId, err: current.error.message },
+        'could not fetch issue for stats',
+      )
+      return
+    }
+    const issue = current.value
+    const updatedBody = `${issue.body}\n\n${formatSessionStatsBlock(stats)}`
+    await provider.writeIssue(issueId, {
+      total_input_tokens: issue.total_input_tokens + stats.inputTokens,
+      total_output_tokens: issue.total_output_tokens + stats.outputTokens,
+      total_duration_seconds:
+        issue.total_duration_seconds + stats.durationSeconds,
+      total_iterations: issue.total_iterations + stats.iterations,
+      run_count: issue.run_count + 1,
+      body: updatedBody,
+    })
+    logger.info(
+      {
+        issueId,
+        durationSeconds: stats.durationSeconds,
+        inputTokens: stats.inputTokens,
+        outputTokens: stats.outputTokens,
+      },
+      'session stats persisted',
+    )
+  } catch (e) {
+    logger.warn(
+      { issueId, err: toError(e).message },
+      'failed to persist session stats',
+    )
+  }
+}
+
 async function runLoopImpl(
   issueId: string,
   mode: LoopMode,
@@ -108,14 +157,20 @@ async function runLoopImpl(
 ): Promise<void> {
   const _runClaudeIteration = deps.runClaudeIteration ?? runClaudeIteration
   const _verifyIssue = deps.verifyIssue ?? verifyIssue
+  const _runPreComplete = deps.runPreComplete ?? runPreComplete
   const lockResult = await provider.lockIssue(issueId, { mode })
   if (lockResult.isErr()) {
     throw lockResult.error
   }
 
+  const sessionStartTime = Date.now()
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
+  let lastContextSize = 0
+  let model = mode === 'plan' ? config.planModel : config.buildModel
+  let iteration = 0
+
   try {
-    let model = mode === 'plan' ? config.planModel : config.buildModel
-    let iteration = 0
     let splitPending = false
 
     // Build mode: transition to IN_PROGRESS on first iteration
@@ -208,9 +263,15 @@ async function runLoopImpl(
       if (iterResult.isErr()) {
         throw iterResult.error
       }
-      const { outcome, tokens } = iterResult.value
+      const { outcome, tokens, outputTokens } = iterResult.value
+      totalInputTokens += tokens
+      totalOutputTokens += outputTokens
+      lastContextSize = tokens
 
-      logger.info({ issueId, iteration, outcome, tokens }, 'iteration complete')
+      logger.info(
+        { issueId, iteration, outcome, tokens, outputTokens },
+        'iteration complete',
+      )
 
       // ── Split iteration completed ──────────────────────────────────────
       if (splitPending) {
@@ -221,6 +282,16 @@ async function runLoopImpl(
         }
         const fresh = await provider.fetchIssue(issueId)
         if (fresh.isOk() && fresh.value.children.length > 0) {
+          const stats: SessionStats = {
+            startedAt: new Date(sessionStartTime).toISOString(),
+            durationSeconds: Math.floor((Date.now() - sessionStartTime) / 1000),
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
+            finalContextSize: lastContextSize,
+            iterations: iteration + 1,
+            model,
+          }
+          await persistSessionStats(issueId, stats, provider)
           await provider.unlockIssue(issueId)
           await planSplitChildren(fresh.value.children, config, provider, deps)
           return
@@ -281,24 +352,20 @@ async function runLoopImpl(
         break // plan mode is always single iteration
       }
 
-      // Build mode: check acceptance criteria + optional test command
+      // Build mode: check acceptance criteria + pre-complete gate
       if (mode === 'build') {
         const criteriaResult = await provider.checkAcceptanceCriteria(issueId)
         const criteriaMet = criteriaResult.isOk() && criteriaResult.value
 
         if (criteriaMet) {
-          let testsPassed = true
-          if (config.testCommand) {
-            const testResult = await execFileNoThrow('sh', [
-              '-c',
-              config.testCommand,
-            ])
-            testsPassed = testResult.status === 0
-            if (!testsPassed) {
-              logger.warn({ issueId, iteration }, 'tests failed — continuing')
-            }
-          }
-          if (testsPassed) {
+          const fixSteps = toFixSteps(config.fixCommands)
+          const preResult = await _runPreComplete(
+            fixSteps,
+            config.testCommand || undefined,
+          )
+          const preOutcome = preResult._unsafeUnwrap()
+
+          if (preOutcome.passed) {
             const fresh = await provider.fetchIssue(issueId)
             if (fresh.isOk() && fresh.value.state !== 'COMPLETED') {
               await provider.transition(issueId, 'COMPLETED')
@@ -313,12 +380,28 @@ async function runLoopImpl(
             }
             break
           }
+          logger.warn(
+            { issueId, iteration },
+            'pre-complete failed — continuing',
+          )
         }
       }
 
       iteration++
     }
   } finally {
+    const stats: SessionStats = {
+      startedAt: new Date(sessionStartTime).toISOString(),
+      durationSeconds: Math.floor((Date.now() - sessionStartTime) / 1000),
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
+      finalContextSize: lastContextSize,
+      iterations: iteration,
+      model,
+    }
+    if (stats.iterations > 0) {
+      await persistSessionStats(issueId, stats, provider)
+    }
     await provider.unlockIssue(issueId)
   }
 }
