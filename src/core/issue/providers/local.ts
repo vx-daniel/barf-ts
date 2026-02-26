@@ -160,6 +160,11 @@ export class LocalIssueProvider extends IssueProvider {
         force_split: false,
         verify_count: 0,
         body: input.body ?? '',
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        total_duration_seconds: 0,
+        total_iterations: 0,
+        run_count: 0,
       }
       return syncToResultAsync(() => {
         writeFileSync(join(this.issuesDir, `${id}.md`), serializeIssue(issue))

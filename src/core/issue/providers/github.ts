@@ -63,6 +63,11 @@ function ghToIssue(gh: GHIssue): Issue {
     force_split: false,
     verify_count: 0,
     body: gh.body,
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    total_duration_seconds: 0,
+    total_iterations: 0,
+    run_count: 0,
   }
 }
 
