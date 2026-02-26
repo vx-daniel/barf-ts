@@ -10,15 +10,92 @@
  */
 import { existsSync } from 'fs'
 import { join } from 'path'
+import { z } from 'zod'
 import { ResultAsync } from 'neverthrow'
 import type { Config, DisplayContext } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { injectTemplateVars } from '@/core/context'
 import { resolvePromptTemplate } from '@/core/prompts'
+import { createSessionStats, persistSessionStats } from '@/core/batch/stats'
 import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 import { formatQuestionsSection, parseTriageResponse } from './parse'
+
+/** Usage token counts extracted from the Claude CLI JSON envelope. */
+const UsageSchema = z.object({
+  input_tokens: z.number().default(0),
+  output_tokens: z.number().default(0),
+  cache_creation_input_tokens: z.number().default(0),
+  cache_read_input_tokens: z.number().default(0),
+})
+
+/**
+ * Old single-object format from `--output-format json` (kept for test compatibility).
+ * Shape: `{ result: string, usage: {...} }`
+ */
+const ClaudeJsonOutputSchema = z.object({
+  result: z.string(),
+  usage: UsageSchema,
+})
+
+/** Array-format item with `type: "result"` — carries the final text result. */
+const ClaudeResultItemSchema = z.object({
+  type: z.literal('result'),
+  result: z.string(),
+})
+
+/** Array-format item with `type: "assistant"` — carries token usage. */
+const ClaudeAssistantItemSchema = z.object({
+  type: z.literal('assistant'),
+  message: z.object({ usage: UsageSchema }),
+})
+
+/** Normalized envelope shape used internally after parsing either format. */
+type ClaudeEnvelope = z.infer<typeof ClaudeJsonOutputSchema>
+
+/**
+ * Normalizes the raw Claude CLI JSON output to a consistent `{ result, usage }` shape.
+ *
+ * The Claude CLI `--output-format json` has two observed formats:
+ * - **Array** (current CLI): streaming event objects; `result` comes from the
+ *   `type: "result"` element and `usage` from the `type: "assistant"` element.
+ * - **Object** (older CLI / tests): direct `{ result, usage }` envelope.
+ *
+ * @param raw - Parsed JSON value from Claude CLI stdout.
+ * @returns `ok(envelope)` with normalized data, or `err(Error)` if neither format matches.
+ */
+function parseClaudeEnvelope(raw: unknown): ClaudeEnvelope {
+  if (Array.isArray(raw)) {
+    const resultItem = raw.find(
+      (item) => ClaudeResultItemSchema.safeParse(item).success,
+    )
+    const assistantItem = raw.find(
+      (item) => ClaudeAssistantItemSchema.safeParse(item).success,
+    )
+
+    if (!resultItem) {
+      throw new Error(
+        `Claude JSON array missing a type:"result" element. Got types: ${raw.map((i: { type?: unknown }) => i?.type).join(', ')}`,
+      )
+    }
+
+    const result = ClaudeResultItemSchema.parse(resultItem).result
+    const usage = assistantItem
+      ? ClaudeAssistantItemSchema.parse(assistantItem).message.usage
+      : { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
+
+    return { result, usage }
+  }
+
+  const parsed = ClaudeJsonOutputSchema.safeParse(raw)
+  if (!parsed.success) {
+    throw new Error(
+      `Unexpected Claude JSON envelope: ${JSON.stringify(parsed.error.issues)}`,
+    )
+  }
+  return parsed.data
+}
 
 /**
  * Injectable subprocess function — mirrors {@link execFileNoThrow}'s signature.
@@ -109,6 +186,7 @@ async function triageIssueImpl(
     )
   }
 
+  const sessionStartTime = Date.now()
   let execResult: ExecResult
   try {
     execResult = await execFn('claude', [
@@ -117,7 +195,7 @@ async function triageIssueImpl(
       '--model',
       config.triageModel,
       '--output-format',
-      'text',
+      'json',
     ])
   } finally {
     if (displayContext && process.stderr.isTTY) {
@@ -131,7 +209,14 @@ async function triageIssueImpl(
     )
   }
 
-  const parsed = parseTriageResponse(execResult.stdout)
+  const { result: resultText, usage } = parseClaudeEnvelope(
+    JSON.parse(execResult.stdout),
+  )
+  const inputTokens =
+    usage.input_tokens +
+    usage.cache_creation_input_tokens +
+    usage.cache_read_input_tokens
+  const parsed = parseTriageResponse(resultText)
 
   if (!parsed.needs_interview) {
     const writeResult = await provider.writeIssue(issueId, {
@@ -142,21 +227,29 @@ async function triageIssueImpl(
       throw writeResult.error
     }
     logger.info({ issueId }, 'triage: issue is well-specified → GROOMED')
-    return
+  } else {
+    // Append Interview Questions section to issue body — stays in NEW
+    const questionsSection = formatQuestionsSection(parsed)
+    const writeResult = await provider.writeIssue(issueId, {
+      needs_interview: true,
+      body: issue.body + questionsSection,
+    })
+    if (writeResult.isErr()) {
+      throw writeResult.error
+    }
+    logger.info(
+      { issueId, questions: parsed.questions.length },
+      'triage: issue needs interview',
+    )
   }
 
-  // Append Interview Questions section to issue body — stays in NEW
-  const questionsSection = formatQuestionsSection(parsed)
-  const writeResult = await provider.writeIssue(issueId, {
-    needs_interview: true,
-    body: issue.body + questionsSection,
-  })
-  if (writeResult.isErr()) {
-    throw writeResult.error
-  }
-
-  logger.info(
-    { issueId, questions: parsed.questions.length },
-    'triage: issue needs interview',
+  const stats = createSessionStats(
+    sessionStartTime,
+    inputTokens,
+    usage.output_tokens,
+    inputTokens,
+    1,
+    config.triageModel,
   )
+  await persistSessionStats(issueId, stats, provider)
 }

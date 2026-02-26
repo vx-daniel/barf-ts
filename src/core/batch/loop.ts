@@ -79,6 +79,7 @@ async function runLoopImpl(
     splitPending: false,
     model: mode === 'plan' ? config.planModel : config.buildModel,
     iteration: 0,
+    iterationsRan: 0,
     totalInputTokens: 0,
     totalOutputTokens: 0,
     lastContextSize: 0,
@@ -135,6 +136,7 @@ async function runLoopImpl(
       }
 
       const currentMode: LoopMode = state.splitPending ? 'split' : mode
+      state.iterationsRan++
       logger.info(
         { issueId, mode: currentMode, model: state.model, iteration: state.iteration },
         'starting iteration',
@@ -182,8 +184,25 @@ async function runLoopImpl(
       state.lastContextSize = tokens
 
       logger.info(
-        { issueId, iteration: state.iteration, outcome, tokens, outputTokens },
+        {
+          issueId,
+          iteration: state.iteration,
+          outcome,
+          tokens,
+          outputTokens,
+          totalInputTokens: state.totalInputTokens,
+          totalOutputTokens: state.totalOutputTokens,
+        },
         'iteration complete',
+      )
+
+      process.stdout.write(
+        `__BARF_STATS__:${JSON.stringify({
+          totalInputTokens: state.totalInputTokens,
+          totalOutputTokens: state.totalOutputTokens,
+          contextSize: state.lastContextSize,
+          iteration: state.iteration,
+        })}\n`,
       )
 
       // ── Dispatch outcome ─────────────────────────────────────────────
@@ -247,10 +266,10 @@ async function runLoopImpl(
       state.totalInputTokens,
       state.totalOutputTokens,
       state.lastContextSize,
-      state.iteration,
+      state.iterationsRan,
       state.model,
     )
-    if (stats.iterations > 0) {
+    if (state.iterationsRan > 0) {
       await persistSessionStats(issueId, stats, provider)
     }
     await provider.unlockIssue(issueId)

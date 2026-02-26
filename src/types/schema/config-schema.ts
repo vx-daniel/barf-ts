@@ -19,7 +19,7 @@ import { z } from 'zod'
  * these defaults when the file is absent or a key is missing.
  *
  * Configuration groups:
- * - **Paths**: `issuesDir`, `planDir`, `barfDir`, `promptDir`, `streamLogDir`
+ * - **Paths**: `issuesDir`, `planDir`, `barfDir`, `promptDir`
  * - **Orchestration**: `contextUsagePercent`, `maxAutoSplits`, `maxIterations`, `claudeTimeout`, `maxVerifyRetries`
  * - **Models**: `planModel`, `buildModel`, `splitModel`, `extendedContextModel`, `triageModel`
  * - **Audit**: `auditProvider`, `auditModel`, `openaiApiKey`, `geminiApiKey`, `anthropicApiKey`
@@ -84,8 +84,8 @@ export const ConfigSchema = z.object({
   issueProvider: z.enum(['local', 'github']).default('local'),
   /** GitHub repository slug (owner/repo) for the GitHub issue provider. */
   githubRepo: z.string().default(''),
-  /** Directory for raw JSONL stream logs. Empty string disables logging. */
-  streamLogDir: z.string().default(''),
+  /** Set to true to disable per-issue raw Claude stream logs written to `.barf/streams/{issueId}.jsonl`. */
+  disableLogStream: z.coerce.boolean().default(false),
   /** Directory for barf internal state (lock files, etc.). */
   barfDir: z.string().default('.barf'),
   /** Directory for custom prompt templates. Empty string uses built-in prompts. */

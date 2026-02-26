@@ -161,15 +161,14 @@ export function handleStopActive(): Response {
  * Polls log file every 500ms, sends parsed activity entries.
  */
 export function handleLogTail(svc: IssueService, issueId: string): Response {
-  const streamLogDir = svc.config.streamLogDir
-  if (!streamLogDir) {
-    return new Response(JSON.stringify({ error: 'STREAM_LOG_DIR not configured' }), {
+  if (svc.config.disableLogStream) {
+    return new Response(JSON.stringify({ error: 'Stream logging is disabled (DISABLE_LOG_STREAM=true)' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     })
   }
 
-  const logPath = join(svc.projectCwd, streamLogDir, `${issueId}.jsonl`)
+  const logPath = join(svc.projectCwd, '.barf/streams', `${issueId}.jsonl`)
 
   const stream = new ReadableStream({
     start(controller) {
@@ -210,15 +209,14 @@ export function handleLogTail(svc: IssueService, issueId: string): Response {
  * Returns full JSONL log history as JSON array of ActivityEntries.
  */
 export function handleLogHistory(svc: IssueService, issueId: string): Response {
-  const streamLogDir = svc.config.streamLogDir
-  if (!streamLogDir) {
-    return new Response(JSON.stringify({ error: 'STREAM_LOG_DIR not configured' }), {
+  if (svc.config.disableLogStream) {
+    return new Response(JSON.stringify({ error: 'Stream logging is disabled (DISABLE_LOG_STREAM=true)' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     })
   }
 
-  const logPath = join(svc.projectCwd, streamLogDir, `${issueId}.jsonl`)
+  const logPath = join(svc.projectCwd, '.barf/streams', `${issueId}.jsonl`)
   const { lines } = readNewLines(logPath, 0)
   const entries = lines
     .map((l) => parseLogMessage(l.data))

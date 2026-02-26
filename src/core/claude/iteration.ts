@@ -36,8 +36,8 @@ import { consumeSDKQuery } from './stream'
  *
  * @param prompt - Full prompt text sent as the first user message.
  * @param model - Claude model identifier (e.g. `'claude-sonnet-4-6'`).
- * @param config - Loaded barf configuration (timeout, context percent, stream log dir).
- * @param issueId - When set, each SDK message is appended to `config.streamLogDir/<issueId>.jsonl`.
+ * @param config - Loaded barf configuration (timeout, context percent, stream logging).
+ * @param issueId - When set and `config.disableLogStream` is false, each SDK message is appended to `.barf/streams/<issueId>.jsonl`.
  * @param displayContext - When set, a sticky header line is shown above the progress line on TTY stderr.
  * @returns `ok(IterationResult)` on success/overflow/rate-limit, `err(Error)` if the SDK throws unexpectedly.
  * @category Claude Agent
@@ -61,9 +61,10 @@ export function runClaudeIteration(
           : null
 
       let streamLogFile: string | undefined
-      if (config.streamLogDir && issueId) {
-        mkdirSync(config.streamLogDir, { recursive: true })
-        streamLogFile = join(config.streamLogDir, `${issueId}.jsonl`)
+      if (!config.disableLogStream && issueId) {
+        const streamLogDir = '.barf/streams'
+        mkdirSync(streamLogDir, { recursive: true })
+        streamLogFile = join(streamLogDir, `${issueId}.jsonl`)
       }
 
       const q = query({

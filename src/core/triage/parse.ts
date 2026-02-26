@@ -67,9 +67,11 @@ export function formatQuestionsSection(
 /**
  * Parses Claude's raw triage response into a validated {@link TriageResult}.
  *
- * Handles markdown code fences that Claude sometimes wraps around JSON
- * despite instructions not to. Strips the fences, parses JSON, and
- * validates against {@link TriageResultSchema}.
+ * Handles two forms of non-compliant output Claude sometimes produces despite
+ * instructions to return only raw JSON:
+ * 1. Markdown code fences (` ```json ... ``` `) — stripped via regex
+ * 2. Surrounding prose (e.g. `"Here is my answer: {...} Hope that helps!"`) —
+ *    handled by extracting the outermost `{...}` substring after fence stripping
  *
  * @param stdout - Raw stdout from the Claude triage subprocess.
  * @returns Validated triage result.
@@ -79,10 +81,18 @@ export function formatQuestionsSection(
 export function parseTriageResponse(stdout: string): TriageResult {
   try {
     // Strip markdown code fences Claude sometimes adds despite instructions
-    const raw = stdout
+    let raw = stdout
       .trim()
       .replace(/^```(?:json)?\n?([\s\S]*?)\n?```$/m, '$1')
       .trim()
+
+    // Fallback: extract outermost JSON object if response contains surrounding prose
+    const start = raw.indexOf('{')
+    const end = raw.lastIndexOf('}')
+    if (start !== -1 && end !== -1 && end > start) {
+      raw = raw.slice(start, end + 1)
+    }
+
     const parseResult = TriageResultSchema.safeParse(JSON.parse(raw))
     if (!parseResult.success) {
       throw new Error(

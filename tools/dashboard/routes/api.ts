@@ -137,7 +137,7 @@ const REVERSE_KEY_MAP: Record<string, string> = {
   pushStrategy: 'PUSH_STRATEGY',
   issueProvider: 'ISSUE_PROVIDER',
   githubRepo: 'GITHUB_REPO',
-  streamLogDir: 'STREAM_LOG_DIR',
+  disableLogStream: 'DISABLE_LOG_STREAM',
   barfDir: 'BARF_DIR',
   promptDir: 'PROMPT_DIR',
   logFile: 'LOG_FILE',

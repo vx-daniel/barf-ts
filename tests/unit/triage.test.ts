@@ -2,11 +2,64 @@ import { describe, it, expect, beforeEach } from 'bun:test'
 import { okAsync, errAsync } from 'neverthrow'
 import type { ExecFn } from '@/core/triage'
 import { triageIssue } from '@/core/triage'
+import { parseTriageResponse } from '@/core/triage/parse'
 import {
   defaultConfig,
   makeIssue,
   makeProvider,
 } from '@tests/fixtures/provider'
+
+describe('parseTriageResponse', () => {
+  it('parses clean JSON with needs_interview=false', () => {
+    const result = parseTriageResponse(JSON.stringify({ needs_interview: false }))
+    expect(result).toEqual({ needs_interview: false })
+  })
+
+  it('parses clean JSON with needs_interview=true and questions', () => {
+    const input = JSON.stringify({
+      needs_interview: true,
+      questions: [{ question: 'What is the scope?' }],
+    })
+    const result = parseTriageResponse(input)
+    expect(result).toMatchObject({ needs_interview: true })
+  })
+
+  it('strips backtick code fences', () => {
+    const input = '```json\n{"needs_interview": false}\n```'
+    const result = parseTriageResponse(input)
+    expect(result).toEqual({ needs_interview: false })
+  })
+
+  it('extracts JSON from surrounding prose', () => {
+    const input = 'Here is my evaluation: {"needs_interview": false} Hope that helps!'
+    const result = parseTriageResponse(input)
+    expect(result).toEqual({ needs_interview: false })
+  })
+
+  it('extracts JSON from asterisk markdown surrounding (the actual bug)', () => {
+    const input =
+      '**Analysis:** After reviewing the issue, here is my result:\n\n{"needs_interview": false}\n\n*Let me know if you need anything else.*'
+    const result = parseTriageResponse(input)
+    expect(result).toEqual({ needs_interview: false })
+  })
+
+  it('handles code fence with surrounding prose (fence stripped first, then prose extracted)', () => {
+    const input =
+      'Sure! Here you go:\n```json\n{"needs_interview": false}\n```\nHope that is helpful.'
+    const result = parseTriageResponse(input)
+    expect(result).toEqual({ needs_interview: false })
+  })
+
+  it('throws on completely unparseable input', () => {
+    expect(() => parseTriageResponse('not json at all')).toThrow('Failed to parse triage response')
+  })
+
+  it('throws on unexpected JSON shape', () => {
+    expect(() => parseTriageResponse('{"unexpected": "shape"}')).toThrow(
+      'Failed to parse triage response',
+    )
+  })
+})
 
 /** Creates an ExecFn that returns the given result synchronously. */
 function mockExec(result: {
@@ -17,8 +70,16 @@ function mockExec(result: {
   return () => Promise.resolve(result)
 }
 
+/** Wraps a triage result in the Claude CLI JSON envelope (`--output-format json`). */
+function envelope(triageResult: unknown): string {
+  return JSON.stringify({
+    result: JSON.stringify(triageResult),
+    usage: { input_tokens: 10, output_tokens: 5, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+  })
+}
+
 const okExec = mockExec({
-  stdout: JSON.stringify({ needs_interview: false }),
+  stdout: envelope({ needs_interview: false }),
   stderr: '',
   status: 0,
 })
@@ -64,7 +125,7 @@ describe('triageIssue', () => {
 
   it('sets needs_interview=false and transitions to GROOMED for well-specified issue', async () => {
     const exec = mockExec({
-      stdout: JSON.stringify({ needs_interview: false }),
+      stdout: envelope({ needs_interview: false }),
       stderr: '',
       status: 0,
     })
@@ -73,11 +134,11 @@ describe('triageIssue', () => {
       state: 'NEW',
       body: 'Well-specified body',
     })
-    let writtenFields: Record<string, unknown> = {}
+    const writes: Record<string, unknown>[] = []
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       writeIssue: (_id, fields) => {
-        writtenFields = fields
+        writes.push(fields)
         return okAsync({ ...issue, ...fields })
       },
     })
@@ -85,13 +146,13 @@ describe('triageIssue', () => {
     const result = await triageIssue('001', defaultConfig(), provider, exec)
 
     expect(result.isOk()).toBe(true)
-    expect(writtenFields.needs_interview).toBe(false)
-    expect(writtenFields.state).toBe('GROOMED')
+    expect(writes[0].needs_interview).toBe(false)
+    expect(writes[0].state).toBe('GROOMED')
   })
 
   it('sets needs_interview=true and stays in NEW for underspecified issue', async () => {
     const exec = mockExec({
-      stdout: JSON.stringify({
+      stdout: envelope({
         needs_interview: true,
         questions: [
           { question: 'What is the scope?', options: ['Small', 'Large'] },
@@ -107,11 +168,11 @@ describe('triageIssue', () => {
       state: 'NEW',
       body: 'Vague description',
     })
-    let writtenFields: Record<string, unknown> = {}
+    const writes: Record<string, unknown>[] = []
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       writeIssue: (_id, fields) => {
-        writtenFields = fields
+        writes.push(fields)
         return okAsync({ ...issue, ...fields })
       },
     })
@@ -119,11 +180,11 @@ describe('triageIssue', () => {
     const result = await triageIssue('002', defaultConfig(), provider, exec)
 
     expect(result.isOk()).toBe(true)
-    expect(writtenFields.needs_interview).toBe(true)
+    expect(writes[0].needs_interview).toBe(true)
     // Should NOT transition to STUCK — stays in NEW
-    expect(writtenFields.state).toBeUndefined()
-    expect(typeof writtenFields.body).toBe('string')
-    const body = writtenFields.body as string
+    expect(writes[0].state).toBeUndefined()
+    expect(typeof writes[0].body).toBe('string')
+    const body = writes[0].body as string
     expect(body).toContain('## Interview Questions')
     expect(body).toContain('What is the scope?')
     expect(body).toContain('Any deadlines?')
@@ -169,10 +230,11 @@ describe('triageIssue', () => {
     const result = await triageIssue('004', defaultConfig(), provider, exec)
 
     expect(result.isErr()).toBe(true)
-    expect(result._unsafeUnwrapErr().message).toContain('Failed to parse')
+    // JSON.parse throws a SyntaxError on invalid input
+    expect(result._unsafeUnwrapErr().message).toMatch(/JSON|parse|syntax/i)
   })
 
-  it('returns err when claude outputs unexpected JSON shape', async () => {
+  it('returns err when claude outputs unexpected JSON envelope shape', async () => {
     const exec = mockExec({
       stdout: JSON.stringify({ unexpected: 'shape' }),
       stderr: '',
@@ -186,7 +248,7 @@ describe('triageIssue', () => {
     const result = await triageIssue('005', defaultConfig(), provider, exec)
 
     expect(result.isErr()).toBe(true)
-    expect(result._unsafeUnwrapErr().message).toContain('Failed to parse')
+    expect(result._unsafeUnwrapErr().message).toContain('Unexpected Claude JSON envelope')
   })
 
   it('returns err when writeIssue fails', async () => {

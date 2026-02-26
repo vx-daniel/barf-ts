@@ -663,6 +663,36 @@ describe('runLoop', () => {
     expect(result._unsafeUnwrapErr().message).toBe('disk error')
   })
 
+  // ── Stats persisted on single-iteration build ─────────────────────
+
+  it('persists stats when build completes in one iteration', async () => {
+    mockOutcomes = [{ outcome: 'success', tokens: 250, outputTokens: 42 }]
+    let writeIssueCalls: Array<Record<string, unknown>> = []
+    const provider = makeProvider({
+      lockIssue: () => okAsync(undefined),
+      unlockIssue: () => okAsync(undefined),
+      fetchIssue: () =>
+        okAsync(makeIssue({ state: 'IN_PROGRESS', total_input_tokens: 0, total_output_tokens: 0, total_iterations: 0, run_count: 0 })),
+      transition: (_id, to) => okAsync(makeIssue({ state: to })),
+      checkAcceptanceCriteria: () => okAsync(true),
+      writeIssue: (_id, patch) => {
+        writeIssueCalls.push(patch as Record<string, unknown>)
+        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+      },
+    })
+
+    const result = await runLoop('001', 'build', defaultConfig(), provider, deps)
+    expect(result.isOk()).toBe(true)
+
+    const statsPatch = writeIssueCalls.find(
+      (p) => 'run_count' in p,
+    )
+    expect(statsPatch).toBeDefined()
+    expect(statsPatch!['total_input_tokens']).toBe(250)
+    expect(statsPatch!['run_count']).toBe(1)
+    expect(statsPatch!['total_iterations']).toBe(1)
+  })
+
   // ── Pre-complete integration ──────────────────────────────────────
 
   it('runs pre-complete before COMPLETED transition', async () => {

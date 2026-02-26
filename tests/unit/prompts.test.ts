@@ -25,7 +25,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     pushStrategy: 'iteration',
     issueProvider: 'local',
     githubRepo: '',
-    streamLogDir: '',
+    disableLogStream: false,
     barfDir: '.barf',
     promptDir: '',
     auditProvider: 'openai' as const,

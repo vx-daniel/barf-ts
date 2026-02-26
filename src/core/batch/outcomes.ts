@@ -38,6 +38,8 @@ export type LoopState = {
   model: string
   /** Zero-based iteration counter. */
   iteration: number
+  /** Number of Claude iterations that actually ran (incremented before each Claude call). */
+  iterationsRan: number
   /** Cumulative input tokens across all iterations. */
   totalInputTokens: number
   /** Cumulative output tokens across all iterations. */
@@ -105,10 +107,11 @@ export async function handleSplitCompletion(
       state.totalInputTokens,
       state.totalOutputTokens,
       state.lastContextSize,
-      state.iteration + 1,
+      state.iterationsRan,
       state.model,
     )
     await persistSessionStats(issueId, stats, provider)
+    state.iterationsRan = 0 // neutralize the finally-block guard (already persisted)
     await provider.unlockIssue(issueId)
     await planSplitChildren(
       fresh.value.children,

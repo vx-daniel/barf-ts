@@ -17,7 +17,7 @@ const FIELDS: FieldDef[] = [
   { key: 'planDir', label: 'Plan Directory', type: 'text', group: 'Paths' },
   { key: 'barfDir', label: 'Barf Directory', type: 'text', group: 'Paths' },
   { key: 'promptDir', label: 'Prompt Directory', type: 'text', group: 'Paths' },
-  { key: 'streamLogDir', label: 'Stream Log Directory', type: 'text', group: 'Paths' },
+  { key: 'disableLogStream', label: 'Disable Stream Logging', type: 'boolean', group: 'Logging' },
 
   // Orchestration
   { key: 'contextUsagePercent', label: 'Context Usage %', type: 'number', group: 'Orchestration' },

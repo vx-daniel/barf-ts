@@ -30,7 +30,7 @@ const KEY_MAP: Record<string, keyof Config> = {
   PUSH_STRATEGY: 'pushStrategy',
   ISSUE_PROVIDER: 'issueProvider',
   GITHUB_REPO: 'githubRepo',
-  STREAM_LOG_DIR: 'streamLogDir',
+  DISABLE_LOG_STREAM: 'disableLogStream',
   BARF_DIR: 'barfDir',
   PROMPT_DIR: 'promptDir',
   LOG_FILE: 'logFile',
@@ -44,7 +44,9 @@ const RawConfigSchema = ConfigSchema.extend({
   maxAutoSplits: z.coerce.number().int().default(3),
   maxIterations: z.coerce.number().int().default(0),
   claudeTimeout: z.coerce.number().int().default(3600),
-  streamLogDir: z.coerce.string().default(''),
+  disableLogStream: z
+    .preprocess((v) => v === '1' || v === 'true' || v === true, z.boolean())
+    .default(false),
   fixCommands: z
     .preprocess(
       (v) =>

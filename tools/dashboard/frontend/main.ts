@@ -185,15 +185,38 @@ function onCommandDone(exitCode: number): void {
   fetchIssues()
 }
 
+function applyLiveStats(stats: { totalInputTokens: number; totalOutputTokens: number; contextSize: number }): void {
+  if (!runningId) return
+  const issue = issues.find((i) => i.id === runningId)
+  if (issue) {
+    issue.total_input_tokens = stats.totalInputTokens
+    issue.total_output_tokens = stats.totalOutputTokens
+  }
+  updateSummary(issues)
+  if (selectedId === runningId && issue) {
+    updateStatus(issue, models ?? undefined)
+  }
+}
+
 function handleMsg(data: Record<string, unknown>): void {
-  if (data.type === 'stdout' && (data.line as string)?.trim()) {
-    termLog('stdout', data.line as string)
-    appendActivity({
-      timestamp: Date.now(),
-      source: 'command',
-      kind: 'stdout',
-      data: { line: data.line },
-    })
+  if (data.type === 'stdout') {
+    const line = data.line as string
+    if (line?.startsWith('__BARF_STATS__:')) {
+      try {
+        const stats = JSON.parse(line.slice('__BARF_STATS__:'.length))
+        applyLiveStats(stats)
+      } catch { /* malformed — ignore */ }
+      return
+    }
+    if (line?.trim()) {
+      termLog('stdout', line)
+      appendActivity({
+        timestamp: Date.now(),
+        source: 'command',
+        kind: 'stdout',
+        data: { line },
+      })
+    }
   } else if (data.type === 'stderr' && (data.line as string)?.trim()) {
     termLog('stderr', data.line as string)
     appendActivity({
