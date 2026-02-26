@@ -169,3 +169,43 @@
   align-self: center;
   margin-left: auto;
 }
+
+/* Metadata tab viewer */
+#editor-metadata {
+  display: none;
+  height: 100%;
+  overflow: auto;
+}
+
+.metadata-viewer {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  padding: 16px;
+  overflow: auto;
+  height: 100%;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* JSON syntax highlighting */
+.json-key {
+  color: #9cdcfe;  /* Light blue for keys */
+}
+
+.json-string {
+  color: #ce9178;  /* Orange for string values */
+}
+
+.json-number {
+  color: #b5cea8;  /* Light green for numbers */
+}
+
+.json-boolean {
+  color: #569cd6;  /* Blue for true/false */
+}
+
+.json-null {
+  color: #808080;  /* Gray for null */
+}
