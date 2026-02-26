@@ -2,9 +2,9 @@
  * Interview modal — interactive Q&A for issues needing refinement.
  * Shows questions from triage, collects answers, submits to Claude for evaluation.
  */
-import * as api from '../lib/api-client'
-import { getEl } from '../lib/dom'
-import type { Issue } from '../lib/types'
+import * as api from '@dashboard/frontend/lib/api-client'
+import { el, getEl } from '@dashboard/frontend/lib/dom'
+import type { Issue } from '@dashboard/frontend/lib/types'
 
 interface Question {
   question: string
@@ -17,11 +17,6 @@ let answers: Array<{ question: string; answer: string }> = []
 let currentIdx = 0
 let onComplete: (() => void) | null = null
 
-function el(tag: string, cls?: string): HTMLElement {
-  const e = document.createElement(tag)
-  if (cls) e.className = cls
-  return e
-}
 
 function getOverlay(): HTMLElement {
   return getEl('interview-ov')
@@ -32,8 +27,11 @@ function getModal(): HTMLElement {
 }
 
 /**
- * Opens the interview modal for an issue.
- * Parses the `## Interview Questions` section from the issue body.
+ * Opens the interview modal for an issue that requires further refinement.
+ * Parses the `## Interview Questions` section from the issue body to drive the Q&A flow.
+ *
+ * @param issue - The issue to interview; its body is parsed for structured questions
+ * @param done - Callback invoked after successful submission and Claude evaluation
  */
 export function openInterview(issue: Issue, done: () => void): void {
   currentIssue = issue
@@ -127,7 +125,7 @@ function renderQuestion(): void {
     optGroup.appendChild(otherInput)
     modal.appendChild(optGroup)
 
-    getAnswer = () => {
+    getAnswer = (): string => {
       if (selected === 'Other') return otherInput.value.trim() || 'Other'
       return selected ?? ''
     }
@@ -136,7 +134,7 @@ function renderQuestion(): void {
     textarea.rows = 4
     textarea.placeholder = 'Type your answer...'
     modal.appendChild(textarea)
-    getAnswer = () => textarea.value.trim()
+    getAnswer = (): string => textarea.value.trim()
   }
 
   // Buttons
@@ -177,7 +175,8 @@ function renderQuestion(): void {
     nextBtn.textContent = 'Evaluating...'
 
     try {
-      const result = await api.submitInterview(currentIssue?.id, answers)
+      if (!currentIssue) return
+      const result = await api.submitInterview(currentIssue.id, answers)
       if (result.status === 'complete') {
         closeModal()
         onComplete?.()

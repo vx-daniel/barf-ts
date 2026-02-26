@@ -3,7 +3,8 @@
  * Each event kind gets distinct visual treatment: stdout groups, tool cards,
  * state banners, and a cumulative token counter in the header.
  */
-import type { ActivityEntry, ActivityKind } from '../lib/types'
+import type { ActivityEntry, ActivityKind } from '@dashboard/frontend/lib/types'
+import { el } from '@dashboard/frontend/lib/dom'
 
 const VISIBLE_KINDS = new Set<ActivityKind>([
   'stdout',
@@ -25,12 +26,6 @@ let currentStdoutGroup: HTMLElement | null = null
 
 /** tool_call cards awaiting their result, keyed by toolUseId. */
 const pendingToolCards = new Map<string, HTMLElement>()
-
-function el(tag: string, cls?: string): HTMLElement {
-  const e = document.createElement(tag)
-  if (cls) e.className = cls
-  return e
-}
 
 /**
  * Builds a `<details>` row with a standardized `<summary class="activity-summary">`.
@@ -90,6 +85,12 @@ function issueSpan(entry: ActivityEntry): HTMLElement | null {
   return s
 }
 
+/**
+ * Mounts the activity log UI (header, filters, log area, term input) into `container`.
+ * Should be called once at startup; subsequent activity is appended via {@link appendActivity}.
+ *
+ * @param container - The DOM element to mount the panel into
+ */
 export function mountActivityLog(container: HTMLElement): void {
   container.textContent = ''
 
@@ -426,7 +427,7 @@ function mainArgSnippet(
   toolName: string,
   args: Record<string, unknown>,
 ): string {
-  const truncate = (s: string, len = 60) =>
+  const truncate = (s: string, len = 60): string =>
     s.length > len ? `${s.slice(0, len)}…` : s
 
   switch (toolName) {
@@ -554,8 +555,8 @@ function resolveToolCard(entry: ActivityEntry): void {
 }
 
 function updateTokenCounter(entry: ActivityEntry): void {
-  cumulativeTokens.input += (entry.data.input_tokens as number) ?? 0
-  cumulativeTokens.output += (entry.data.output_tokens as number) ?? 0
+  cumulativeTokens.input += Number(entry.data.input_tokens ?? 0)
+  cumulativeTokens.output += Number(entry.data.output_tokens ?? 0)
 
   const titleEl = document.getElementById('activity-title')
   if (titleEl) {
@@ -656,6 +657,12 @@ function appendErrorBanner(entry: ActivityEntry): void {
   log.scrollTop = log.scrollHeight
 }
 
+/**
+ * Dispatches a single activity entry to the appropriate renderer based on its kind.
+ * All SSE-delivered activity events flow through this function.
+ *
+ * @param entry - The activity entry to render
+ */
 export function appendActivity(entry: ActivityEntry): void {
   switch (entry.kind) {
     case 'stdout':
@@ -682,6 +689,12 @@ export function appendActivity(entry: ActivityEntry): void {
   }
 }
 
+/**
+ * Appends a styled terminal-style line (e.g. system message or user reply) to the log.
+ *
+ * @param type - CSS suffix used as `t-{type}` class for styling
+ * @param text - The text content to display
+ */
 export function termLog(type: string, text: string): void {
   const log = document.getElementById('activity-log')
   if (!log) return
@@ -691,6 +704,10 @@ export function termLog(type: string, text: string): void {
   log.scrollTop = log.scrollHeight
 }
 
+/**
+ * Clears all entries from the activity log and resets cumulative token counters.
+ * Called when switching issues or starting a fresh agent run.
+ */
 export function clearLog(): void {
   const log = document.getElementById('activity-log')
   if (log) log.textContent = ''
@@ -701,6 +718,11 @@ export function clearLog(): void {
   if (titleEl) titleEl.textContent = 'Activity Log'
 }
 
+/**
+ * Shows or hides the terminal answer-input row used during interactive interviews.
+ *
+ * @param show - When `true`, reveals the input and focuses it; `false` hides it
+ */
 export function setTermInput(show: boolean): void {
   const row = document.getElementById('term-input-row')
   if (row) {
@@ -713,6 +735,11 @@ export function setTermInput(show: boolean): void {
   }
 }
 
+/**
+ * Expands the activity panel and optionally updates the header title.
+ *
+ * @param title - Optional override for the panel title (e.g. issue name while running)
+ */
 export function openActivityPanel(title?: string): void {
   const bottom = document.getElementById('bottom')
   if (bottom) bottom.classList.add('open')
@@ -720,6 +747,9 @@ export function openActivityPanel(title?: string): void {
   if (titleEl && title) titleEl.textContent = title
 }
 
+/**
+ * Collapses the activity panel without clearing its contents.
+ */
 export function closeActivityPanel(): void {
   const bottom = document.getElementById('bottom')
   if (bottom) bottom.classList.remove('open')

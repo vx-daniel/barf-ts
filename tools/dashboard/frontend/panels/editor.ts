@@ -6,11 +6,22 @@
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
+import * as api from '@dashboard/frontend/lib/api-client'
+import {
+  CMD_ACTIONS as CMD_ACTIONS_CONST,
+  CMD_CLASS as CMD_CLASS_CONST,
+  STATE_LABELS as STATE_LABELS_CONST,
+  stateColor,
+} from '@dashboard/frontend/lib/constants'
+import { el, getEl } from '@dashboard/frontend/lib/dom'
+import type { Issue } from '@dashboard/frontend/lib/types'
 import { basicSetup, EditorView } from 'codemirror'
 import { marked } from 'marked'
-import * as api from '../lib/api-client'
-import { getEl } from '../lib/dom'
-import type { Issue } from '../lib/types'
+
+// Widen to Record<string, ...> so dynamic string keys (issue.state, cmd) can index them.
+const STATE_LABELS = STATE_LABELS_CONST as Record<string, string>
+const CMD_ACTIONS = CMD_ACTIONS_CONST as Record<string, string[]>
+const CMD_CLASS = CMD_CLASS_CONST as Record<string, string>
 
 let editorView: EditorView | null = null
 let currentIssueId: string | null = null
@@ -26,44 +37,36 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   SPLIT: [],
   COMPLETED: ['VERIFIED'],
   VERIFIED: [],
-}
+} satisfies Record<string, string[]>
 
-const STATE_COLORS: Record<string, string> = {
-  NEW: '#6b7280',
-  GROOMED: '#3b82f6',
-  PLANNED: '#f59e0b',
-  IN_PROGRESS: '#f97316',
-  COMPLETED: '#22c55e',
-  VERIFIED: '#10b981',
-  STUCK: '#ef4444',
-  SPLIT: '#a855f7',
-}
-
-const STATE_LABELS: Record<string, string> = {
-  NEW: 'NEW',
-  GROOMED: 'GROOMED',
-  PLANNED: 'PLANNED',
-  IN_PROGRESS: 'IN PROGRESS',
-  COMPLETED: 'COMPLETED',
-  VERIFIED: 'VERIFIED',
-  STUCK: 'STUCK',
-  SPLIT: 'SPLIT',
-}
-
-function el(tag: string, cls?: string): HTMLElement {
-  const e = document.createElement(tag)
-  if (cls) e.className = cls
-  return e
+/**
+ * Strips inline event handlers and script elements from a parsed document
+ * before any nodes are appended to the live DOM.
+ *
+ * `DOMParser` produces live DOM nodes — `on*` attributes and `<script>` tags
+ * execute when connected to a document, so they must be removed in the
+ * parsed (disconnected) document before the nodes are moved.
+ */
+function sanitizeDoc(doc: Document): void {
+  for (const el of Array.from(doc.body.querySelectorAll('*'))) {
+    for (const attr of Array.from(el.attributes)) {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name)
+    }
+  }
+  for (const script of Array.from(doc.body.querySelectorAll('script'))) {
+    script.remove()
+  }
 }
 
 /**
- * Safely renders an HTML string into a container by parsing it into a DOM
- * fragment first, avoiding direct innerHTML assignment on live elements.
- * Content originates from local issue files owned by the dashboard operator.
+ * Safely renders an HTML string into a container by parsing it into a
+ * disconnected document, stripping event handlers and scripts, then
+ * appending the sanitized nodes.
  */
 function safeRenderHTML(container: HTMLElement, htmlString: string): void {
   const parser = new DOMParser()
   const doc = parser.parseFromString(htmlString, 'text/html')
+  sanitizeDoc(doc)
   container.textContent = ''
   while (doc.body.firstChild) {
     container.appendChild(doc.body.firstChild)
@@ -98,6 +101,10 @@ function renderMetadataJSON(issue: Issue): string {
   return `<pre class="metadata-viewer">${highlighted}</pre>`
 }
 
+/**
+ * Callbacks provided by the host panel to handle editor-driven actions.
+ * Decouples the editor from specific business logic (routing, stopping agents, etc.).
+ */
 export interface EditorCallbacks {
   onTransition: (issueId: string, to: string) => void
   onDelete: (issueId: string) => void
@@ -111,6 +118,12 @@ export interface EditorCallbacks {
 
 let callbacks: EditorCallbacks | null = null
 
+/**
+ * Wires up the editor panel with the provided callbacks and attaches DOM event listeners.
+ * Must be called once at application startup before {@link openIssue} is used.
+ *
+ * @param cb - Host-provided callbacks for transitions, commands, navigation, and close
+ */
 export function initEditor(cb: EditorCallbacks): void {
   callbacks = cb
 
@@ -157,6 +170,12 @@ export function initEditor(cb: EditorCallbacks): void {
   })
 }
 
+/**
+ * Populates the editor sidebar with the given issue's content and state controls.
+ * Resets dirty state, destroys any existing CodeMirror instance, and defaults to preview tab.
+ *
+ * @param issue - The issue to display and edit
+ */
 export function openIssue(issue: Issue): void {
   currentIssueId = issue.id
   _dirty = false
@@ -167,7 +186,7 @@ export function openIssue(issue: Issue): void {
   getEl('editor-id').textContent = `#${issue.id}`
   getEl('editor-title').textContent = issue.title
 
-  const color = STATE_COLORS[issue.state] ?? '#6b7280'
+  const color = stateColor(issue.state)
   const stLbl = getEl('editor-state-lbl')
   stLbl.textContent = STATE_LABELS[issue.state] ?? issue.state
   stLbl.style.color = color
@@ -245,21 +264,6 @@ export function openIssue(issue: Issue): void {
     stopBtn.addEventListener('click', () => callbacks?.onStop())
     actsDiv.appendChild(stopBtn)
   } else {
-    const CMD_ACTIONS: Record<string, string[]> = {
-      GROOMED: ['plan'],
-      PLANNED: ['plan', 'build'],
-      IN_PROGRESS: ['build'],
-      COMPLETED: ['audit'],
-      STUCK: ['plan'],
-    }
-    const CMD_CLASS: Record<string, string> = {
-      plan: 'abtn-plan',
-      build: 'abtn-build',
-      audit: 'abtn-audit',
-      triage: 'abtn-triage',
-      interview: 'abtn-interview',
-    }
-
     // Dynamic actions for NEW issues based on triage state
     let actions: string[]
     if (issue.state === 'NEW') {
@@ -299,7 +303,6 @@ export function openIssue(issue: Issue): void {
   actsDiv.appendChild(statusSpan)
 
   // Default to preview tab
-  // Default to preview tab
   document
     .querySelector('.editor-tab[data-tab="edit"]')
     ?.classList.remove('active')
@@ -309,9 +312,12 @@ export function openIssue(issue: Issue): void {
   document
     .querySelector('.editor-tab[data-tab="preview"]')
     ?.classList.add('active')
-  document.getElementById('editor-cm')?.style.display = 'none'
-  document.getElementById('editor-preview')?.style.display = 'block'
-  document.getElementById('editor-metadata')?.style.display = 'none'
+  const cmEl = document.getElementById('editor-cm')
+  const previewEl = document.getElementById('editor-preview')
+  const metaEl = document.getElementById('editor-metadata')
+  if (cmEl) cmEl.style.display = 'none'
+  if (previewEl) previewEl.style.display = 'block'
+  if (metaEl) metaEl.style.display = 'none'
   updatePreview()
 }
 
@@ -319,7 +325,7 @@ function buildRelChip(id: string, issue?: Issue): HTMLElement {
   const chip = el('span', 'rel-chip')
   if (issue) {
     const dot = el('span', 'state-dot')
-    dot.style.background = STATE_COLORS[issue.state] ?? '#6b7280'
+    dot.style.background = stateColor(issue.state)
     chip.appendChild(dot)
   }
   const idSpan = el('span', 'rel-id')
@@ -401,6 +407,10 @@ async function saveIssue(): Promise<void> {
   }
 }
 
+/**
+ * Collapses the sidebar, destroys the active CodeMirror instance, and notifies
+ * the host via {@link EditorCallbacks.onClose}.
+ */
 export function closeSidebar(): void {
   currentIssueId = null
   const app = getEl('app')
@@ -413,6 +423,9 @@ export function closeSidebar(): void {
   callbacks?.onClose()
 }
 
+/**
+ * Returns the ID of the issue currently open in the editor, or `null` if none.
+ */
 export function getCurrentIssueId(): string | null {
   return currentIssueId
 }

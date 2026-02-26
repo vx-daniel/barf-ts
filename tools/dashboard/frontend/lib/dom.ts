@@ -11,3 +11,16 @@ export function getEl<T extends HTMLElement = HTMLElement>(id: string): T {
   if (!el) throw new Error(`Required DOM element #${id} not found`)
   return el as T
 }
+
+/**
+ * Creates a DOM element with an optional CSS class.
+ *
+ * @param tag - HTML tag name
+ * @param cls - Optional class name to set on the element
+ * @returns The newly created element
+ */
+export function el(tag: string, cls?: string): HTMLElement {
+  const e = document.createElement(tag)
+  if (cls) e.className = cls
+  return e
+}

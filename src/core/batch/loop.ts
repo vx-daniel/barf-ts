@@ -15,6 +15,7 @@
  */
 import { ResultAsync } from 'neverthrow'
 import { runClaudeIteration } from '@/core/claude'
+import { getContextLimit } from '@/core/claude/context'
 import { injectTemplateVars } from '@/core/context'
 import type { IssueProvider } from '@/core/issue/base'
 import { runPreComplete } from '@/core/pre-complete'
@@ -211,6 +212,9 @@ async function runLoopImpl(
           totalInputTokens: state.totalInputTokens,
           totalOutputTokens: state.totalOutputTokens,
           contextSize: state.lastContextSize,
+          contextUsagePercent: Math.round(
+            (state.lastContextSize / getContextLimit(state.model)) * 100,
+          ),
           iteration: state.iteration,
         })}\n`,
       )
