@@ -4,6 +4,11 @@ import { IssueProvider } from '@/core/issue/base'
 import type { Issue, IssueState, LockMode } from '@/types'
 import { type ExecResult, execFileNoThrow } from '@/utils/execFileNoThrow'
 import { toError } from '@/utils/toError'
+import {
+  STATE_TO_LABEL,
+  GHIssueSchema,
+  ghToIssue,
+} from './github-labels'
 
 /**
  * Injectable subprocess function matching the {@link execFileNoThrow} signature.
@@ -12,64 +17,6 @@ import { toError } from '@/utils/toError'
  * @category Issue Providers
  */
 export type SpawnFn = (file: string, args?: string[]) => Promise<ExecResult>
-
-const STATE_TO_LABEL: Record<IssueState, string> = {
-  NEW: 'barf:new',
-  PLANNED: 'barf:planned',
-  IN_PROGRESS: 'barf:in-progress',
-  STUCK: 'barf:stuck',
-  SPLIT: 'barf:split',
-  COMPLETED: 'barf:completed',
-  VERIFIED: 'barf:verified',
-}
-
-const LABEL_TO_STATE: Record<string, IssueState> = Object.fromEntries(
-  (Object.entries(STATE_TO_LABEL) as [IssueState, string][]).map(([s, l]) => [
-    l,
-    s,
-  ]),
-)
-
-const GHIssueSchema = z.object({
-  number: z.number(),
-  title: z.string(),
-  body: z
-    .string()
-    .nullable()
-    .transform((v) => v ?? ''),
-  state: z.enum(['open', 'closed']),
-  labels: z.array(z.object({ name: z.string() })),
-  milestone: z.object({ number: z.number(), title: z.string() }).nullable(),
-})
-type GHIssue = z.infer<typeof GHIssueSchema>
-
-function ghToIssue(gh: GHIssue): Issue {
-  const stateLabel = gh.labels.find((l) => LABEL_TO_STATE[l.name])
-  let state: IssueState
-  if (gh.state === 'closed') {
-    state = 'COMPLETED'
-  } else if (stateLabel) {
-    state = LABEL_TO_STATE[stateLabel.name]
-  } else {
-    state = 'NEW'
-  }
-  return {
-    id: String(gh.number),
-    title: gh.title,
-    state,
-    parent: '',
-    children: [],
-    split_count: 0,
-    force_split: false,
-    verify_count: 0,
-    body: gh.body,
-    total_input_tokens: 0,
-    total_output_tokens: 0,
-    total_duration_seconds: 0,
-    total_iterations: 0,
-    run_count: 0,
-  }
-}
 
 /**
  * GitHub Issues provider. Maps the barf state machine to GitHub labels (`barf:*`).

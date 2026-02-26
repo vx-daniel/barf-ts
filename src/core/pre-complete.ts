@@ -1,23 +1,12 @@
 import { ResultAsync } from 'neverthrow'
 import type { ExecFn } from '@/core/verification'
+import type { FixStep, PreCompleteResult } from '@/types'
+
+export type { FixStep, PreCompleteResult } from '@/types'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('pre-complete')
-
-/** A fix command to run before testing. */
-export interface FixStep {
-  name: string
-  command: string
-}
-
-/** Outcome of the pre-completion checks. */
-export type PreCompleteResult =
-  | { passed: true }
-  | {
-      passed: false
-      testFailure: { stdout: string; stderr: string; exitCode: number }
-    }
 
 /**
  * Converts config `fixCommands` strings into {@link FixStep} entries.

@@ -1,6 +1,15 @@
+/**
+ * Triage orchestration — one-shot Claude evaluation of NEW issues.
+ *
+ * Evaluates whether a NEW issue needs further refinement (interview) before
+ * planning can proceed. Uses a one-shot Claude call with the triage prompt
+ * template. The result is either `needs_interview=false` (ready for planning)
+ * or `needs_interview=true` with appended interview questions.
+ *
+ * @module triage/triage
+ */
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { z } from 'zod'
 import { ResultAsync } from 'neverthrow'
 import type { Config, DisplayContext } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
@@ -9,48 +18,17 @@ import { resolvePromptTemplate } from '@/core/prompts'
 import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
+import { formatQuestionsSection, parseTriageResponse } from './parse'
 
 /**
  * Injectable subprocess function — mirrors {@link execFileNoThrow}'s signature.
- * Pass a mock in tests to avoid spawning a real claude process.
+ * Pass a mock in tests to avoid spawning a real Claude process.
+ *
+ * @category Triage
  */
 export type ExecFn = (file: string, args?: string[]) => Promise<ExecResult>
 
 const logger = createLogger('triage')
-
-/** JSON shape Claude must return for a triage evaluation. */
-const TriageResultSchema = z.union([
-  z.object({ needs_interview: z.literal(false) }),
-  z.object({
-    needs_interview: z.literal(true),
-    questions: z.array(
-      z.object({
-        question: z.string(),
-        options: z.array(z.string()).optional(),
-      }),
-    ),
-  }),
-])
-
-type TriageResult = z.infer<typeof TriageResultSchema>
-
-/**
- * Formats the questions from a triage result as a numbered markdown list
- * suitable for appending to an issue body under `## Interview Questions`.
- */
-function formatQuestionsSection(
-  result: TriageResult & { needs_interview: true },
-): string {
-  const items = result.questions
-    .map((q, i) => {
-      const opts = q.options?.map((o) => `   - ${o}`).join('\n') ?? ''
-      return opts
-        ? `${i + 1}. ${q.question}\n${opts}`
-        : `${i + 1}. ${q.question}`
-    })
-    .join('\n')
-  return `\n\n## Interview Questions\n\n${items}`
-}
 
 /**
  * Resolves the full path of an issue file given its ID and config.
@@ -75,6 +53,24 @@ function resolveIssueFilePath(issueId: string, config: Config): string {
  * @param execFn - Subprocess runner; defaults to {@link execFileNoThrow}. Injectable for tests.
  * @param displayContext - When set, a sticky header line is shown on TTY stderr during the triage call.
  * @returns `ok(void)` on success or skip, `err(Error)` on I/O or Claude failure.
+ * @category Triage
+ */
+export function triageIssue(
+  issueId: string,
+  config: Config,
+  provider: IssueProvider,
+  execFn: ExecFn = execFileNoThrow,
+  displayContext?: DisplayContext,
+): ResultAsync<void, Error> {
+  return ResultAsync.fromPromise(
+    triageIssueImpl(issueId, config, provider, execFn, displayContext),
+    toError,
+  )
+}
+
+/**
+ * Internal implementation of triageIssue.
+ * Separated so the public API can wrap in ResultAsync.
  */
 async function triageIssueImpl(
   issueId: string,
@@ -135,23 +131,7 @@ async function triageIssueImpl(
     )
   }
 
-  let parsed: TriageResult
-  try {
-    // Strip markdown code fences Claude sometimes adds despite instructions
-    const raw = execResult.stdout
-      .trim()
-      .replace(/^```(?:json)?\n?([\s\S]*?)\n?```$/m, '$1')
-      .trim()
-    const parseResult = TriageResultSchema.safeParse(JSON.parse(raw))
-    if (!parseResult.success) {
-      throw new Error(
-        `Unexpected triage JSON shape: ${JSON.stringify(parseResult.error.issues)}`,
-      )
-    }
-    parsed = parseResult.data
-  } catch (e) {
-    throw new Error(`Failed to parse triage response: ${toError(e).message}`)
-  }
+  const parsed = parseTriageResponse(execResult.stdout)
 
   if (!parsed.needs_interview) {
     const writeResult = await provider.writeIssue(issueId, {
@@ -177,33 +157,5 @@ async function triageIssueImpl(
   logger.info(
     { issueId, questions: parsed.questions.length },
     'triage: issue needs interview',
-  )
-}
-
-/**
- * Evaluates a single NEW issue with a one-shot Claude call to determine whether
- * it needs further refinement before planning can proceed.
- *
- * Skips issues where `needs_interview` is already set (already triaged).
- * On completion, sets `needs_interview=false` or `needs_interview=true` and
- * appends a `## Interview Questions` section to the issue body when questions exist.
- *
- * @param issueId - ID of the issue to triage.
- * @param config - Loaded barf configuration (triageModel, dirs, etc.).
- * @param provider - Issue provider for reading and writing the issue.
- * @param execFn - Subprocess runner; defaults to {@link execFileNoThrow}. Injectable for tests.
- * @param displayContext - When set, a sticky header line is shown on TTY stderr during the triage call.
- * @returns `ok(void)` on success or skip, `err(Error)` on I/O or Claude failure.
- */
-export function triageIssue(
-  issueId: string,
-  config: Config,
-  provider: IssueProvider,
-  execFn: ExecFn = execFileNoThrow,
-  displayContext?: DisplayContext,
-): ResultAsync<void, Error> {
-  return ResultAsync.fromPromise(
-    triageIssueImpl(issueId, config, provider, execFn, displayContext),
-    toError,
   )
 }
