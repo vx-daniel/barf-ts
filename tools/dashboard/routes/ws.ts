@@ -3,7 +3,7 @@
  * and pipes stdin/stdout/stderr over the WebSocket.
  */
 import { join } from 'path'
-import type { IssueService } from '../services/issue-service'
+import type { IssueService } from '@dashboard/services/issue-service'
 
 export const wsProcs = new Map<object, ReturnType<typeof Bun.spawn>>()
 

@@ -136,15 +136,16 @@ async function triageIssueImpl(
   if (!parsed.needs_interview) {
     const writeResult = await provider.writeIssue(issueId, {
       needs_interview: false,
+      state: 'GROOMED',
     })
     if (writeResult.isErr()) {
       throw writeResult.error
     }
-    logger.info({ issueId }, 'triage: issue is well-specified')
+    logger.info({ issueId }, 'triage: issue is well-specified → GROOMED')
     return
   }
 
-  // Append Interview Questions section to issue body
+  // Append Interview Questions section to issue body — stays in NEW
   const questionsSection = formatQuestionsSection(parsed)
   const writeResult = await provider.writeIssue(issueId, {
     needs_interview: true,

@@ -7,7 +7,9 @@
     "types": ["bun-types"],
     "paths": {
       "@/*": ["./src/*"],
-      "@tests/*": ["./tests/*"]
+      "@tests/*": ["./tests/*"],
+      "@tools/*": ["./tools/*"],
+      "@dashboard/*": ["./tools/dashboard/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*"]

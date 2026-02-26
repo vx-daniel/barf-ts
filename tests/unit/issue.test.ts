@@ -309,8 +309,28 @@ describe('verify_count / is_verify_fix / verify_exhausted', () => {
 })
 
 describe('validateTransition', () => {
-  it('returns Ok for valid transition NEW → PLANNED', () => {
-    expect(validateTransition('NEW', 'PLANNED').isOk()).toBe(true)
+  it('returns Ok for valid transition NEW → GROOMED', () => {
+    expect(validateTransition('NEW', 'GROOMED').isOk()).toBe(true)
+  })
+
+  it('returns Ok for valid transition NEW → STUCK', () => {
+    expect(validateTransition('NEW', 'STUCK').isOk()).toBe(true)
+  })
+
+  it('returns Err for removed transition NEW → PLANNED (must go through GROOMED)', () => {
+    expect(validateTransition('NEW', 'PLANNED').isErr()).toBe(true)
+  })
+
+  it('returns Ok for valid transition GROOMED → PLANNED', () => {
+    expect(validateTransition('GROOMED', 'PLANNED').isOk()).toBe(true)
+  })
+
+  it('returns Ok for valid transition GROOMED → STUCK', () => {
+    expect(validateTransition('GROOMED', 'STUCK').isOk()).toBe(true)
+  })
+
+  it('returns Ok for valid transition GROOMED → SPLIT', () => {
+    expect(validateTransition('GROOMED', 'SPLIT').isOk()).toBe(true)
   })
 
   it('returns Ok for valid transition PLANNED → IN_PROGRESS', () => {
@@ -319,6 +339,10 @@ describe('validateTransition', () => {
 
   it('returns Ok for valid transition COMPLETED → VERIFIED', () => {
     expect(validateTransition('COMPLETED', 'VERIFIED').isOk()).toBe(true)
+  })
+
+  it('returns Ok for valid transition STUCK → GROOMED', () => {
+    expect(validateTransition('STUCK', 'GROOMED').isOk()).toBe(true)
   })
 
   it('returns Err for removed transition NEW → INTERVIEWING', () => {

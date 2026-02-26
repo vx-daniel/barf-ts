@@ -21,6 +21,9 @@ import auditPromptTemplate from '@/prompts/PROMPT_audit.md' with {
 import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with {
   type: 'text',
 }
+import interviewEvalPromptTemplate from '@/prompts/PROMPT_interview_eval.md' with {
+  type: 'text',
+}
 
 const logger = createLogger('prompts')
 
@@ -30,6 +33,7 @@ const BUILTIN_TEMPLATES: Record<PromptMode, string> = {
   split: splitPromptTemplate,
   audit: auditPromptTemplate,
   triage: triagePromptTemplate,
+  interview_eval: interviewEvalPromptTemplate,
 }
 
 /**

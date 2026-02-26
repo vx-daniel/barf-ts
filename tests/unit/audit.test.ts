@@ -145,9 +145,10 @@ describe('state machine after triage migration', () => {
     expect(IssueStateSchema.options).not.toContain('INTERVIEWING')
   })
 
-  it('VALID_TRANSITIONS maps NEW to PLANNED directly', () => {
+  it('VALID_TRANSITIONS maps NEW to GROOMED (not PLANNED directly)', () => {
     const { VALID_TRANSITIONS } = require('@/core/issue')
-    expect(VALID_TRANSITIONS['NEW']).toEqual(['PLANNED'])
+    expect(VALID_TRANSITIONS['NEW']).toEqual(['GROOMED', 'STUCK'])
+    expect(VALID_TRANSITIONS['GROOMED']).toEqual(['PLANNED', 'STUCK', 'SPLIT'])
     expect(VALID_TRANSITIONS['INTERVIEWING']).toBeUndefined()
   })
 })

@@ -18,6 +18,7 @@ import {
 } from './panels/activity-log'
 import { initEditor, openIssue, closeSidebar, getCurrentIssueId } from './panels/editor'
 import { initConfigPanel } from './panels/config'
+import { openInterview } from './panels/interview-modal'
 import { mountSidebarResizer, mountBottomResizer } from './lib/resizer'
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -213,6 +214,20 @@ function handleMsg(data: Record<string, unknown>): void {
 }
 
 function runCommand(id: string, cmd: string): void {
+  // Interview opens a modal instead of spawning a subprocess
+  if (cmd === 'interview') {
+    const issue = issues.find((i) => i.id === id)
+    if (!issue) return
+    openInterview(issue, () => {
+      fetchIssues()
+      if (selectedId === id) {
+        const updated = issues.find((i) => i.id === id)
+        if (updated) openIssue(updated)
+      }
+    })
+    return
+  }
+
   stopActive()
   pauseRefresh = true
   runningId = id
@@ -229,21 +244,7 @@ function runCommand(id: string, cmd: string): void {
     appendActivity(data as any)
   })
 
-  if (cmd === 'interview') {
-    wsClient.connect(
-      id,
-      handleMsg,
-      () => setTermInput(true),
-      () => {
-        runningId = null
-        pauseRefresh = false
-        setTermInput(false)
-        setActiveCommand(null)
-        logSSE.close()
-        refreshBoard()
-      },
-    )
-  } else {
+  {
     sseClient.connect('/api/issues/' + id + '/run/' + cmd, (data) => {
       handleMsg(data)
       if (data.type === 'done' || data.type === 'error') {

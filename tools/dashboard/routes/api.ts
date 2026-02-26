@@ -1,11 +1,14 @@
 /**
- * REST API routes — CRUD issues, transitions, config.
+ * REST API routes — CRUD issues, transitions, config, interview.
  */
 import { writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { IssueStateSchema } from '../../../src/types'
-import { VALID_TRANSITIONS, parseIssue, serializeIssue } from '../../../src/core/issue'
-import type { IssueService } from '../services/issue-service'
+import { IssueStateSchema } from '@/types'
+import { VALID_TRANSITIONS, parseIssue, serializeIssue } from '@/core/issue'
+import { injectTemplateVars } from '@/core/context'
+import { resolvePromptTemplate } from '@/core/prompts'
+import { execFileNoThrow } from '@/utils/execFileNoThrow'
+import type { IssueService } from '@dashboard/services/issue-service'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -143,6 +146,81 @@ const REVERSE_KEY_MAP: Record<string, string> = {
 }
 
 const MASKED = '••••••••'
+
+export async function handleInterview(
+  svc: IssueService,
+  id: string,
+  req: Request,
+): Promise<Response> {
+  let body: { answers: Array<{ question: string; answer: string }> }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+  if (!Array.isArray(body.answers) || body.answers.length === 0) {
+    return jsonError('answers array is required')
+  }
+
+  const issueResult = await svc.provider.fetchIssue(id)
+  if (issueResult.isErr()) return jsonError(issueResult.error.message, 404)
+  const issue = issueResult.value
+
+  // Format Q&A for the prompt
+  const qaText = body.answers
+    .map((a, i) => `${i + 1}. **Q:** ${a.question}\n   **A:** ${a.answer}`)
+    .join('\n\n')
+
+  const prompt = injectTemplateVars(resolvePromptTemplate('interview_eval', svc.config), {
+    BARF_ISSUE_ID: id,
+    BARF_ISSUE_BODY: issue.body,
+    BARF_INTERVIEW_QA: qaText,
+  })
+
+  const execResult = await execFileNoThrow('claude', [
+    '-p',
+    prompt,
+    '--model',
+    svc.config.triageModel,
+    '--output-format',
+    'text',
+  ])
+
+  if (execResult.status !== 0) {
+    return jsonError(`Claude interview eval failed (exit ${execResult.status}): ${execResult.stderr.trim()}`, 500)
+  }
+
+  // Parse response
+  let evalResult: { satisfied: boolean; questions?: Array<{ question: string; options?: string[] }> }
+  try {
+    const raw = execResult.stdout
+      .trim()
+      .replace(/^```(?:json)?\n?([\s\S]*?)\n?```$/m, '$1')
+      .trim()
+    evalResult = JSON.parse(raw)
+  } catch {
+    return jsonError('Failed to parse Claude eval response', 500)
+  }
+
+  if (!evalResult.satisfied) {
+    return json({
+      status: 'more_questions',
+      questions: evalResult.questions ?? [],
+    })
+  }
+
+  // Satisfied — update issue: append Q&A, remove questions section, transition to GROOMED
+  const qaSection = `\n\n## Interview Q&A\n\n${qaText}`
+  const cleanBody = issue.body.replace(/\n\n## Interview Questions\n\n[\s\S]*$/, '')
+  const writeResult = await svc.provider.writeIssue(id, {
+    needs_interview: false,
+    state: 'GROOMED',
+    body: cleanBody + qaSection,
+  })
+  if (writeResult.isErr()) return jsonError(writeResult.error.message, 500)
+
+  return json({ status: 'complete', issue: writeResult.value })
+}
 
 export async function handleSaveConfig(
   svc: IssueService,

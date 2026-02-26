@@ -18,10 +18,11 @@ import {
  * @category Issue Model
  */
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
-  NEW: ['PLANNED'],
+  NEW: ['GROOMED', 'STUCK'],
+  GROOMED: ['PLANNED', 'STUCK', 'SPLIT'],
   PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
   IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
-  STUCK: ['PLANNED', 'NEW', 'SPLIT'],
+  STUCK: ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
   SPLIT: [],
   COMPLETED: ['VERIFIED'],
   VERIFIED: [],

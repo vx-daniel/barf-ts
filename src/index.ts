@@ -11,6 +11,7 @@ import {
   initCommand,
   planCommand,
   statusCommand,
+  triageCommand,
 } from '@/cli/commands'
 
 /**
@@ -87,7 +88,7 @@ program
 
 program
   .command('plan')
-  .description('Plan an issue with Claude AI (NEW → PLANNED)')
+  .description('Plan an issue with Claude AI (GROOMED → PLANNED)')
   .option(
     '--issue <id>',
     'Issue ID to plan (auto-selects INTERVIEWING issue if omitted)',
@@ -129,6 +130,16 @@ program
       { batch: opts.batch ?? 1, max: opts.max ?? 0 },
       config,
     )
+  })
+
+program
+  .command('triage')
+  .description('Triage a single NEW issue with Claude AI')
+  .requiredOption('--issue <id>', 'Issue ID to triage')
+  .action(async (opts) => {
+    const config = loadConfig(program.opts().config)
+    const provider = getProvider(config)
+    await triageCommand(provider, { issue: opts.issue }, config)
   })
 
 program

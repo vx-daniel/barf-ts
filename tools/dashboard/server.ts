@@ -8,7 +8,7 @@
  * status panel, and activity log. REST API + SSE + WebSocket.
  */
 import { resolve } from 'path'
-import { IssueService } from './services/issue-service'
+import { IssueService } from '@dashboard/services/issue-service'
 import {
   handleListIssues,
   handleGetIssue,
@@ -16,10 +16,11 @@ import {
   handleUpdateIssue,
   handleDeleteIssue,
   handleTransition,
+  handleInterview,
   handleGetConfig,
   handleSaveConfig,
   jsonError,
-} from './routes/api'
+} from '@dashboard/routes/api'
 import {
   handleRunCommand,
   handleRunAuto,
@@ -27,9 +28,9 @@ import {
   handleLogTail,
   handleLogHistory,
   isAllowedCommand,
-} from './routes/sse'
-import { startInterviewProc, wsProcs } from './routes/ws'
-import { serveStatic } from './routes/static'
+} from '@dashboard/routes/sse'
+import { startInterviewProc, wsProcs } from '@dashboard/routes/ws'
+import { serveStatic } from '@dashboard/routes/static'
 
 // ── CLI arg parsing ──────────────────────────────────────────────────────────
 
@@ -79,11 +80,14 @@ async function router(req: Request): Promise<Response> {
   const transitionMatch = path.match(/^\/api\/issues\/([^/]+)\/transition$/)
   if (transitionMatch && method === 'PUT') return handleTransition(svc, transitionMatch[1], req)
 
+  const interviewMatch = path.match(/^\/api\/issues\/([^/]+)\/interview$/)
+  if (interviewMatch && method === 'POST') return handleInterview(svc, interviewMatch[1], req)
+
   const runMatch = path.match(/^\/api\/issues\/([^/]+)\/run\/([^/]+)$/)
   if (runMatch && (method === 'GET' || method === 'POST')) {
     const [, id, command] = runMatch
     if (!isAllowedCommand(command)) {
-      return jsonError(`Unknown command: ${command}. Allowed: plan, build, audit`)
+      return jsonError(`Unknown command: ${command}. Allowed: plan, build, audit, triage`)
     }
     return handleRunCommand(svc, id, command)
   }

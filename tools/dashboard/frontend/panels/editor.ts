@@ -2,13 +2,14 @@
  * Editor panel — CodeMirror 6 markdown editor + marked preview.
  * Mounted in the sidebar when an issue is selected.
  */
-import { EditorView, basicSetup } from 'codemirror'
-import { EditorState } from '@codemirror/state'
+
 import { markdown } from '@codemirror/lang-markdown'
+import { EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { basicSetup, EditorView } from 'codemirror'
 import { marked } from 'marked'
-import type { Issue } from '../lib/types'
 import * as api from '../lib/api-client'
+import type { Issue } from '../lib/types'
 
 let editorView: EditorView | null = null
 let currentIssueId: string | null = null
@@ -16,10 +17,11 @@ let currentBody: string = ''
 let dirty = false
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  NEW: ['PLANNED'],
+  NEW: ['GROOMED', 'STUCK'],
+  GROOMED: ['PLANNED', 'STUCK', 'SPLIT'],
   PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
   IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
-  STUCK: ['PLANNED', 'NEW', 'SPLIT'],
+  STUCK: ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
   SPLIT: [],
   COMPLETED: ['VERIFIED'],
   VERIFIED: [],
@@ -27,6 +29,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 
 const STATE_COLORS: Record<string, string> = {
   NEW: '#6b7280',
+  GROOMED: '#3b82f6',
   PLANNED: '#f59e0b',
   IN_PROGRESS: '#f97316',
   COMPLETED: '#22c55e',
@@ -37,6 +40,7 @@ const STATE_COLORS: Record<string, string> = {
 
 const STATE_LABELS: Record<string, string> = {
   NEW: 'NEW',
+  GROOMED: 'GROOMED',
   PLANNED: 'PLANNED',
   IN_PROGRESS: 'IN PROGRESS',
   COMPLETED: 'COMPLETED',
@@ -85,7 +89,9 @@ export function initEditor(cb: EditorCallbacks): void {
     const target = e.target as HTMLElement
     if (!target.classList.contains('editor-tab')) return
     const tab = target.dataset.tab
-    document.querySelectorAll('.editor-tab').forEach((t) => t.classList.remove('active'))
+    document
+      .querySelectorAll('.editor-tab')
+      .forEach((t) => t.classList.remove('active'))
     target.classList.add('active')
 
     const cm = document.getElementById('editor-cm')!
@@ -136,7 +142,7 @@ export function openIssue(issue: Issue): void {
   const hasParent = issue.parent && issue.parent.trim()
   const hasChildren = issue.children && issue.children.length > 0
   const relsEl = document.getElementById('editor-rels')!
-  relsEl.style.display = (hasParent || hasChildren) ? 'flex' : 'none'
+  relsEl.style.display = hasParent || hasChildren ? 'flex' : 'none'
 
   const parentRow = document.getElementById('editor-parent-row')!
   parentRow.textContent = ''
@@ -179,7 +185,9 @@ export function openIssue(issue: Issue): void {
   actsDiv.textContent = ''
 
   const saveBtn = el('button', 'mbtn primary') as HTMLButtonElement
+  saveBtn.id = 'editor-save-btn'
   saveBtn.textContent = 'Save'
+  saveBtn.style.display = 'none'
   saveBtn.addEventListener('click', () => saveIssue())
   actsDiv.appendChild(saveBtn)
 
@@ -193,28 +201,52 @@ export function openIssue(issue: Issue): void {
     actsDiv.appendChild(stopBtn)
   } else {
     const CMD_ACTIONS: Record<string, string[]> = {
-      NEW: ['interview'], PLANNED: ['plan', 'build'], IN_PROGRESS: ['build'],
-      COMPLETED: ['audit'], STUCK: ['plan'],
+      GROOMED: ['plan'],
+      PLANNED: ['plan', 'build'],
+      IN_PROGRESS: ['build'],
+      COMPLETED: ['audit'],
+      STUCK: ['plan'],
     }
     const CMD_CLASS: Record<string, string> = {
-      plan: 'abtn-plan', build: 'abtn-build', audit: 'abtn-audit', interview: 'abtn-interview',
+      plan: 'abtn-plan',
+      build: 'abtn-build',
+      audit: 'abtn-audit',
+      triage: 'abtn-triage',
+      interview: 'abtn-interview',
     }
 
-    for (const cmd of CMD_ACTIONS[issue.state] ?? []) {
-      const btn = el('button', 'abtn ' + (CMD_CLASS[cmd] ?? '')) as HTMLButtonElement
+    // Dynamic actions for NEW issues based on triage state
+    let actions: string[]
+    if (issue.state === 'NEW') {
+      if (issue.needs_interview === undefined) actions = ['triage']
+      else if (issue.needs_interview === true) actions = ['interview']
+      else actions = []
+    } else {
+      actions = CMD_ACTIONS[issue.state] ?? []
+    }
+
+    for (const cmd of actions) {
+      const btn = el(
+        'button',
+        'abtn ' + (CMD_CLASS[cmd] ?? ''),
+      ) as HTMLButtonElement
       btn.style.cssText = 'font-size:12px;padding:5px 14px'
       btn.textContent = 'Run ' + cmd
       btn.disabled = callbacks?.runningId !== null
-      btn.addEventListener('click', () => callbacks?.onRunCommand(issue.id, cmd))
+      btn.addEventListener('click', () =>
+        callbacks?.onRunCommand(issue.id, cmd),
+      )
       actsDiv.appendChild(btn)
     }
   }
 
   const delBtn = el('button', 'abtn') as HTMLButtonElement
-  delBtn.style.cssText = 'font-size:12px;padding:5px 14px;border-color:#6b7280;color:#6b7280'
+  delBtn.style.cssText =
+    'font-size:12px;padding:5px 14px;border-color:#6b7280;color:#6b7280'
   delBtn.textContent = 'Delete'
   delBtn.addEventListener('click', () => {
-    if (confirm('Delete issue #' + issue.id + '?')) callbacks?.onDelete(issue.id)
+    if (confirm('Delete issue #' + issue.id + '?'))
+      callbacks?.onDelete(issue.id)
   })
   actsDiv.appendChild(delBtn)
 
@@ -223,8 +255,12 @@ export function openIssue(issue: Issue): void {
   actsDiv.appendChild(statusSpan)
 
   // Default to preview tab
-  document.querySelector('.editor-tab[data-tab="edit"]')?.classList.remove('active')
-  document.querySelector('.editor-tab[data-tab="preview"]')?.classList.add('active')
+  document
+    .querySelector('.editor-tab[data-tab="edit"]')
+    ?.classList.remove('active')
+  document
+    .querySelector('.editor-tab[data-tab="preview"]')
+    ?.classList.add('active')
   document.getElementById('editor-cm')!.style.display = 'none'
   document.getElementById('editor-preview')!.style.display = 'block'
   updatePreview()
@@ -242,7 +278,10 @@ function buildRelChip(id: string, issue?: Issue): HTMLElement {
   chip.appendChild(idSpan)
   if (issue) {
     const titleSpan = el('span')
-    titleSpan.textContent = issue.title.length > 28 ? issue.title.slice(0, 28) + '\u2026' : issue.title
+    titleSpan.textContent =
+      issue.title.length > 28
+        ? issue.title.slice(0, 28) + '\u2026'
+        : issue.title
     chip.appendChild(titleSpan)
   }
   chip.addEventListener('click', () => callbacks?.onNavigate(id))
@@ -267,6 +306,8 @@ function mountCodeMirror(content: string): void {
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           dirty = true
+          const saveBtn = document.getElementById('editor-save-btn')
+          if (saveBtn) saveBtn.style.display = ''
           const status = document.getElementById('editor-save-status')
           if (status) status.textContent = 'unsaved'
         }
@@ -299,18 +340,24 @@ async function saveIssue(): Promise<void> {
     if (status) status.textContent = 'saving...'
     await api.updateIssue(currentIssueId, { body })
     dirty = false
+    const saveBtn = document.getElementById('editor-save-btn')
+    if (saveBtn) saveBtn.style.display = 'none'
     if (status) status.textContent = 'saved'
     setTimeout(() => {
       if (status && status.textContent === 'saved') status.textContent = ''
     }, 2000)
   } catch (e) {
-    if (status) status.textContent = 'save failed: ' + (e instanceof Error ? e.message : String(e))
+    if (status)
+      status.textContent =
+        'save failed: ' + (e instanceof Error ? e.message : String(e))
   }
 }
 
 export function closeSidebar(): void {
   currentIssueId = null
-  document.getElementById('app')!.classList.add('no-sidebar')
+  const app = document.getElementById('app')!
+  app.classList.add('no-sidebar')
+  app.style.gridTemplateColumns = ''
   if (editorView) {
     editorView.destroy()
     editorView = null

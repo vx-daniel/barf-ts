@@ -146,6 +146,7 @@ html, body {
 .abtn-build { border-color: #f97316; color: #f97316; }
 .abtn-audit { border-color: #22c55e; color: #22c55e; }
 .abtn-interview { border-color: #3b82f6; color: #3b82f6; }
+.abtn-triage { border-color: #8b5cf6; color: #8b5cf6; }
 .abtn-stop { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.1); }
 
 /* ── Modal ──────────────────────────────────────────────────────── */
@@ -195,6 +196,49 @@ html, body {
 }
 .mbtn.primary { background: #7c3aed; border-color: #7c3aed; color: #fff; }
 .mbtn.primary:hover { background: #6d28d9; }
+
+/* ── Interview Modal ──────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+.interview-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.interview-hdr h2 { font-size: 14px; margin: 0; }
+.interview-progress { font-size: 11px; color: var(--text-muted); }
+.interview-q { font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
+.interview-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.interview-opt { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; padding: 6px 8px; border-radius: var(--radius); }
+.interview-opt:hover { background: var(--surface2); }
+.interview-opt input[type=radio] { accent-color: var(--accent); }
+.interview-other-input {
+  width: 100%; margin-top: 6px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  font-family: inherit; font-size: 12px; padding: 7px 10px;
+}
+.interview-textarea {
+  width: 100%;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  font-family: inherit; font-size: 12px; padding: 7px 10px;
+  resize: vertical; margin-bottom: 14px;
+}
+.interview-textarea:focus, .interview-other-input:focus { outline: none; border-color: var(--accent); }
+.interview-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.interview-err { color: #ef4444; font-size: 11px; margin-top: 8px; }
 
 /* ── Config Modal ──────────────────────────────────────────────── */
 #config-ov {

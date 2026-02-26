@@ -2,11 +2,11 @@
  * SSE routes — command streaming + JSONL log tailing.
  */
 import { join } from 'path'
-import type { IssueService } from '../services/issue-service'
-import { readNewLines } from '../services/log-reader'
-import { parseLogMessage } from '../services/activity-aggregator'
+import type { IssueService } from '@dashboard/services/issue-service'
+import { readNewLines } from '@dashboard/services/log-reader'
+import { parseLogMessage } from '@dashboard/services/activity-aggregator'
 
-const ALLOWED_COMMANDS = ['plan', 'build', 'audit'] as const
+const ALLOWED_COMMANDS = ['plan', 'build', 'audit', 'triage'] as const
 type AllowedCommand = (typeof ALLOWED_COMMANDS)[number]
 
 export { ALLOWED_COMMANDS }

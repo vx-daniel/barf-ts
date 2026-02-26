@@ -19,7 +19,7 @@ export type AutoDeps = {
 }
 
 /** Issue states queued for planning on each {@link autoCommand} loop iteration. */
-const PLAN_STATES = new Set<IssueState>(['NEW'])
+const PLAN_STATES = new Set<IssueState>(['GROOMED'])
 /** Issue states queued for building on each {@link autoCommand} loop iteration. */
 const BUILD_STATES = new Set<IssueState>(['PLANNED', 'IN_PROGRESS'])
 
@@ -93,7 +93,7 @@ export async function autoCommand(
 
     // ── Gate check ─────────────────────────────────────────────────────────────
     const needsInterview = refreshed.filter(
-      (i) => i.state === 'NEW' && i.needs_interview === true,
+      (i) => i.needs_interview === true,
     )
     for (const issue of needsInterview) {
       logger.warn(
@@ -114,10 +114,8 @@ export async function autoCommand(
     }
 
     // ── Plan phase ─────────────────────────────────────────────────────────────
-    // Plan NEW issues where needs_interview is false (triaged, ready) or undefined (backward compat)
-    const toPlan = refreshed.filter(
-      (i) => PLAN_STATES.has(i.state) && i.needs_interview !== true,
-    )
+    // Plan GROOMED issues — they've already passed triage
+    const toPlan = refreshed.filter((i) => PLAN_STATES.has(i.state))
     const toBuild = refreshed
       .filter((i) => BUILD_STATES.has(i.state))
       .slice(0, opts.batch)
@@ -147,12 +145,6 @@ export async function autoCommand(
     }
 
     for (const issue of toPlan) {
-      if (issue.needs_interview === undefined) {
-        logger.info(
-          { issueId: issue.id },
-          'planning issue that was never triaged — run auto again to triage first',
-        )
-      }
       const result = await runLoop(issue.id, 'plan', config, provider, loopDeps)
       if (result.isErr()) {
         logger.warn(

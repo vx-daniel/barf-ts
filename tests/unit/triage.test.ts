@@ -62,7 +62,7 @@ describe('triageIssue', () => {
     expect(writeIssueCallCount).toBe(0)
   })
 
-  it('sets needs_interview=false for well-specified issue', async () => {
+  it('sets needs_interview=false and transitions to GROOMED for well-specified issue', async () => {
     const exec = mockExec({
       stdout: JSON.stringify({ needs_interview: false }),
       stderr: '',
@@ -86,9 +86,10 @@ describe('triageIssue', () => {
 
     expect(result.isOk()).toBe(true)
     expect(writtenFields.needs_interview).toBe(false)
+    expect(writtenFields.state).toBe('GROOMED')
   })
 
-  it('sets needs_interview=true and appends questions for underspecified issue', async () => {
+  it('sets needs_interview=true and stays in NEW for underspecified issue', async () => {
     const exec = mockExec({
       stdout: JSON.stringify({
         needs_interview: true,
@@ -119,6 +120,8 @@ describe('triageIssue', () => {
 
     expect(result.isOk()).toBe(true)
     expect(writtenFields.needs_interview).toBe(true)
+    // Should NOT transition to STUCK — stays in NEW
+    expect(writtenFields.state).toBeUndefined()
     expect(typeof writtenFields.body).toBe('string')
     const body = writtenFields.body as string
     expect(body).toContain('## Interview Questions')

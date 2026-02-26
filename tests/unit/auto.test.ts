@@ -76,7 +76,7 @@ describe('autoCommand', () => {
     expect(process.exitCode).toBe(0)
   })
 
-  it('plans NEW issues with needs_interview=false', async () => {
+  it('plans GROOMED issues', async () => {
     let callCount = 0
     let lockCalls = 0
     const provider = makeProvider({
@@ -84,7 +84,7 @@ describe('autoCommand', () => {
         callCount++
         if (callCount <= 2) {
           return okAsync([
-            makeIssue({ id: '003', state: 'NEW', needs_interview: false }),
+            makeIssue({ id: '003', state: 'GROOMED', needs_interview: false }),
           ])
         }
         return okAsync([])
@@ -95,7 +95,7 @@ describe('autoCommand', () => {
       },
       unlockIssue: () => okAsync(undefined),
       fetchIssue: () =>
-        okAsync(makeIssue({ state: 'NEW', needs_interview: false })),
+        okAsync(makeIssue({ state: 'GROOMED', needs_interview: false })),
       writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
       checkAcceptanceCriteria: () => okAsync(false),
@@ -106,32 +106,18 @@ describe('autoCommand', () => {
     expect(lockCalls).toBeGreaterThanOrEqual(1)
   })
 
-  it('plans NEW issues with needs_interview=undefined (backward compat)', async () => {
-    let callCount = 0
-    let lockCalls = 0
+  it('does not plan NEW issues (must be GROOMED first)', async () => {
     const provider = makeProvider({
-      listIssues: () => {
-        callCount++
-        // needs_interview=undefined treated same as false for planning
-        if (callCount <= 2) {
-          return okAsync([makeIssue({ id: '004', state: 'NEW' })])
-        }
-        return okAsync([])
-      },
-      lockIssue: () => {
-        lockCalls++
-        return okAsync(undefined)
-      },
-      unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'NEW' })),
-      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
-      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
-      checkAcceptanceCriteria: () => okAsync(false),
+      listIssues: () =>
+        okAsync([
+          makeIssue({ id: '004', state: 'NEW', needs_interview: false }),
+        ]),
     })
 
     await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
 
-    expect(lockCalls).toBeGreaterThanOrEqual(1)
+    // NEW issues are not plannable — exits cleanly
+    expect(process.exitCode).toBe(0)
   })
 
   it('builds PLANNED issues in build phase', async () => {

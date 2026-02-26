@@ -17,12 +17,13 @@ import { z } from 'zod'
  *
  * The state machine enforces this progression:
  * ```
- * NEW → PLANNED → IN_PROGRESS → COMPLETED → VERIFIED
- *                     ↘                         ↑
- *                      STUCK ←→ SPLIT    (via fix sub-issues)
+ * NEW → GROOMED → PLANNED → IN_PROGRESS → COMPLETED → VERIFIED
+ *                                ↘                         ↑
+ *                                 STUCK ←→ SPLIT    (via fix sub-issues)
  * ```
  *
  * - `NEW` — freshly created, may need triage (`needs_interview=true`)
+ * - `GROOMED` — triaged and refined; ready for planning
  * - `PLANNED` — a plan file exists; ready for build
  * - `IN_PROGRESS` — Claude is actively working on this issue
  * - `COMPLETED` — Claude finished; pending automated verification
@@ -38,6 +39,7 @@ import { z } from 'zod'
  */
 export const IssueStateSchema = z.enum([
   'NEW',
+  'GROOMED',
   'PLANNED',
   'IN_PROGRESS',
   'STUCK',

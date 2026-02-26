@@ -91,7 +91,7 @@ async function runLoopImpl(
       const issueResult = await provider.fetchIssue(issueId)
       if (issueResult.isOk()) {
         const currentState = issueResult.value.state
-        if (currentState === 'NEW' || currentState === 'PLANNED') {
+        if (currentState === 'PLANNED') {
           const transitionResult = await provider.transition(
             issueId,
             'IN_PROGRESS',

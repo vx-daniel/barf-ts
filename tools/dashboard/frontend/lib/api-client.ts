@@ -84,6 +84,28 @@ export async function stopActive(): Promise<void> {
   await fetch('/api/auto/stop', { method: 'POST' })
 }
 
+export interface InterviewResponse {
+  status: 'complete' | 'more_questions'
+  issue?: Issue
+  questions?: Array<{ question: string; options?: string[] }>
+}
+
+export async function submitInterview(
+  issueId: string,
+  answers: Array<{ question: string; answer: string }>,
+): Promise<InterviewResponse> {
+  const r = await fetch(`/api/issues/${issueId}/interview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answers }),
+  })
+  if (!r.ok) {
+    const e = await r.json()
+    throw new Error(e.error ?? 'Interview failed')
+  }
+  return r.json()
+}
+
 export async function fetchLogHistory(issueId: string): Promise<unknown[]> {
   const r = await fetch(`/api/issues/${issueId}/logs/history`)
   if (!r.ok) return []

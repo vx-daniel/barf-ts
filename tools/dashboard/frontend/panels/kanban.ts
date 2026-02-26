@@ -3,11 +3,11 @@
  */
 import type { Issue } from '../lib/types'
 
-const STATE_ORDER = ['NEW', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED', 'STUCK', 'SPLIT'] as const
+const STATE_ORDER = ['NEW', 'GROOMED', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED', 'STUCK', 'SPLIT'] as const
 
 const STATE_COLORS: Record<string, string> = {
   NEW: '#6b7280',
-  INTERVIEWING: '#3b82f6',
+  GROOMED: '#3b82f6',
   PLANNED: '#f59e0b',
   IN_PROGRESS: '#f97316',
   COMPLETED: '#22c55e',
@@ -18,7 +18,7 @@ const STATE_COLORS: Record<string, string> = {
 
 const STATE_LABELS: Record<string, string> = {
   NEW: 'NEW',
-  INTERVIEWING: 'INTERVIEWING',
+  GROOMED: 'GROOMED',
   PLANNED: 'PLANNED',
   IN_PROGRESS: 'IN PROGRESS',
   COMPLETED: 'COMPLETED',
@@ -28,8 +28,8 @@ const STATE_LABELS: Record<string, string> = {
 }
 
 const CMD_ACTIONS: Record<string, string[]> = {
-  NEW: ['interview'],
-  INTERVIEWING: ['plan'],
+  NEW: [],
+  GROOMED: ['plan'],
   PLANNED: ['plan', 'build'],
   IN_PROGRESS: ['build'],
   COMPLETED: ['audit'],
@@ -42,7 +42,20 @@ const CMD_CLASS: Record<string, string> = {
   plan: 'abtn-plan',
   build: 'abtn-build',
   audit: 'abtn-audit',
+  triage: 'abtn-triage',
   interview: 'abtn-interview',
+}
+
+/**
+ * Returns the dynamic action buttons for a NEW issue based on triage state.
+ * - `needs_interview === undefined` → triage
+ * - `needs_interview === true` → interview
+ * - `needs_interview === false` → none (should auto-transition to GROOMED)
+ */
+function getNewIssueActions(issue: Issue): string[] {
+  if (issue.needs_interview === undefined) return ['triage']
+  if (issue.needs_interview === true) return ['interview']
+  return []
 }
 
 export { STATE_COLORS, STATE_LABELS, CMD_ACTIONS }
@@ -138,7 +151,7 @@ function buildCard(issue: Issue, cb: KanbanCallbacks): HTMLElement {
     card.appendChild(relRow)
   }
 
-  const actions = CMD_ACTIONS[issue.state] ?? []
+  const actions = issue.state === 'NEW' ? getNewIssueActions(issue) : (CMD_ACTIONS[issue.state] ?? [])
   if (actions.length > 0) {
     const actDiv = el('div', 'card-actions')
     for (const cmd of actions) {

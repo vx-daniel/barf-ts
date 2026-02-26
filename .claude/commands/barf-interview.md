@@ -25,7 +25,7 @@ Scan all barf issues that need interviews and conduct them interactively.
 
    d. Remove the `## Interview Questions` section from the issue body entirely.
 
-   e. In the frontmatter, replace `needs_interview=true` with `needs_interview=false`.
+   e. In the frontmatter, replace `needs_interview=true` with `needs_interview=false` and replace `state=STUCK` with `state=NEW` (so the issue re-enters the pipeline).
 
    f. Write the updated file and confirm: "Updated issue {id}: {title}"
 

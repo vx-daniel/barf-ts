@@ -75,8 +75,8 @@ describe('LocalIssueProvider', () => {
   })
 
   it('transition() validates and applies state change', async () => {
-    const result = await provider.transition('001', 'PLANNED')
-    expect(result._unsafeUnwrap().state).toBe('PLANNED')
+    const result = await provider.transition('001', 'GROOMED')
+    expect(result._unsafeUnwrap().state).toBe('GROOMED')
   })
 
   it('transition() returns Err on invalid state change', async () => {

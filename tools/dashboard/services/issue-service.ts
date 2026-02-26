@@ -3,9 +3,9 @@
  * so route handlers receive a single dependency instead of scattered globals.
  */
 import { resolve, join } from 'path'
-import { loadConfig } from '../../../src/core/config'
-import { LocalIssueProvider } from '../../../src/core/issue/providers/local'
-import type { Config } from '../../../src/types'
+import { loadConfig } from '@/core/config'
+import { LocalIssueProvider } from '@/core/issue/providers/local'
+import type { Config } from '@/types'
 
 export interface IssueServiceInit {
   projectCwd: string
