@@ -6,6 +6,13 @@
   "excludePrivate": true,
   "excludeInternal": true,
   "readme": "./docs/architecture.md",
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": false,
+    "includeFolders": false,
+    "compactFolders": true,
+    "excludeReferences": true
+  },
   "validation": {
     "notExported": true,
     "invalidLink": true
@@ -13,13 +20,28 @@
   "plugin": [
     "typedoc-plugin-zod",
     "typedoc-plugin-mdn-links",
-    "typedoc-plugin-coverage"
+    "typedoc-plugin-coverage",
+    "typedoc-theme-hierarchy"
   ],
+  "theme": "hierarchy",
   "navigationLinks": {
     "Architecture": "../architecture.md",
-    "Guides": "../guides/issue-lifecycle.md",
-    "GitHub": "https://github.com/your-org/barf-ts"
+    "Guides": "../guides/issue-lifecycle.md"
   },
+  "categorizeByGroup": false,
+  "categoryOrder": [
+    "Issue Model",
+    "Issue Providers",
+    "Orchestration",
+    "Verification",
+    "Triage",
+    "CLI Commands",
+    "Providers",
+    "Configuration",
+    "Utilities",
+    "*"
+  ],
+  "useFirstParagraphOfCommentAsSummary": true,
   "highlightLanguages": ["bash", "typescript", "javascript", "mermaid"],
   "resolveUtilityTypes": true,
   "externalSymbolLinkMappings": {

@@ -5,7 +5,7 @@
  * the sticky 2-line TTY header shown during Claude iterations. It identifies
  * what mode is running, which issue is being processed, and the current state.
  *
- * @module display-schema
+ * @module Configuration
  */
 import { z } from 'zod'
 

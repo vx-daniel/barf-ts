@@ -5,7 +5,7 @@
  * and a test gate (hard requirement). These schemas define the fix step
  * definitions and the outcome of the pre-completion checks.
  *
- * @module pre-complete-schema
+ * @module Configuration
  */
 import { z } from 'zod'
 

@@ -8,7 +8,7 @@
  * All issue data is stored as frontmatter markdown files under `issuesDir`.
  * The `body` field holds everything after the closing `---` delimiter.
  *
- * @module issue-schema
+ * @module Configuration
  */
 import { z } from 'zod'
 

@@ -8,7 +8,7 @@
  * returns a fully-populated config object. This is intentional — partial configs are
  * merged with defaults at parse time, not at runtime.
  *
- * @module config-schema
+ * @module Configuration
  */
 import { z } from 'zod'
 

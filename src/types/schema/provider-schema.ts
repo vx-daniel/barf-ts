@@ -1,3 +1,4 @@
+/** @module Configuration */
 import { z } from 'zod'
 
 /** Default sampling temperature for audit providers. */

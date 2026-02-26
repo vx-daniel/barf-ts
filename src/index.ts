@@ -1,3 +1,4 @@
+/** @module CLI Commands */
 import { resolve } from 'path'
 import { Command } from 'commander'
 import { loadConfig } from '@/core/config'

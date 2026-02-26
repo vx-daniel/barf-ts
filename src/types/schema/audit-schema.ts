@@ -1,3 +1,4 @@
+/** @module Configuration */
 import { z } from 'zod'
 
 /**

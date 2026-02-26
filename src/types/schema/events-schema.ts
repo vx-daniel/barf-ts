@@ -5,7 +5,7 @@
  * it processes the Claude agent SDK message stream. They provide real-time
  * observability into token usage and tool invocations during a Claude session.
  *
- * @module events-schema
+ * @module Configuration
  */
 import { z } from 'zod'
 

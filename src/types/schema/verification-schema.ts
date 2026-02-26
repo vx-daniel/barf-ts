@@ -5,7 +5,7 @@
  * lint, test) to confirm the work is correct before transitioning to VERIFIED.
  * These schemas define the check definitions and their outcomes.
  *
- * @module verification-schema
+ * @module Configuration
  */
 import { z } from 'zod'
 

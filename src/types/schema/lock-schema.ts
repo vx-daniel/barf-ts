@@ -6,7 +6,7 @@
  * matching {@link LockInfoSchema}, which enables stale-lock detection (by
  * checking if the PID is still alive) and status display.
  *
- * @module lock-schema
+ * @module Configuration
  */
 import { z } from 'zod'
 import { IssueStateSchema } from './issue-schema'
