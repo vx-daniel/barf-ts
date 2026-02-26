@@ -199,6 +199,9 @@ function applyLiveStats(stats: { totalInputTokens: number; totalOutputTokens: nu
 }
 
 function handleMsg(data: Record<string, unknown>): void {
+  const activeIssue = runningId && runningId !== '__auto__' ? issues.find((i) => i.id === runningId) : undefined
+  const issueCtx = activeIssue ? { issueId: activeIssue.id, issueName: activeIssue.title } : {}
+
   if (data.type === 'stdout') {
     const line = data.line as string
     if (line?.startsWith('__BARF_STATS__:')) {
@@ -208,21 +211,32 @@ function handleMsg(data: Record<string, unknown>): void {
       } catch { /* malformed — ignore */ }
       return
     }
-    if (line?.trim()) {
-      termLog('stdout', line)
+    if (line?.startsWith('__BARF_STATE__:')) {
+      // Forward as stdout so activity-log can render a state banner
       appendActivity({
         timestamp: Date.now(),
         source: 'command',
         kind: 'stdout',
+        ...issueCtx,
+        data: { line },
+      })
+      return
+    }
+    if (line?.trim()) {
+      appendActivity({
+        timestamp: Date.now(),
+        source: 'command',
+        kind: 'stdout',
+        ...issueCtx,
         data: { line },
       })
     }
   } else if (data.type === 'stderr' && (data.line as string)?.trim()) {
-    termLog('stderr', data.line as string)
     appendActivity({
       timestamp: Date.now(),
       source: 'command',
       kind: 'stderr',
+      ...issueCtx,
       data: { line: data.line },
     })
   } else if (data.type === 'done') {
@@ -264,10 +278,14 @@ function runCommand(id: string, cmd: string): void {
   // Also start JSONL log tailing if available
   const logSSE = new SSEClient()
   logSSE.connect('/api/issues/' + id + '/logs', (data) => {
-    appendActivity(data as any)
+    const entry = data as import('./lib/types').ActivityEntry
+    const issue = issues.find((i) => i.id === id)
+    appendActivity({
+      ...entry,
+      issueId: entry.issueId ?? id,
+      issueName: entry.issueName ?? issue?.title,
+    })
   })
-
-  {
     sseClient.connect('/api/issues/' + id + '/run/' + cmd, (data) => {
       handleMsg(data)
       if (data.type === 'done' || data.type === 'error') {
@@ -283,7 +301,6 @@ function runCommand(id: string, cmd: string): void {
       setActiveCommand(null)
       refreshBoard()
     })
-  }
 }
 
 // ── Auto command ─────────────────────────────────────────────────────────────

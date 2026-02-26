@@ -6,6 +6,7 @@ export type ActivityKind =
   | 'stdout'
   | 'stderr'
   | 'tool_call'
+  | 'tool_result'
   | 'token_update'
   | 'result'
   | 'error'
@@ -16,6 +17,8 @@ export interface ActivityEntry {
   timestamp: number
   source: ActivitySource
   kind: ActivityKind
+  issueId?: string
+  issueName?: string
   data: Record<string, unknown>
 }
 

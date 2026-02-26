@@ -9,6 +9,7 @@ export type ActivityKind =
   | 'stdout'
   | 'stderr'
   | 'tool_call'
+  | 'tool_result'
   | 'token_update'
   | 'result'
   | 'error'
@@ -19,12 +20,19 @@ export interface ActivityEntry {
   timestamp: number
   source: ActivitySource
   kind: ActivityKind
+  issueId?: string
+  issueName?: string
   data: Record<string, unknown>
 }
 
 /**
  * Converts a raw JSONL SDK message into an {@link ActivityEntry}, or `null` if
  * the message type is not relevant for the activity log.
+ *
+ * The Claude Agent SDK records complete message objects (not streaming events):
+ * - Tool calls: `type === 'assistant'` with `message.content[0].type === 'tool_use'`
+ * - Tool results: `type === 'user'` with `message.content[0].type === 'tool_result'`
+ * - Token usage: `type === 'assistant'` with `message.usage` (only when no tool_use)
  */
 export function parseLogMessage(raw: unknown): ActivityEntry | null {
   if (typeof raw !== 'object' || raw === null) return null
@@ -33,6 +41,29 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
 
   if (msg.type === 'assistant' && typeof msg.message === 'object' && msg.message !== null) {
     const message = msg.message as Record<string, unknown>
+    const content = message.content
+
+    // Tool call: assistant message with tool_use content block
+    if (Array.isArray(content) && content.length > 0) {
+      const block = content[0] as Record<string, unknown>
+      if (block.type === 'tool_use' && typeof block.name === 'string') {
+        return {
+          timestamp: ts,
+          source: 'sdk',
+          kind: 'tool_call',
+          data: {
+            tool: block.name,
+            toolUseId: typeof block.id === 'string' ? block.id : undefined,
+            args: typeof block.input === 'object' && block.input !== null
+              ? block.input as Record<string, unknown>
+              : undefined,
+          },
+        }
+      }
+    }
+
+    // Token update: assistant message with usage but no tool_use (avoids duplicates
+    // from parallel tool calls where each call emits its own assistant message)
     const usage = message.usage as Record<string, number> | undefined
     if (usage) {
       return {
@@ -49,14 +80,23 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
     }
   }
 
-  if (msg.type === 'tool_use' || (msg.type === 'content_block_start' && isToolUse(msg))) {
-    const name = extractToolName(msg)
-    if (name) {
-      return {
-        timestamp: ts,
-        source: 'sdk',
-        kind: 'tool_call',
-        data: { tool: name },
+  // Tool result: user message with tool_result content block
+  if (msg.type === 'user' && typeof msg.message === 'object' && msg.message !== null) {
+    const message = msg.message as Record<string, unknown>
+    const content = message.content
+    if (Array.isArray(content) && content.length > 0) {
+      const block = content[0] as Record<string, unknown>
+      if (block.type === 'tool_result') {
+        return {
+          timestamp: ts,
+          source: 'sdk',
+          kind: 'tool_result',
+          data: {
+            toolUseId: typeof block.tool_use_id === 'string' ? block.tool_use_id : undefined,
+            content: extractContent(block.content),
+            isError: block.is_error === true,
+          },
+        }
       }
     }
   }
@@ -82,14 +122,16 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
   return null
 }
 
-function isToolUse(msg: Record<string, unknown>): boolean {
-  const block = msg.content_block as Record<string, unknown> | undefined
-  return block?.type === 'tool_use'
-}
-
-function extractToolName(msg: Record<string, unknown>): string | null {
-  if (typeof msg.name === 'string') return msg.name
-  const block = msg.content_block as Record<string, unknown> | undefined
-  if (typeof block?.name === 'string') return block.name
-  return null
+function extractContent(content: unknown): string {
+  if (typeof content === 'string') return content.slice(0, 500)
+  if (Array.isArray(content)) {
+    return content
+      .map((c) => {
+        const item = c as Record<string, unknown>
+        return typeof item.text === 'string' ? item.text : ''
+      })
+      .join('\n')
+      .slice(0, 500)
+  }
+  return ''
 }

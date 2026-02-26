@@ -10,7 +10,13 @@
     "enabled": true
   },
   "files": {
-    "includes": ["**", "!!**/dist", "!!**/sample-project", "!!**/node_modules"]
+    "includes": [
+      "**",
+      "!!**/dist",
+      "!!**/sample-project",
+      "!!**/tests",
+      "!!**/node_modules"
+    ]
   },
   "formatter": {
     "enabled": true,

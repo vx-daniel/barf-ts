@@ -1,14 +1,15 @@
 /**
  * REST API routes — CRUD issues, transitions, config, interview.
  */
-import { writeFileSync, readFileSync } from 'fs'
-import { join } from 'path'
-import { IssueStateSchema } from '@/types'
-import { VALID_TRANSITIONS, parseIssue, serializeIssue } from '@/core/issue'
-import { injectTemplateVars } from '@/core/context'
-import { resolvePromptTemplate } from '@/core/prompts'
-import { execFileNoThrow } from '@/utils/execFileNoThrow'
+
 import type { IssueService } from '@dashboard/services/issue-service'
+import { readFileSync, writeFileSync } from 'fs'
+import { join } from 'path'
+import { injectTemplateVars } from '@/core/context'
+import { parseIssue, serializeIssue, VALID_TRANSITIONS } from '@/core/issue'
+import { resolvePromptTemplate } from '@/core/prompts'
+import { IssueStateSchema } from '@/types'
+import { execFileNoThrow } from '@/utils/execFileNoThrow'
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -29,13 +30,19 @@ export async function handleListIssues(svc: IssueService): Promise<Response> {
   return json(result.value)
 }
 
-export async function handleGetIssue(svc: IssueService, id: string): Promise<Response> {
+export async function handleGetIssue(
+  svc: IssueService,
+  id: string,
+): Promise<Response> {
   const result = await svc.provider.fetchIssue(id)
   if (result.isErr()) return jsonError(result.error.message, 404)
   return json(result.value)
 }
 
-export async function handleCreateIssue(svc: IssueService, req: Request): Promise<Response> {
+export async function handleCreateIssue(
+  svc: IssueService,
+  req: Request,
+): Promise<Response> {
   let body: { title?: string; body?: string }
   try {
     body = await req.json()
@@ -70,7 +77,10 @@ export async function handleUpdateIssue(
   return json(result.value)
 }
 
-export async function handleDeleteIssue(svc: IssueService, id: string): Promise<Response> {
+export async function handleDeleteIssue(
+  svc: IssueService,
+  id: string,
+): Promise<Response> {
   const result = await svc.provider.deleteIssue(id)
   if (result.isErr()) return jsonError(result.error.message, 500)
   return json({ ok: true })
@@ -171,11 +181,14 @@ export async function handleInterview(
     .map((a, i) => `${i + 1}. **Q:** ${a.question}\n   **A:** ${a.answer}`)
     .join('\n\n')
 
-  const prompt = injectTemplateVars(resolvePromptTemplate('interview_eval', svc.config), {
-    BARF_ISSUE_ID: id,
-    BARF_ISSUE_BODY: issue.body,
-    BARF_INTERVIEW_QA: qaText,
-  })
+  const prompt = injectTemplateVars(
+    resolvePromptTemplate('interview_eval', svc.config),
+    {
+      BARF_ISSUE_ID: id,
+      BARF_ISSUE_BODY: issue.body,
+      BARF_INTERVIEW_QA: qaText,
+    },
+  )
 
   const execResult = await execFileNoThrow('claude', [
     '-p',
@@ -187,11 +200,17 @@ export async function handleInterview(
   ])
 
   if (execResult.status !== 0) {
-    return jsonError(`Claude interview eval failed (exit ${execResult.status}): ${execResult.stderr.trim()}`, 500)
+    return jsonError(
+      `Claude interview eval failed (exit ${execResult.status}): ${execResult.stderr.trim()}`,
+      500,
+    )
   }
 
   // Parse response
-  let evalResult: { satisfied: boolean; questions?: Array<{ question: string; options?: string[] }> }
+  let evalResult: {
+    satisfied: boolean
+    questions?: Array<{ question: string; options?: string[] }>
+  }
   try {
     const raw = execResult.stdout
       .trim()
@@ -211,7 +230,10 @@ export async function handleInterview(
 
   // Satisfied — update issue: append Q&A, remove questions section, transition to GROOMED
   const qaSection = `\n\n## Interview Q&A\n\n${qaText}`
-  const cleanBody = issue.body.replace(/\n\n## Interview Questions\n\n[\s\S]*$/, '')
+  const cleanBody = issue.body.replace(
+    /\n\n## Interview Questions\n\n[\s\S]*$/,
+    '',
+  )
   const writeResult = await svc.provider.writeIssue(id, {
     needs_interview: false,
     state: 'GROOMED',
@@ -260,7 +282,9 @@ export async function handleSaveConfig(
     }
     const envKey = trimmed.slice(0, eq).trim()
     // Find camelCase key for this env key
-    const camelKey = Object.entries(REVERSE_KEY_MAP).find(([, v]) => v === envKey)?.[0]
+    const camelKey = Object.entries(REVERSE_KEY_MAP).find(
+      ([, v]) => v === envKey,
+    )?.[0]
     if (camelKey && camelKey in body) {
       const val = body[camelKey]
       // Skip masked API keys — keep existing value
@@ -289,6 +313,9 @@ export async function handleSaveConfig(
     writeFileSync(rcPath, outputLines.join('\n'))
     return json({ ok: true, path: rcPath })
   } catch (e) {
-    return jsonError(`Failed to write config: ${e instanceof Error ? e.message : String(e)}`, 500)
+    return jsonError(
+      `Failed to write config: ${e instanceof Error ? e.message : String(e)}`,
+      500,
+    )
   }
 }

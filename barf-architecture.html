@@ -713,7 +713,7 @@ const state = {
 };
 
 const nodeMap = {};
-NODES.forEach(function(n) { nodeMap[n.id] = n; });
+NODES.forEach((n) => { nodeMap[n.id] = n; });
 
 // --- SVG HELPERS ---
 const svg = document.getElementById('canvas');
@@ -737,10 +737,10 @@ function renderDiagram() {
   var visibleConns = state.conns;
   var hl = state.highlightNodes;
   var commentedIds = {};
-  state.comments.forEach(function(c) { commentedIds[c.target] = true; });
+  state.comments.forEach((c) => { commentedIds[c.target] = true; });
 
   var maxX = 0, maxY = 0;
-  NODES.forEach(function(n) {
+  NODES.forEach((n) => {
     if (visibleLayers[n.layer]) {
       maxX = Math.max(maxX, n.x + n.w);
       maxY = Math.max(maxY, n.y + n.h);
@@ -794,7 +794,7 @@ function renderDiagram() {
 
   // Visible node IDs set
   var visibleNodeIds = {};
-  NODES.forEach(function(n) {
+  NODES.forEach((n) => {
     if (visibleLayers[n.layer]) visibleNodeIds[n.id] = true;
   });
 
@@ -883,8 +883,8 @@ function renderDiagram() {
       }, g);
     }
 
-    (function(nodeId) {
-      g.addEventListener('click', function() { openModal(nodeId); });
+    ((nodeId) => {
+      g.addEventListener('click', () => { openModal(nodeId); });
     })(n.id);
   }
 }
@@ -897,7 +897,7 @@ function openModal(nodeId) {
   document.getElementById('modal-path').textContent = node.subtitle + ' \u2014 ' + node.desc;
   document.getElementById('modal-input').value = '';
   document.getElementById('modal').classList.add('open');
-  setTimeout(function() { document.getElementById('modal-input').focus(); }, 50);
+  setTimeout(() => { document.getElementById('modal-input').focus(); }, 50);
 }
 
 function closeModal() {
@@ -973,7 +973,7 @@ function renderComments() {
 }
 
 function deleteComment(id) {
-  state.comments = state.comments.filter(function(c) { return c.id !== id; });
+  state.comments = state.comments.filter((c) => c.id !== id);
   updateAll();
 }
 
@@ -1014,19 +1014,19 @@ function updatePrompt() {
 }
 
 // --- COPY ---
-document.getElementById('copy-btn').addEventListener('click', function() {
+document.getElementById('copy-btn').addEventListener('click', () => {
   var text = document.getElementById('prompt-text').textContent;
-  navigator.clipboard.writeText(text).then(function() {
+  navigator.clipboard.writeText(text).then(() => {
     var btn = document.getElementById('copy-btn');
     btn.textContent = 'Copied!';
     btn.classList.add('copied');
-    setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
   });
 });
 
 // --- PRESETS ---
-document.querySelectorAll('.preset-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
+document.querySelectorAll('.preset-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
     var preset = PRESETS[btn.dataset.preset];
     state.activePreset = btn.dataset.preset;
     state.highlightNodes = preset.highlight || null;
@@ -1045,26 +1045,26 @@ document.querySelectorAll('.preset-btn').forEach(function(btn) {
       if (ccb) ccb.checked = preset.conns[connKeys[j]];
     }
 
-    document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.preset-btn').forEach((b) => { b.classList.remove('active'); });
     btn.classList.add('active');
     updateAll();
   });
 });
 
 // --- LAYER TOGGLES ---
-document.querySelectorAll('[data-layer]').forEach(function(cb) {
-  cb.addEventListener('change', function() {
+document.querySelectorAll('[data-layer]').forEach((cb) => {
+  cb.addEventListener('change', () => {
     state.layers[cb.dataset.layer] = cb.checked;
     state.activePreset = 'custom';
     state.highlightNodes = null;
-    document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.preset-btn').forEach((b) => { b.classList.remove('active'); });
     updateAll();
   });
 });
 
 // --- CONNECTION TOGGLES ---
-document.querySelectorAll('[data-conn]').forEach(function(cb) {
-  cb.addEventListener('change', function() {
+document.querySelectorAll('[data-conn]').forEach((cb) => {
+  cb.addEventListener('change', () => {
     state.conns[cb.dataset.conn] = cb.checked;
     updateAll();
   });
@@ -1077,12 +1077,12 @@ function setZoom(z) {
   renderDiagram();
 }
 
-document.getElementById('zoom-in').addEventListener('click', function() { setZoom(state.zoom + 0.15); });
-document.getElementById('zoom-out').addEventListener('click', function() { setZoom(state.zoom - 0.15); });
-document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(1); });
+document.getElementById('zoom-in').addEventListener('click', () => { setZoom(state.zoom + 0.15); });
+document.getElementById('zoom-out').addEventListener('click', () => { setZoom(state.zoom - 0.15); });
+document.getElementById('zoom-reset').addEventListener('click', () => { setZoom(1); });
 
 // --- KEYBOARD ---
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeModal();
   if (e.key === 'Enter' && state.modalTarget) saveComment();
 });
