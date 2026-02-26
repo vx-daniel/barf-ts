@@ -33,7 +33,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     geminiModel: 'gemini-1.5-pro',
     anthropicApiKey: '',
     claudeAuditModel: 'claude-sonnet-4-6',
-    logFile: 'barf.log',
+    logFile: '.barf/barf.jsonl',
     logLevel: 'info',
     logPretty: false,
     ...overrides,

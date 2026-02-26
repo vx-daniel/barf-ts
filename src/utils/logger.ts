@@ -1,4 +1,6 @@
 /** @module Utilities */
+import { mkdirSync } from 'fs'
+import { dirname } from 'path'
 import pino from 'pino'
 import type { Config } from '@/types/index'
 
@@ -27,7 +29,7 @@ function buildLogger(name: string): pino.Logger {
   const level = _loggerConfig?.logLevel ?? process.env.LOG_LEVEL ?? 'info'
   const pretty = _loggerConfig?.logPretty ?? process.env.LOG_PRETTY === '1'
   const logFile =
-    _loggerConfig?.logFile ?? process.env.BARF_LOG_FILE ?? 'barf.log'
+    _loggerConfig?.logFile ?? process.env.BARF_LOG_FILE ?? '.barf/barf.jsonl'
 
   if (pretty) {
     try {
@@ -43,6 +45,7 @@ function buildLogger(name: string): pino.Logger {
     }
   }
 
+  mkdirSync(dirname(logFile), { recursive: true })
   const destinations: Parameters<typeof pino.multistream>[0] = [
     { stream: pino.destination(logFile) },
   ]

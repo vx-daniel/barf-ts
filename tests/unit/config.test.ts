@@ -138,11 +138,11 @@ describe('parseBarfrc', () => {
     }
   })
 
-  it('defaults logFile to barf.log', () => {
+  it('defaults logFile to .barf/barf.jsonl', () => {
     const result = parseBarfrc('')
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
-      expect(result.value.logFile).toBe('barf.log')
+      expect(result.value.logFile).toBe('.barf/barf.jsonl')
     }
   })
 

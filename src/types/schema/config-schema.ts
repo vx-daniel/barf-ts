@@ -91,7 +91,7 @@ export const ConfigSchema = z.object({
   /** Directory for custom prompt templates. Empty string uses built-in prompts. */
   promptDir: z.string().default(''),
   /** Path to the pino log file. */
-  logFile: z.string().default('barf.log'),
+  logFile: z.string().default('.barf/barf.jsonl'),
   /** Pino log level (trace, debug, info, warn, error, fatal). */
   logLevel: z.string().default('info'),
   /** Enable pretty-printed log output (for development). */
