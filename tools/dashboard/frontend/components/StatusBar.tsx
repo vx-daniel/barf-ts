@@ -6,14 +6,15 @@
  * manages the elapsed-timer ticker with `useEffect` so no module-level
  * `setInterval` is needed.
  */
-import { useState, useEffect } from 'preact/hooks'
-import {
-  issues,
-  selectedId,
-  activeCommand,
-} from '@dashboard/frontend/lib/state'
+
 import { STATE_ORDER, stateColor } from '@dashboard/frontend/lib/constants'
 import { fmt, fmtDuration } from '@dashboard/frontend/lib/format'
+import {
+  activeCommand,
+  issues,
+  selectedId,
+} from '@dashboard/frontend/lib/state'
+import { useEffect, useState } from 'preact/hooks'
 
 /**
  * Persistent status bar between the header and the board.

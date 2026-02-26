@@ -3,9 +3,10 @@
  *
  * Inserts thin divider elements and tracks mouse drag to update
  * CSS grid template sizes on #app.
+ *
+ * Each resizer observes the DOM for its target element, mounting the drag
+ * handle as soon as the element appears and cleaning up when it disappears.
  */
-
-import { getEl } from '@dashboard/frontend/lib/dom'
 
 const MIN_SIDEBAR_W = 280
 const MAX_SIDEBAR_W = 800
@@ -13,92 +14,138 @@ const MIN_BOTTOM_H = 100
 const MAX_BOTTOM_H = 600
 
 /**
- * Mounts the sidebar resize handle, allowing users to drag the vertical divider
- * to adjust sidebar width. Clamps width between {@link MIN_SIDEBAR_W} and
- * {@link MAX_SIDEBAR_W} and writes the result directly to `#app`'s grid template.
+ * Attaches a drag handle to `#sidebar` for horizontal resizing.
+ * Safe to call before the sidebar exists — the handle is mounted lazily
+ * via a {@link MutationObserver} and removed if the sidebar unmounts.
  */
 export function mountSidebarResizer(): void {
-  const app = getEl('app')
-  const sidebar = getEl('sidebar')
+  const HANDLE_ID = 'resize-sidebar'
+  let mounted = false
 
-  const handle = document.createElement('div')
-  handle.id = 'resize-sidebar'
-  handle.className = 'resize-handle resize-handle-v'
-  sidebar.prepend(handle)
+  function attach() {
+    const app = document.getElementById('app')
+    const sidebar = document.getElementById('sidebar')
+    if (!app || !sidebar || mounted) return
+    if (document.getElementById(HANDLE_ID)) return
 
-  let startX = 0
-  let startW = 0
+    const handle = document.createElement('div')
+    handle.id = HANDLE_ID
+    handle.className = 'resize-handle resize-handle-v'
+    sidebar.prepend(handle)
+    mounted = true
 
-  handle.addEventListener('mousedown', (e) => {
-    e.preventDefault()
-    startX = e.clientX
-    startW = sidebar.getBoundingClientRect().width
+    let startX = 0
+    let startW = 0
 
-    const onMove = (ev: MouseEvent) => {
-      const delta = startX - ev.clientX
-      const newW = Math.min(
-        MAX_SIDEBAR_W,
-        Math.max(MIN_SIDEBAR_W, startW + delta),
-      )
-      app.style.gridTemplateColumns = `1fr ${newW}px`
-    }
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      startX = e.clientX
+      startW = sidebar.getBoundingClientRect().width
 
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
+      const onMove = (ev: MouseEvent) => {
+        const delta = startX - ev.clientX
+        const newW = Math.min(
+          MAX_SIDEBAR_W,
+          Math.max(MIN_SIDEBAR_W, startW + delta),
+        )
+        app.style.gridTemplateColumns = `1fr ${newW}px`
+      }
 
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
+
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+    })
+  }
+
+  function detach() {
+    if (!mounted) return
+    const handle = document.getElementById(HANDLE_ID)
+    handle?.remove()
+    mounted = false
+  }
+
+  // Try immediately, then watch for sidebar appear/disappear
+  attach()
+  const observer = new MutationObserver(() => {
+    const sidebar = document.getElementById('sidebar')
+    if (sidebar && !mounted) attach()
+    else if (!sidebar && mounted) detach()
   })
+  observer.observe(document.body, { childList: true, subtree: true })
 }
 
 /**
- * Mounts the bottom panel resize handle, allowing users to drag the horizontal
- * divider to adjust the activity log height. Clamps height between
- * {@link MIN_BOTTOM_H} and {@link MAX_BOTTOM_H} and applies the value as an
- * explicit pixel height on `#bottom`.
+ * Attaches a drag handle to `#bottom` for vertical resizing.
+ * Safe to call before the bottom panel exists — the handle is mounted lazily
+ * via a {@link MutationObserver} and removed if the panel unmounts.
  */
 export function mountBottomResizer(): void {
-  const bottom = getEl('bottom')
+  const HANDLE_ID = 'resize-bottom'
+  let mounted = false
 
-  const handle = document.createElement('div')
-  handle.id = 'resize-bottom'
-  handle.className = 'resize-handle resize-handle-h'
-  bottom.prepend(handle)
+  function attach() {
+    const bottom = document.getElementById('bottom')
+    if (!bottom || mounted) return
+    if (document.getElementById(HANDLE_ID)) return
 
-  let startY = 0
-  let startH = 0
+    const handle = document.createElement('div')
+    handle.id = HANDLE_ID
+    handle.className = 'resize-handle resize-handle-h'
+    bottom.prepend(handle)
+    mounted = true
 
-  handle.addEventListener('mousedown', (e) => {
-    e.preventDefault()
-    startY = e.clientY
-    startH = bottom.getBoundingClientRect().height
+    let startY = 0
+    let startH = 0
 
-    const onMove = (ev: MouseEvent) => {
-      const delta = startY - ev.clientY
-      const newH = Math.min(
-        MAX_BOTTOM_H,
-        Math.max(MIN_BOTTOM_H, startH + delta),
-      )
-      bottom.style.maxHeight = `${newH}px`
-      bottom.style.height = `${newH}px`
-    }
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      startY = e.clientY
+      startH = bottom.getBoundingClientRect().height
 
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
+      const onMove = (ev: MouseEvent) => {
+        const delta = startY - ev.clientY
+        const newH = Math.min(
+          MAX_BOTTOM_H,
+          Math.max(MIN_BOTTOM_H, startH + delta),
+        )
+        bottom.style.maxHeight = `${newH}px`
+        bottom.style.height = `${newH}px`
+      }
 
-    document.body.style.cursor = 'row-resize'
-    document.body.style.userSelect = 'none'
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
+
+      document.body.style.cursor = 'row-resize'
+      document.body.style.userSelect = 'none'
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+    })
+  }
+
+  function detach() {
+    if (!mounted) return
+    const handle = document.getElementById(HANDLE_ID)
+    handle?.remove()
+    mounted = false
+  }
+
+  attach()
+  const observer = new MutationObserver(() => {
+    const bottom = document.getElementById('bottom')
+    if (bottom && !mounted) attach()
+    else if (!bottom && mounted) detach()
   })
+  observer.observe(document.body, { childList: true, subtree: true })
 }

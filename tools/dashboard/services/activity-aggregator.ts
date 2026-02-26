@@ -4,26 +4,9 @@
  * Extracts only the fields the dashboard cares about: tool names, token deltas,
  * result summaries. Raw messages are discarded after extraction.
  */
+import type { ActivityEntry } from '@/types/schema/activity-schema'
 
-export type ActivityKind =
-  | 'stdout'
-  | 'stderr'
-  | 'tool_call'
-  | 'tool_result'
-  | 'token_update'
-  | 'result'
-  | 'error'
-
-export type ActivitySource = 'command' | 'sdk'
-
-export interface ActivityEntry {
-  timestamp: number
-  source: ActivitySource
-  kind: ActivityKind
-  issueId?: string
-  issueName?: string
-  data: Record<string, unknown>
-}
+export type { ActivityKind, ActivitySource, ActivityEntry } from '@/types/schema/activity-schema'
 
 /**
  * Converts a raw JSONL SDK message into an {@link ActivityEntry}, or `null` if

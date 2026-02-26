@@ -18,6 +18,7 @@ import {
 import { getNewIssueActions } from '@dashboard/frontend/lib/issue-helpers'
 import { issues, runningId } from '@dashboard/frontend/lib/state'
 import type { Issue } from '@dashboard/frontend/lib/types'
+import type { IssueState } from '@/types/schema/issue-schema'
 
 /**
  * A single issue card within a kanban column.
@@ -30,7 +31,7 @@ function KanbanCard({ issue }: { issue: Issue }) {
   const actions =
     issue.state === 'NEW'
       ? getNewIssueActions(issue)
-      : ((CMD_ACTIONS as Record<string, string[]>)[issue.state] ?? [])
+      : (CMD_ACTIONS[issue.state] ?? [])
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: card is a complex container, not a simple button
@@ -82,7 +83,7 @@ function KanbanCard({ issue }: { issue: Issue }) {
             <button
               type="button"
               key={cmd}
-              className={`abtn ${(CMD_CLASS as Record<string, string>)[cmd]}`}
+              className={`abtn ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
               disabled={runningId.value !== null}
               onClick={(e: MouseEvent) => {
                 e.stopPropagation()
@@ -103,15 +104,14 @@ function KanbanCard({ issue }: { issue: Issue }) {
  *
  * @param state - The {@link IssueState} string value this column represents
  */
-function KanbanColumn({ state }: { state: string }) {
-  const labels = STATE_LABELS as Record<string, string>
+function KanbanColumn({ state }: { state: IssueState }) {
   const color = stateColor(state)
   const stateIssues = issues.value.filter((i) => i.state === state)
 
   return (
     <div className="col">
       <div className="col-hdr" style={{ color, borderTopColor: color }}>
-        <span>{labels[state] ?? state}</span>
+        <span>{STATE_LABELS[state] ?? state}</span>
         <span className="col-cnt">{stateIssues.length}</span>
       </div>
       <div className="col-body">

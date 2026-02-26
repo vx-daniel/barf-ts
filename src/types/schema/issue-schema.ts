@@ -58,6 +58,29 @@ export const IssueStateSchema = z.enum([
 export type IssueState = z.infer<typeof IssueStateSchema>
 
 /**
+ * The allowed state transitions in the barf issue lifecycle.
+ *
+ * Used by `validateTransition` in `core/issue/index.ts` to reject illegal moves.
+ * Terminal states (`SPLIT`, `VERIFIED`) have empty arrays — no further transitions allowed.
+ * `COMPLETED` is an intermediate state; only `VERIFIED` is the true terminal after verification.
+ *
+ * Defined here (rather than in `core/issue`) so that browser consumers (dashboard)
+ * can import it without pulling in `neverthrow`.
+ *
+ * @category Issue Model
+ */
+export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
+  NEW: ['GROOMED', 'STUCK'],
+  GROOMED: ['PLANNED', 'STUCK', 'SPLIT'],
+  PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
+  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
+  STUCK: ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
+  SPLIT: [],
+  COMPLETED: ['VERIFIED'],
+  VERIFIED: [],
+}
+
+/**
  * A barf work item — the central data model of the system.
  *
  * Stored as frontmatter markdown under `issuesDir`. The frontmatter fields

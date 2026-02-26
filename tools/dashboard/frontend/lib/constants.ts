@@ -4,10 +4,18 @@
  * These are the single source of truth for state colours, labels, ordering,
  * and the command actions available per state. Import from here — do not
  * redeclare locally in panel files.
+ *
+ * All state maps are typed as `Record<IssueState, ...>` so adding a new state
+ * to {@link IssueStateSchema} causes a compile error here until updated.
  */
+import type { IssueState } from '@/types/schema/issue-schema'
 
-/** Canonical rendering order for kanban columns. */
-export const STATE_ORDER = [
+/**
+ * Canonical rendering order for kanban columns.
+ * Differs from {@link IssueStateSchema} order — side-states (`STUCK`, `SPLIT`)
+ * are placed at the end for a cleaner kanban layout.
+ */
+export const STATE_ORDER: readonly IssueState[] = [
   'NEW',
   'GROOMED',
   'PLANNED',
@@ -16,14 +24,14 @@ export const STATE_ORDER = [
   'VERIFIED',
   'STUCK',
   'SPLIT',
-] as const
+]
 
 /**
  * Accent colour for each {@link IssueState} value, used for badges and borders.
  * Values reference CSS custom properties defined in the `@theme` block
  * (`styles/index.css`) so the palette has a single source of truth.
  */
-export const STATE_COLORS = {
+export const STATE_COLORS: Record<IssueState, string> = {
   NEW: 'var(--color-state-new)',
   GROOMED: 'var(--color-state-groomed)',
   PLANNED: 'var(--color-state-planned)',
@@ -32,10 +40,10 @@ export const STATE_COLORS = {
   VERIFIED: 'var(--color-state-verified)',
   STUCK: 'var(--color-state-stuck)',
   SPLIT: 'var(--color-state-split)',
-} satisfies Record<string, string>
+}
 
 /** Human-readable label for each {@link IssueState} value. */
-export const STATE_LABELS = {
+export const STATE_LABELS: Record<IssueState, string> = {
   NEW: 'NEW',
   GROOMED: 'GROOMED',
   PLANNED: 'PLANNED',
@@ -44,10 +52,10 @@ export const STATE_LABELS = {
   VERIFIED: 'VERIFIED',
   STUCK: 'STUCK',
   SPLIT: 'SPLIT',
-} satisfies Record<string, string>
+}
 
 /** CLI commands available to run for issues in each state. */
-export const CMD_ACTIONS = {
+export const CMD_ACTIONS: Record<IssueState, string[]> = {
   NEW: [],
   GROOMED: ['plan'],
   PLANNED: ['plan', 'build'],
@@ -56,7 +64,7 @@ export const CMD_ACTIONS = {
   VERIFIED: [],
   STUCK: ['plan'],
   SPLIT: [],
-} satisfies Record<string, string[]>
+}
 
 /**
  * Returns the accent colour for a given issue state, falling back to the
@@ -68,8 +76,8 @@ export const CMD_ACTIONS = {
  * @param state - An {@link IssueState} string value
  * @returns A CSS hex colour string
  */
-export function stateColor(state: string): string {
-  return (STATE_COLORS as Record<string, string>)[state] ?? STATE_COLORS.NEW
+export function stateColor(state: IssueState | string): string {
+  return STATE_COLORS[state as IssueState] ?? STATE_COLORS.NEW
 }
 
 /**

@@ -21,6 +21,7 @@ import type { Issue, IssueState } from '@/types'
  */
 export const STATE_TO_LABEL: Record<IssueState, string> = {
   NEW: 'barf:new',
+  GROOMED: 'barf:groomed',
   PLANNED: 'barf:planned',
   IN_PROGRESS: 'barf:in-progress',
   STUCK: 'barf:stuck',
