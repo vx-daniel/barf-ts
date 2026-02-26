@@ -6,12 +6,15 @@
  * {@link module:lib/actions}. This file is intentionally thin.
  */
 import { render } from 'preact'
-import { html } from 'htm/preact'
-import { issues, selectedId, runningId, pauseRefresh } from '@dashboard/frontend/lib/state'
+import {
+  issues,
+  selectedId,
+  runningId,
+  pauseRefresh,
+} from '@dashboard/frontend/lib/state'
 import {
   fetchIssues,
   fetchConfig,
-  openCard,
   navigateToIssue,
   doTransition,
   deleteIssue,
@@ -30,14 +33,17 @@ import {
 } from '@dashboard/frontend/panels/activity-log'
 import { initEditor, closeSidebar } from '@dashboard/frontend/panels/editor'
 import { initConfigPanel } from '@dashboard/frontend/panels/config'
-import { mountSidebarResizer, mountBottomResizer } from '@dashboard/frontend/lib/resizer'
+import {
+  mountSidebarResizer,
+  mountBottomResizer,
+} from '@dashboard/frontend/lib/resizer'
 import { getEl } from '@dashboard/frontend/lib/dom'
 
 // ── Mount Preact components ───────────────────────────────────────────────────
 // Signals read inside components auto-subscribe them — no manual effects needed.
 
-render(html`<${KanbanBoard} />`, getEl('board'))
-render(html`<${StatusBar} />`, getEl('statusbar'))
+render(<KanbanBoard />, getEl('board'))
+render(<StatusBar />, getEl('statusbar'))
 
 // ── Mount imperative panels ───────────────────────────────────────────────────
 // Activity log, editor, and config remain imperative — they manage complex
@@ -67,7 +73,9 @@ initEditor({
 
 // ── DOM event wiring ──────────────────────────────────────────────────────────
 
-document.getElementById('activity-close')?.addEventListener('click', onActivityClose)
+document
+  .getElementById('activity-close')
+  ?.addEventListener('click', onActivityClose)
 
 document.getElementById('term-input')?.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return
@@ -86,11 +94,15 @@ document.getElementById('btn-new')?.addEventListener('click', () => {
   ;(document.getElementById('modal-ttl') as HTMLInputElement).value = ''
   ;(document.getElementById('modal-bdy') as HTMLTextAreaElement).value = ''
   document.getElementById('modal-ov')?.classList.add('open')
-  setTimeout(() => (document.getElementById('modal-ttl') as HTMLInputElement).focus(), 50)
+  setTimeout(
+    () => (document.getElementById('modal-ttl') as HTMLInputElement).focus(),
+    50,
+  )
 })
 
 document.getElementById('modal-ov')?.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) document.getElementById('modal-ov')?.classList.remove('open')
+  if (e.target === e.currentTarget)
+    document.getElementById('modal-ov')?.classList.remove('open')
 })
 
 document.getElementById('modal-cancel')?.addEventListener('click', () => {
@@ -101,7 +113,9 @@ document.getElementById('modal-ttl')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') void submitNewIssue()
 })
 
-document.getElementById('modal-submit')?.addEventListener('click', () => void submitNewIssue())
+document
+  .getElementById('modal-submit')
+  ?.addEventListener('click', () => void submitNewIssue())
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 

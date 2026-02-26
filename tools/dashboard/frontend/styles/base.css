@@ -1,4 +1,5 @@
-/* ── CSS Variables + Dark Theme + Layout Grid ───────────────────── */
+/* ── Dark Theme + Layout Grid ────────────────────────────────────── */
+/* Colours are defined in index.css @theme — use var(--color-*).    */
 *,
 *::before,
 *::after {
@@ -7,31 +8,12 @@
   padding: 0;
 }
 
-:root {
-  --bg: #0d0d1a;
-  --surface: #161625;
-  --surface2: #1e1e32;
-  --border: #2a2a45;
-  --text: #e2e8f0;
-  --text-muted: #7c8db0;
-  --accent: #a78bfa;
-  --radius: 6px;
-  --c-new: #6b7280;
-  --c-interviewing: #3b82f6;
-  --c-planned: #f59e0b;
-  --c-in-progress: #f97316;
-  --c-completed: #22c55e;
-  --c-verified: #10b981;
-  --c-stuck: #ef4444;
-  --c-split: #a855f7;
-}
-
 html,
 body {
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: "SF Mono", "Fira Code", monospace;
   font-size: 13px;
 }
@@ -68,19 +50,19 @@ body {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 #header h1 {
   font-size: 15px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--color-accent);
   white-space: nowrap;
 }
 
 #project-path {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-size: 11px;
   flex: 1;
   overflow: hidden;
@@ -90,10 +72,10 @@ body {
 
 .hbtn {
   padding: 5px 12px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
+  border-radius: var(--radius-default);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface2);
+  color: var(--color-text);
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
@@ -101,18 +83,18 @@ body {
 }
 
 .hbtn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 .hbtn.active {
-  background: var(--accent);
+  background: var(--color-accent);
   color: #fff;
-  border-color: var(--accent);
+  border-color: var(--color-accent);
 }
 
 #refresh-ind {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 /* ── Main area ──────────────────────────────────────────────────── */
@@ -128,8 +110,8 @@ body {
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border);
-  background: var(--surface);
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
   overflow: hidden;
   position: relative;
 }
@@ -137,10 +119,10 @@ body {
 /* ── Bottom panel ───────────────────────────────────────────────── */
 #bottom {
   grid-area: bottom;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
   display: none;
   flex-direction: column;
-  background: #0a0a14;
+  background: var(--color-bg-deep);
   max-height: 300px;
 }
 
@@ -169,36 +151,36 @@ body {
   cursor: not-allowed;
 }
 .abtn-plan {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--color-state-planned);
+  color: var(--color-state-planned);
 }
 .abtn-build {
-  border-color: #f97316;
-  color: #f97316;
+  border-color: var(--color-state-in-progress);
+  color: var(--color-state-in-progress);
 }
 .abtn-audit {
-  border-color: #22c55e;
-  color: #22c55e;
+  border-color: var(--color-state-completed);
+  color: var(--color-state-completed);
 }
 .abtn-interview {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--color-state-groomed);
+  color: var(--color-state-groomed);
 }
 .abtn-triage {
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  border-color: var(--color-state-split);
+  color: var(--color-state-split);
 }
 .abtn-stop {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
 }
 
 /* ── Modal ──────────────────────────────────────────────────────── */
 #modal-ov {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-overlay);
   z-index: 200;
   display: none;
   align-items: center;
@@ -209,8 +191,8 @@ body {
 }
 
 #modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   width: 420px;
   max-width: 90vw;
@@ -223,16 +205,16 @@ body {
 #modal label {
   display: block;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   margin-bottom: 4px;
 }
 #modal input,
 #modal textarea {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  color: var(--color-text);
   font-family: inherit;
   font-size: 12px;
   padding: 7px 10px;
@@ -242,7 +224,7 @@ body {
 #modal input:focus,
 #modal textarea:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--color-accent);
 }
 #modal-btns {
   display: flex;
@@ -251,35 +233,35 @@ body {
 }
 .mbtn {
   padding: 6px 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
+  border-radius: var(--radius-default);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface2);
+  color: var(--color-text);
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
 }
 .mbtn.primary {
-  background: #7c3aed;
-  border-color: #7c3aed;
+  background: var(--color-accent-bold);
+  border-color: var(--color-accent-bold);
   color: #fff;
 }
 .mbtn.primary:hover {
-  background: #6d28d9;
+  background: var(--color-accent-hover);
 }
 
 /* ── Interview Modal ──────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-overlay);
   z-index: 200;
   align-items: center;
   justify-content: center;
 }
 .modal-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   width: 480px;
   max-width: 90vw;
@@ -299,7 +281,7 @@ body {
 }
 .interview-progress {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 .interview-q {
   font-size: 13px;
@@ -319,31 +301,31 @@ body {
   font-size: 12px;
   cursor: pointer;
   padding: 6px 8px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-default);
 }
 .interview-opt:hover {
-  background: var(--surface2);
+  background: var(--color-surface2);
 }
 .interview-opt input[type="radio"] {
-  accent-color: var(--accent);
+  accent-color: var(--color-accent);
 }
 .interview-other-input {
   width: 100%;
   margin-top: 6px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  color: var(--color-text);
   font-family: inherit;
   font-size: 12px;
   padding: 7px 10px;
 }
 .interview-textarea {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  color: var(--color-text);
   font-family: inherit;
   font-size: 12px;
   padding: 7px 10px;
@@ -353,7 +335,7 @@ body {
 .interview-textarea:focus,
 .interview-other-input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--color-accent);
 }
 .interview-btns {
   display: flex;
@@ -361,7 +343,7 @@ body {
   justify-content: flex-end;
 }
 .interview-err {
-  color: #ef4444;
+  color: var(--color-danger);
   font-size: 11px;
   margin-top: 8px;
 }
@@ -370,7 +352,7 @@ body {
 #config-ov {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-overlay);
   z-index: 200;
   display: none;
   align-items: center;
@@ -381,8 +363,8 @@ body {
 }
 
 #config-modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   width: 560px;
   max-width: 90vw;
@@ -396,7 +378,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 #config-header h2 {
@@ -406,7 +388,7 @@ body {
 }
 #config-path {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -415,7 +397,7 @@ body {
 #config-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
@@ -423,7 +405,7 @@ body {
   margin-left: auto;
 }
 #config-close:hover {
-  color: var(--text);
+  color: var(--color-text);
 }
 
 #config-body {
@@ -436,10 +418,10 @@ body {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--accent);
+  color: var(--color-accent);
   margin: 14px 0 6px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
 }
 .config-group-heading:first-child {
   margin-top: 0;
@@ -454,24 +436,24 @@ body {
 
 .config-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   min-width: 180px;
   flex-shrink: 0;
 }
 
 .config-input {
   flex: 1;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  color: var(--color-text);
   font-family: inherit;
   font-size: 12px;
   padding: 5px 8px;
 }
 .config-input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--color-accent);
 }
 
 select.config-input {
@@ -482,7 +464,7 @@ select.config-input {
 .config-checkbox {
   width: 14px;
   height: 14px;
-  accent-color: var(--accent);
+  accent-color: var(--color-accent);
 }
 
 #config-footer {
@@ -490,12 +472,12 @@ select.config-input {
   align-items: center;
   gap: 8px;
   padding: 12px 18px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 #config-status {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   flex: 1;
 }
 
@@ -510,13 +492,13 @@ select.config-input {
 .resize-handle::after {
   content: "";
   position: absolute;
-  background: var(--border);
+  background: var(--color-border);
   transition: background 0.15s;
 }
 
 .resize-handle:hover::after,
 .resize-handle:active::after {
-  background: var(--accent);
+  background: var(--color-accent);
 }
 
 /* Vertical handle (sidebar left edge) */
@@ -556,6 +538,6 @@ select.config-input {
   width: 4px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--color-border);
   border-radius: 2px;
 }

@@ -18,7 +18,7 @@ mkdirSync(DIST, { recursive: true })
 
 // Bundle TypeScript
 const result = await Bun.build({
-  entrypoints: [join(FRONTEND, 'main.ts')],
+  entrypoints: [join(FRONTEND, 'main.tsx')],
   outdir: DIST,
   minify: true,
   sourcemap: 'external',
@@ -69,7 +69,7 @@ html = html.replace(
   '<link rel="stylesheet" href="/styles.css">\n</head>',
 )
 // Replace module script src
-html = html.replace('src="./main.ts"', 'src="/main.js"')
+html = html.replace('src="./main.tsx"', 'src="/main.js"')
 
 writeFileSync(join(DIST, 'index.html'), html)
 console.log('HTML: index.html')

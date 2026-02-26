@@ -6,30 +6,20 @@
  * re-rendering only affected subtrees on change.
  */
 
-import { Fragment } from 'preact'
-import { html } from 'htm/preact'
 import { openCard, runCommand } from '@dashboard/frontend/lib/actions'
 import {
   CMD_ACTIONS,
   CMD_CLASS,
+  contextBarColor,
   STATE_LABELS,
   STATE_ORDER,
   stateColor,
 } from '@dashboard/frontend/lib/constants'
+import { getNewIssueActions } from '@dashboard/frontend/lib/issue-helpers'
 import { issues, runningId } from '@dashboard/frontend/lib/state'
 import type { Issue } from '@dashboard/frontend/lib/types'
-
-function getNewIssueActions(issue: Issue): string[] {
-  if (issue.needs_interview === undefined) return ['triage']
-  if (issue.needs_interview === true) return ['interview']
-  return []
-}
-
-function contextBarColor(pct: number): string {
-  if (pct > 80) return '#ef4444'
-  if (pct > 60) return '#f97316'
-  return '#22c55e'
-}
+import { html } from 'htm/preact'
+import { Fragment } from 'preact'
 
 /**
  * A single issue card within a kanban column.

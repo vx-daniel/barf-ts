@@ -17,7 +17,6 @@ let answers: Array<{ question: string; answer: string }> = []
 let currentIdx = 0
 let onComplete: (() => void) | null = null
 
-
 function getOverlay(): HTMLElement {
   return getEl('interview-ov')
 }

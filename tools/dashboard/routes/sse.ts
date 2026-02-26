@@ -101,9 +101,9 @@ function spawnSSEStream(
             }
           }
           if (buf) {
-            // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
             send({
               type: streamName,
+              // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
               line: buf.replace(/\u001b\[[0-9;]*m/g, ''),
             })
           }

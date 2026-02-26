@@ -4,6 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "types": ["bun-types"],
     "paths": {
       "@/*": ["./src/*"],

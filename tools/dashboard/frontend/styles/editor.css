@@ -11,13 +11,13 @@
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 #editor-id {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 #editor-title {
   font-size: 14px;
@@ -30,20 +30,20 @@
 #editor-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
   padding: 2px;
 }
 #editor-close:hover {
-  color: var(--text);
+  color: var(--color-text);
 }
 
 /* State + transitions row */
 #editor-state-row {
   padding: 8px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -69,22 +69,22 @@
 .tbtn {
   font-size: 11px;
   padding: 3px 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text-muted);
+  border-radius: var(--radius-default);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface2);
+  color: var(--color-text-muted);
   cursor: pointer;
   font-family: inherit;
 }
 .tbtn:hover {
-  border-color: var(--text-muted);
-  color: var(--text);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
 }
 
 /* Relationships */
 #editor-rels {
   padding: 8px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   display: none;
   flex-direction: column;
@@ -99,7 +99,7 @@
 }
 .rel-label {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -111,14 +111,14 @@
   gap: 5px;
   padding: 2px 8px;
   border-radius: 4px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface2);
   cursor: pointer;
   font-size: 11px;
   transition: border-color 0.15s;
 }
 .rel-chip:hover {
-  border-color: var(--text-muted);
+  border-color: var(--color-text-muted);
 }
 .rel-chip .state-dot {
   width: 6px;
@@ -127,21 +127,21 @@
   flex-shrink: 0;
 }
 .rel-chip .rel-id {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-size: 10px;
 }
 
 /* Tab bar */
 #editor-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 .editor-tab {
   padding: 6px 14px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   background: none;
@@ -152,8 +152,8 @@
 }
 
 .editor-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
 }
 
 /* Editor content area */
@@ -181,7 +181,7 @@
 #editor-preview h1,
 #editor-preview h2,
 #editor-preview h3 {
-  color: var(--accent);
+  color: var(--color-accent);
   margin: 12px 0 6px;
 }
 #editor-preview h1 {
@@ -197,15 +197,15 @@
   margin: 4px 0;
 }
 #editor-preview code {
-  background: var(--surface2);
+  background: var(--color-surface2);
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 11px;
 }
 #editor-preview pre {
-  background: var(--surface2);
+  background: var(--color-surface2);
   padding: 10px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-default);
   overflow-x: auto;
   margin: 8px 0;
 }
@@ -227,7 +227,7 @@
 /* Actions footer */
 #editor-actions {
   padding: 10px 14px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -236,7 +236,7 @@
 
 #editor-save-status {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   align-self: center;
   margin-left: auto;
 }

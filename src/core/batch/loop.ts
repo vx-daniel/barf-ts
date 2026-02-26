@@ -24,7 +24,11 @@ import { verifyIssue } from '@/core/verification'
 import type { Config, DisplayContext } from '@/types'
 import type { LoopMode } from '@/types/schema/mode-schema'
 import { createLogger } from '@/utils/logger'
-import { addBreadcrumb, captureException, setIssueContext } from '@/utils/sentry'
+import {
+  addBreadcrumb,
+  captureException,
+  setIssueContext,
+} from '@/utils/sentry'
 import { toError } from '@/utils/toError'
 import {
   handleOverflow,

@@ -59,9 +59,9 @@ export function startInterviewProc(
         const lines = buf.split('\n')
         buf = lines.pop() ?? ''
         for (const line of lines) {
-          // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
           send({
             type: streamName,
+            // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape stripping
             line: line.replace(/\u001b\[[0-9;]*m/g, ''),
           })
         }

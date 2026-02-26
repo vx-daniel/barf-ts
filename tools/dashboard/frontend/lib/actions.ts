@@ -56,7 +56,10 @@ export async function fetchIssues(): Promise<void> {
   try {
     issues.value = await api.fetchIssues()
   } catch (e) {
-    termLog('error', `fetch issues: ${e instanceof Error ? e.message : String(e)}`)
+    termLog(
+      'error',
+      `fetch issues: ${e instanceof Error ? e.message : String(e)}`,
+    )
   }
 }
 
@@ -124,7 +127,10 @@ export async function doTransition(id: string, to: string): Promise<void> {
     await api.transitionIssue(id, to)
     await fetchIssues()
   } catch (e) {
-    termLog('error', `Transition failed: ${e instanceof Error ? e.message : String(e)}`)
+    termLog(
+      'error',
+      `Transition failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
   }
 }
 
@@ -141,7 +147,10 @@ export async function deleteIssue(id: string): Promise<void> {
     selectedId.value = null
     await fetchIssues()
   } catch (e) {
-    termLog('error', `Delete failed: ${e instanceof Error ? e.message : String(e)}`)
+    termLog(
+      'error',
+      `Delete failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
   }
 }
 
@@ -166,7 +175,10 @@ export function stopActive(): void {
  */
 export function stopAndReset(): void {
   api.stopActive().catch((e: unknown) => {
-    termLog('error', `Stop request failed: ${e instanceof Error ? e.message : String(e)}`)
+    termLog(
+      'error',
+      `Stop request failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
   })
   stopActive()
   termLog('info', 'Stopped.')
@@ -194,7 +206,10 @@ export function resetAfterAuto(): void {
  */
 export function stopAutoRun(): void {
   api.stopActive().catch((e: unknown) => {
-    termLog('error', `Stop request failed: ${e instanceof Error ? e.message : String(e)}`)
+    termLog(
+      'error',
+      `Stop request failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
   })
   sseClient.close()
   termLog('info', 'Stopped.')
@@ -296,7 +311,10 @@ export function handleMsg(data: Record<string, unknown>): void {
  */
 function onCommandDone(exitCode: number): void {
   const ok = exitCode === 0
-  termLog(ok ? 'done' : 'error', ok ? 'Done (exit 0)' : `Failed (exit ${exitCode})`)
+  termLog(
+    ok ? 'done' : 'error',
+    ok ? 'Done (exit 0)' : `Failed (exit ${exitCode})`,
+  )
   runningId.value = null
   pauseRefresh.value = false
   setTermInput(false)
@@ -353,8 +371,10 @@ export function runCommand(id: string, cmd: string): void {
         i.id === id
           ? {
               ...i,
-              total_input_tokens: i.total_input_tokens + Number(entry.data.input_tokens ?? 0),
-              total_output_tokens: i.total_output_tokens + Number(entry.data.output_tokens ?? 0),
+              total_input_tokens:
+                i.total_input_tokens + Number(entry.data.input_tokens ?? 0),
+              total_output_tokens:
+                i.total_output_tokens + Number(entry.data.output_tokens ?? 0),
             }
           : i,
       )
@@ -473,6 +493,9 @@ export async function submitNewIssue(): Promise<void> {
     document.getElementById('modal-ov')?.classList.remove('open')
     await fetchIssues()
   } catch (e) {
-    termLog('error', `Create failed: ${e instanceof Error ? e.message : String(e)}`)
+    termLog(
+      'error',
+      `Create failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
   }
 }

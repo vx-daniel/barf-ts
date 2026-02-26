@@ -285,7 +285,10 @@ export function initConfigPanel(): void {
       renderForm(body, configData)
       overlay.classList.add('open')
     } catch (e) {
-      termLog('error', `Failed to load config: ${e instanceof Error ? e.message : String(e)}`)
+      termLog(
+        'error',
+        `Failed to load config: ${e instanceof Error ? e.message : String(e)}`,
+      )
     }
   })
 

@@ -14,6 +14,8 @@ import {
   stateColor,
 } from '@dashboard/frontend/lib/constants'
 import { el, getEl } from '@dashboard/frontend/lib/dom'
+import { getNewIssueActions } from '@dashboard/frontend/lib/issue-helpers'
+import { VALID_TRANSITIONS } from '@dashboard/frontend/lib/transitions'
 import type { Issue } from '@dashboard/frontend/lib/types'
 import { basicSetup, EditorView } from 'codemirror'
 import { marked } from 'marked'
@@ -27,17 +29,6 @@ let editorView: EditorView | null = null
 let currentIssueId: string | null = null
 let currentBody: string = ''
 let _dirty = false
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  NEW: ['GROOMED', 'STUCK'],
-  GROOMED: ['PLANNED', 'STUCK', 'SPLIT'],
-  PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
-  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
-  STUCK: ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
-  SPLIT: [],
-  COMPLETED: ['VERIFIED'],
-  VERIFIED: [],
-} satisfies Record<string, string[]>
 
 /**
  * Strips inline event handlers and script elements from a parsed document
@@ -264,15 +255,10 @@ export function openIssue(issue: Issue): void {
     stopBtn.addEventListener('click', () => callbacks?.onStop())
     actsDiv.appendChild(stopBtn)
   } else {
-    // Dynamic actions for NEW issues based on triage state
-    let actions: string[]
-    if (issue.state === 'NEW') {
-      if (issue.needs_interview === undefined) actions = ['triage']
-      else if (issue.needs_interview === true) actions = ['interview']
-      else actions = []
-    } else {
-      actions = CMD_ACTIONS[issue.state] ?? []
-    }
+    const actions =
+      issue.state === 'NEW'
+        ? getNewIssueActions(issue)
+        : (CMD_ACTIONS[issue.state] ?? [])
 
     for (const cmd of actions) {
       const btn = el(

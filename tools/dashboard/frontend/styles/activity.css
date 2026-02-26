@@ -4,13 +4,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 4px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 #activity-title {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 #activity-controls {
@@ -23,27 +23,27 @@
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 3px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   cursor: pointer;
   font-family: inherit;
 }
 .filter-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 #activity-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
 }
 #activity-close:hover {
-  color: var(--text);
+  color: var(--color-text);
 }
 
 #activity-log {
@@ -85,7 +85,7 @@
 }
 
 .log-time {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-size: 0.8rem;
   min-width: 60px;
   flex-shrink: 0;
@@ -103,20 +103,20 @@
   font-family: monospace;
   flex-shrink: 0;
   flex-basis: 5%;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 .pino-level-warn {
-  color: #fbbf24;
+  color: var(--color-warning-light);
 }
 .pino-level-error,
 .pino-level-fatal {
-  color: #f87171;
+  color: var(--color-danger-light);
 }
 .pino-level-result {
-  color: #4ade80;
+  color: var(--color-success-light);
 }
 .pino-level-tokens {
-  color: #22c55e;
+  color: var(--color-success);
   opacity: 0.7;
 }
 
@@ -124,37 +124,37 @@
   /* font-size: 10px; */
   padding: 0 4px;
   border-radius: 2px;
-  background: rgba(148, 163, 184, 0.12);
-  color: #94a3b8;
+  background: color-mix(in srgb, var(--color-text-slate) 12%, transparent);
+  color: var(--color-text-slate);
   flex-shrink: 0;
   /* flex-basis: 8%; */
   font-weight: 600;
 }
 
 .pino-msg {
-  color: #cbd5e1;
+  color: var(--color-text-light);
   /* font-size: 11px; */
 }
 
 .pino-issue-id {
   /* font-size: 10px; */
-  color: #60a5fa;
+  color: var(--color-info);
   flex-shrink: 0;
 }
 
 .pino-extra {
   /* font-size: 10px; */
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   flex-shrink: 0;
   font-family: monospace;
 }
 
 .pino-warn .pino-msg {
-  color: #fbbf24;
+  color: var(--color-warning-light);
 }
 .pino-error .pino-msg,
 .pino-fatal .pino-msg {
-  color: #f87171;
+  color: var(--color-danger-light);
 }
 
 /* ── Stdout turn groups ──────────────────────────────────────────── */
@@ -166,14 +166,14 @@
 
 .turn-group summary.turn-group-summary {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 2px 0;
   list-style: none;
   user-select: none;
 }
 .turn-group summary.turn-group-summary:hover {
-  color: var(--text);
+  color: var(--color-text);
 }
 .turn-group summary.turn-group-summary::marker {
   display: none;
@@ -187,7 +187,7 @@
 }
 
 .gutter-time {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-size: 10px;
   min-width: 60px;
   flex-shrink: 0;
@@ -195,7 +195,7 @@
 }
 
 .line-text {
-  color: #e2e8f0;
+  color: var(--color-text);
   flex: 1;
   word-break: break-word;
 }
@@ -222,19 +222,19 @@
   border-left: 3px solid transparent;
 }
 .tool-card {
-  border-color: #60a5fa;
+  border-color: var(--color-info);
 }
 .agent-card {
   border-color: #2dd4bf;
 }
 .skill-card {
-  border-color: #a78bfa;
+  border-color: var(--color-accent);
 }
 .error-row {
-  border-color: #ef4444;
+  border-color: var(--color-danger);
 }
 .pino-row {
-  border-color: #4ade80;
+  border-color: var(--color-success-light);
 }
 .token-row {
   border-color: #e202d7;
@@ -251,7 +251,7 @@
   line-height: 1.4;
   margin: 0;
   padding: 4px 8px 4px 16px;
-  color: #94a3b8;
+  color: var(--color-text-slate);
   white-space: pre;
   overflow-x: auto;
 }
@@ -259,12 +259,12 @@
 .result-slot {
   padding: 4px 8px 4px 16px;
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-style: italic;
 }
 
 .result-slot.result-error {
-  color: #f87171;
+  color: var(--color-danger-light);
   font-style: normal;
 }
 
@@ -272,7 +272,7 @@
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  color: #cbd5e1;
+  color: var(--color-text-light);
   font-style: normal;
 }
 
@@ -289,21 +289,21 @@
 
 /* Terminal output in activity */
 .t-stdout {
-  color: #e2e8f0;
+  color: var(--color-text);
 }
 .t-stderr {
-  color: #f87171;
+  color: var(--color-danger-light);
 }
 .t-info {
-  color: #60a5fa;
+  color: var(--color-info);
   font-style: italic;
 }
 .t-done {
-  color: #4ade80;
+  color: var(--color-success-light);
   font-weight: 700;
 }
 .t-error {
-  color: #f87171;
+  color: var(--color-danger-light);
   font-weight: 700;
 }
 
@@ -313,7 +313,7 @@
   align-items: center;
   gap: 8px;
   padding: 5px 10px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 #term-input-row.visible {
@@ -321,18 +321,18 @@
 }
 #term-input-prompt {
   font-size: 11px;
-  color: #60a5fa;
+  color: var(--color-info);
   white-space: nowrap;
 }
 #term-input {
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--text);
+  color: var(--color-text);
   font-family: inherit;
   font-size: 11px;
   outline: none;
 }
 #term-input::placeholder {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }

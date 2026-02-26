@@ -18,16 +18,20 @@ export const STATE_ORDER = [
   'SPLIT',
 ] as const
 
-/** Accent colour for each {@link IssueState} value, used for badges and borders. */
+/**
+ * Accent colour for each {@link IssueState} value, used for badges and borders.
+ * Values reference CSS custom properties defined in the `@theme` block
+ * (`styles/index.css`) so the palette has a single source of truth.
+ */
 export const STATE_COLORS = {
-  NEW: '#6b7280',
-  GROOMED: '#3b82f6',
-  PLANNED: '#f59e0b',
-  IN_PROGRESS: '#f97316',
-  COMPLETED: '#22c55e',
-  VERIFIED: '#10b981',
-  STUCK: '#ef4444',
-  SPLIT: '#a855f7',
+  NEW: 'var(--color-state-new)',
+  GROOMED: 'var(--color-state-groomed)',
+  PLANNED: 'var(--color-state-planned)',
+  IN_PROGRESS: 'var(--color-state-in-progress)',
+  COMPLETED: 'var(--color-state-completed)',
+  VERIFIED: 'var(--color-state-verified)',
+  STUCK: 'var(--color-state-stuck)',
+  SPLIT: 'var(--color-state-split)',
 } satisfies Record<string, string>
 
 /** Human-readable label for each {@link IssueState} value. */
@@ -66,6 +70,19 @@ export const CMD_ACTIONS = {
  */
 export function stateColor(state: string): string {
   return (STATE_COLORS as Record<string, string>)[state] ?? STATE_COLORS.NEW
+}
+
+/**
+ * Returns a red/orange/green colour based on context usage percentage.
+ * Used for progress bar fills on kanban cards.
+ *
+ * @param pct - Context usage percentage (0-100)
+ * @returns A CSS hex colour string
+ */
+export function contextBarColor(pct: number): string {
+  if (pct > 80) return 'var(--color-danger)'
+  if (pct > 60) return 'var(--color-state-in-progress)'
+  return 'var(--color-success)'
 }
 
 /** CSS class applied to action buttons, keyed by command name. */
