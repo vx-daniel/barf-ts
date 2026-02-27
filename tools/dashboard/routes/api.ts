@@ -219,25 +219,45 @@ export async function handleInterview(
     questions?: Array<{ question: string; options?: string[] }>
   }
   try {
-    const raw = execResult.stdout
-      .trim()
-      .replace(/^```(?:json)?\n?([\s\S]*?)\n?```$/m, '$1')
-      .trim()
+    let raw = execResult.stdout.trim()
+    // Strip markdown fences if present
+    const fenceMatch = raw.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/)
+    if (fenceMatch) raw = fenceMatch[1].trim()
+    // Fallback: extract first JSON object from response
+    if (!raw.startsWith('{')) {
+      const start = raw.indexOf('{')
+      const end = raw.lastIndexOf('}')
+      if (start !== -1 && end > start) raw = raw.slice(start, end + 1)
+    }
     evalResult = JSON.parse(raw)
   } catch {
-    return jsonError('Failed to parse Claude eval response', 500)
+    return jsonError(
+      `Failed to parse Claude eval response: ${execResult.stdout.slice(0, 200)}`,
+      500,
+    )
   }
 
+  // Strip any prior partial Q&A section from body before re-appending
+  const bodyWithoutPartialQa = issue.body.replace(
+    /\n\n## Interview Q&A \(In Progress\)\n\n[\s\S]*?(?=\n\n## |\s*$)/,
+    '',
+  )
+
   if (!evalResult.satisfied) {
+    // Persist partial answers so progress survives if user leaves
+    const partialQaSection = `\n\n## Interview Q&A (In Progress)\n\n${qaText}`
+    await svc.provider.writeIssue(id, {
+      body: bodyWithoutPartialQa + partialQaSection,
+    })
     return json({
       status: 'more_questions',
       questions: evalResult.questions ?? [],
     })
   }
 
-  // Satisfied — update issue: append Q&A, remove questions section, transition to GROOMED
+  // Satisfied — update issue: append Q&A, remove questions + partial sections, transition to GROOMED
   const qaSection = `\n\n## Interview Q&A\n\n${qaText}`
-  const cleanBody = issue.body.replace(
+  const cleanBody = bodyWithoutPartialQa.replace(
     /\n\n## Interview Questions\n\n[\s\S]*$/,
     '',
   )

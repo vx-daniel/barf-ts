@@ -5,7 +5,7 @@
  * merging start/end events by `sessionId`. For sessions without an `end` event,
  * checks PID liveness to determine `running` vs `crashed` status.
  */
-import { appendFileSync, readFileSync } from 'fs'
+import { appendFileSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import type {
   Session,
@@ -22,6 +22,11 @@ import { SessionIndexEventSchema } from '@/types/schema/session-index-schema'
 function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0)
+    // kill(0) succeeds on zombie processes — check /proc to detect them
+    if (existsSync(`/proc/${pid}/status`)) {
+      const status = readFileSync(`/proc/${pid}/status`, 'utf8')
+      if (/^State:\s+Z/m.test(status)) return false
+    }
     return true
   } catch {
     return false
@@ -173,7 +178,7 @@ export function listSessions(barfDir: string, limit = 50): Session[] {
  */
 export function stopSession(barfDir: string, pid: number): boolean {
   const events = readEvents(barfDir)
-  const knownPids = new Set(events.map((e) => e.pid))
+  const knownPids = new Set(events.flatMap((e) => ('pid' in e ? [e.pid] : [])))
 
   if (!knownPids.has(pid)) {
     return false
@@ -181,9 +186,70 @@ export function stopSession(barfDir: string, pid: number): boolean {
 
   try {
     process.kill(pid, 'SIGTERM')
-    return true
   } catch {
-    return false
+    // Already dead — fall through to mark ended
+  }
+
+  // If the process is a zombie or already dead, write end events so the
+  // session index no longer considers it "running".
+  if (!isPidAlive(pid)) {
+    markSessionsEnded(barfDir, pid, events)
+  }
+
+  return true
+}
+
+/**
+ * Writes `end` / `auto_end` events for all open sessions belonging to a dead PID.
+ *
+ * This cleans up the session index when a process exits without writing its own
+ * end events (e.g. zombies, crashes, or killed-without-cleanup scenarios).
+ *
+ * @param barfDir - Absolute path to the `.barf` directory.
+ * @param pid - The dead PID whose sessions should be closed.
+ * @param events - Pre-read session index events.
+ */
+function markSessionsEnded(
+  barfDir: string,
+  pid: number,
+  events: SessionIndexEvent[],
+): void {
+  const indexPath = join(barfDir, 'sessions.jsonl')
+  const now = new Date().toISOString()
+
+  // Find session IDs that started with this PID but never ended
+  const started = new Set<string>()
+  const ended = new Set<string>()
+  const autoStarted = new Set<string>()
+  const autoEnded = new Set<string>()
+
+  for (const e of events) {
+    if (e.event === 'start' && e.pid === pid) started.add(e.sessionId)
+    if (e.event === 'end' && e.pid === pid) ended.add(e.sessionId)
+    if (e.event === 'auto_start' && e.pid === pid) autoStarted.add(e.sessionId)
+    if (e.event === 'auto_end' && e.pid === pid) autoEnded.add(e.sessionId)
+  }
+
+  const lines: string[] = []
+
+  for (const sessionId of started) {
+    if (!ended.has(sessionId)) {
+      lines.push(
+        JSON.stringify({ event: 'end', sessionId, pid, timestamp: now }),
+      )
+    }
+  }
+
+  for (const sessionId of autoStarted) {
+    if (!autoEnded.has(sessionId)) {
+      lines.push(
+        JSON.stringify({ event: 'auto_end', sessionId, pid, timestamp: now }),
+      )
+    }
+  }
+
+  if (lines.length > 0) {
+    appendFileSync(indexPath, lines.map((l) => `${l}\n`).join(''))
   }
 }
 

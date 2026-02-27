@@ -45,6 +45,10 @@ export function parseLogMessage(raw: unknown): ActivityEntry | null {
           data: {
             tool: block.name,
             toolUseId: typeof block.id === 'string' ? block.id : undefined,
+            parentToolUseId:
+              typeof msg.parent_tool_use_id === 'string'
+                ? msg.parent_tool_use_id
+                : null,
             args:
               typeof block.input === 'object' && block.input !== null
                 ? (block.input as Record<string, unknown>)

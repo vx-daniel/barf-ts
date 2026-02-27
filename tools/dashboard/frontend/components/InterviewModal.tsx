@@ -14,6 +14,41 @@ interface Question {
   options?: string[]
 }
 
+interface QA {
+  question: string
+  answer: string
+}
+
+/**
+ * Parses saved partial answers from the `## Interview Q&A (In Progress)` section.
+ *
+ * @param body - Raw markdown body of the issue
+ * @returns Previously saved question/answer pairs, empty if none
+ */
+function parseSavedAnswers(body: string): QA[] {
+  const match = body.match(
+    /## Interview Q&A \(In Progress\)\n\n([\s\S]*?)(?=\n\n## |\s*$)/,
+  )
+  if (!match) return []
+
+  const result: QA[] = []
+  const lines = match[1].split('\n')
+  let currentQ = ''
+  for (const line of lines) {
+    const qMatch = line.match(/^\d+\.\s+\*\*Q:\*\*\s+(.+)/)
+    if (qMatch) {
+      currentQ = qMatch[1]
+      continue
+    }
+    const aMatch = line.match(/^\s+\*\*A:\*\*\s+(.+)/)
+    if (aMatch && currentQ) {
+      result.push({ question: currentQ, answer: aMatch[1] })
+      currentQ = ''
+    }
+  }
+  return result
+}
+
 /**
  * Parses the `## Interview Questions` section from an issue body into structured questions.
  *
@@ -53,9 +88,7 @@ export function InterviewModal(): preact.JSX.Element {
   const target = interviewTarget.value
   const [currentIdx, setCurrentIdx] = useState(0)
   const [questions, setQuestions] = useState<Question[]>([])
-  const [answers, setAnswers] = useState<
-    Array<{ question: string; answer: string }>
-  >([])
+  const [answers, setAnswers] = useState<QA[]>([])
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [selectedOpt, setSelectedOpt] = useState<string | null>(null)
@@ -71,8 +104,10 @@ export function InterviewModal(): preact.JSX.Element {
       parsed.length > 0
         ? parsed
         : [{ question: 'Please describe what you need in more detail.' }]
+    // Restore any previously saved partial answers
+    const saved = parseSavedAnswers(target.issue.body)
     setQuestions(qs)
-    setAnswers([])
+    setAnswers(saved)
     setCurrentIdx(0)
     setError(null)
     setSubmitting(false)
@@ -147,7 +182,7 @@ export function InterviewModal(): preact.JSX.Element {
         done()
       } else if (result.status === 'more_questions' && result.questions) {
         setQuestions(result.questions)
-        setAnswers([])
+        setAnswers(updated)
         setCurrentIdx(0)
       }
     } catch (e) {

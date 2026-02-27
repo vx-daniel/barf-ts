@@ -5,6 +5,7 @@
  * All UI lives in components; this file is intentionally minimal.
  */
 
+import '@dashboard/frontend/lib/perf'
 import { App } from '@dashboard/frontend/components/App'
 import {
   fetchAuditGate,
@@ -32,9 +33,10 @@ mountBottomResizer()
 // ── Polling ──────────────────────────────────────────────────────────────────
 
 setInterval(() => {
+  // Sessions always poll — needed for Active section updates during runs
+  void fetchSessions()
   if (!pauseRefresh.value) {
     void fetchIssues()
-    void fetchSessions()
     void fetchAuditGate()
   }
 }, 5000)

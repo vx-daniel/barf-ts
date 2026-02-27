@@ -438,7 +438,7 @@ export function EditorSidebar() {
               className={`btn ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
               style={{ fontSize: '0.75rem', padding: '0.3125rem 0.875rem' }}
               loading="loading-ring"
-              disabled={running !== null}
+              disabled={running !== null && cmd !== 'interview'}
               onClick={() => runCommand(issue.id, cmd)}
             />
           ))

@@ -111,7 +111,8 @@ function KanbanCard({ issue }: { issue: Issue }) {
                 key={cmd}
                 className={`btn btn-outline  btn-xs ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
                 disabled={
-                  runningId.value !== null || interviewTarget.value !== null
+                  interviewTarget.value !== null ||
+                  (runningId.value !== null && cmd !== 'interview')
                 }
                 onClick={(e: MouseEvent) => {
                   e.stopPropagation()

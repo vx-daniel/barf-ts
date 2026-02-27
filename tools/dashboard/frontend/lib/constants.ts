@@ -80,8 +80,9 @@ export const STATE_EMOJI: Record<IssueState, string> = {
 
 /** General-purpose icon glyphs for UI actions, labels, and decorators. */
 export const ICON = {
-  ai: '🤖',
-  ai2: '👾',
+  agent: '🤖',
+  assistant: '👾',
+  // assistant: '🎪',
   archive: '📦',
   arr: '🏴‍☠️',
   bug: '🐛',
@@ -120,6 +121,7 @@ export const ICON = {
   unlock: '🔓',
   warning: '⚠️',
   yolo: '🎰',
+  user: '🤓',
 } as const satisfies Record<string, string>
 
 /** Type-safe icon key. */

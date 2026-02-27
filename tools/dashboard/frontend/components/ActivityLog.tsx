@@ -81,7 +81,10 @@ function parsePinoLog(line: string): PinoLog | null {
   }
 }
 
-function resolveToolMeta(toolName: string): {
+function resolveToolMeta(
+  toolName: string,
+  isAgent: boolean,
+): {
   borderCls: string
   badgeText: string
 } {
@@ -89,6 +92,7 @@ function resolveToolMeta(toolName: string): {
     return { borderCls: 'border-l-[#2dd4bf]', badgeText: 'AGENT' }
   if (toolName === 'Skill')
     return { borderCls: 'border-l-accent', badgeText: 'SKILL' }
+  if (isAgent) return { borderCls: 'border-l-[#2dd4bf]', badgeText: 'AGENT' }
   return { borderCls: 'border-l-info', badgeText: 'TOOL' }
 }
 
@@ -337,10 +341,20 @@ function StderrRow({ entry }: { entry: ProcessedEntry }) {
   )
 }
 
-function ToolCard({ entry }: { entry: ProcessedEntry }) {
+function ToolCard({
+  entry,
+  agentNames,
+}: {
+  entry: ProcessedEntry
+  agentNames: Map<string, string>
+}) {
   const toolName = String(entry.data.tool ?? 'unknown')
   const args = entry.data.args as Record<string, unknown> | undefined
-  const { borderCls, badgeText } = resolveToolMeta(toolName)
+  const isAgent = entry.data.parentToolUseId != null
+  const { borderCls, badgeText } = resolveToolMeta(toolName, isAgent)
+  const agentLabel = isAgent
+    ? (agentNames.get(String(entry.data.parentToolUseId)) ?? null)
+    : null
 
   let displayName = toolName
   if (toolName === 'Task' && args?.subagent_type)
@@ -362,6 +376,9 @@ function ToolCard({ entry }: { entry: ProcessedEntry }) {
         <span className="font-mono shrink-0 basis-[5%] text-text-muted">
           [{badgeText}]
         </span>
+        {agentLabel && (
+          <span className="text-[#2dd4bf]/70 text-[0.7rem]">{agentLabel}</span>
+        )}
         <span className="px-xs rounded-[0.125rem] bg-[color-mix(in_srgb,var(--color-text-slate)_12%,transparent)] text-text-slate shrink-0 font-semibold">
           {displayName}
         </span>
@@ -549,6 +566,20 @@ export function ActivityLog() {
     () => new Set(ALL_KINDS),
   )
 
+  // Map Task toolUseId → subagent_type for labelling subagent tool calls
+  const agentNames = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const e of entries) {
+      if (e.kind === 'tool_call' && e.data.tool === 'Task') {
+        const id = e.data.toolUseId as string | undefined
+        const args = e.data.args as Record<string, unknown> | undefined
+        const name = String(args?.subagent_type ?? args?.description ?? 'agent')
+        if (id) map.set(id, name)
+      }
+    }
+    return map
+  }, [entries])
+
   // Cumulative tokens
   const cumulativeTokens = useMemo(() => {
     let input = 0
@@ -681,7 +712,7 @@ export function ActivityLog() {
       case 'stderr':
         return <StderrRow key={e.key} entry={e} />
       case 'tool_call':
-        return <ToolCard key={e.key} entry={e} />
+        return <ToolCard key={e.key} entry={e} agentNames={agentNames} />
       case 'token_update':
         return <TokenRow key={e.key} entry={e} />
       case 'result':

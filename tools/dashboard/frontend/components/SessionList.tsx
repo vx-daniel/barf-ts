@@ -8,11 +8,13 @@
 import {
   archiveSessionById,
   deleteSessionById,
+  deselectSession,
   selectSession,
   stopSessionByPid,
 } from '@dashboard/frontend/lib/actions'
 import { icon } from '@dashboard/frontend/lib/constants'
 import {
+  activeCommand,
   selectedSessionId,
   sessions,
   showArchived,
@@ -151,11 +153,21 @@ export function SessionList() {
   const isShowArchived = showArchived.value
 
   const running = allSessions.filter((s) => s.status === 'running')
+  const runningIds = new Set(running.map((s) => s.sessionId))
+
+  // Active = running sessions + completed/crashed children of running sessions
+  const active = allSessions.filter(
+    (s) =>
+      runningIds.has(s.sessionId) ||
+      (s.parentSessionId !== undefined && runningIds.has(s.parentSessionId)),
+  )
+  const activeIds = new Set(active.map((s) => s.sessionId))
+
   const archivedSessions = allSessions.filter(
-    (s) => s.status !== 'running' && s.archived,
+    (s) => !activeIds.has(s.sessionId) && s.archived,
   )
   const recent = allSessions.filter(
-    (s) => s.status !== 'running' && !s.archived,
+    (s) => !activeIds.has(s.sessionId) && !s.archived,
   )
 
   if (allSessions.length === 0) {
@@ -166,14 +178,36 @@ export function SessionList() {
     )
   }
 
+  const hasLiveStream = activeCommand.value !== null
+
   return (
     <div className="flex flex-col gap-xs overflow-y-auto">
-      {running.length > 0 && (
+      {/* Live stream row — returns to the dashboard command output */}
+      {hasLiveStream && (
+        <button
+          type="button"
+          className={`flex items-center gap-sm px-md py-sm cursor-pointer rounded-box text-xs transition-colors w-full text-left bg-transparent text-inherit ${
+            selected === null
+              ? 'bg-primary/20 border border-primary/40'
+              : 'hover:bg-base-300 border border-transparent'
+          }`}
+          onClick={() => deselectSession()}
+        >
+          <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse" />
+          <span className="font-semibold text-success">
+            {activeCommand.value}
+          </span>
+          <span className="text-base-content/40 text-[0.625rem] ml-auto">
+            live
+          </span>
+        </button>
+      )}
+      {active.length > 0 && (
         <>
           <div className="text-[0.625rem] uppercase tracking-wider text-success/70 px-md pt-sm font-semibold">
-            Running
+            Active
           </div>
-          {running.map((s) => (
+          {active.map((s) => (
             <SessionRow
               key={s.sessionId}
               session={s}

@@ -45,35 +45,74 @@ const logSSE = new SSEClient()
 
 // ── Signal-based panel helpers ───────────────────────────────────────────────
 
+/** Maximum activity entries kept in memory to prevent unbounded growth. */
+const MAX_ACTIVITY_ENTRIES = 5000
+
 let entryCounter = 0
 
 /**
+ * Live command entries accumulated while a dashboard-initiated command runs.
+ * Always receives new entries from {@link pushActivity}; the visible
+ * {@link activityEntries} signal only reflects this when no historical
+ * session is selected.
+ */
+let liveEntries: ProcessedEntry[] = []
+
+/** O(1) lookup from `toolUseId` → index in {@link liveEntries} for tool_result resolution. */
+const toolCallIndex = new Map<string, number>()
+
+/**
+ * Publishes the current {@link liveEntries} to the visible signal when
+ * no historical session is selected.
+ */
+function syncSignal(): void {
+  if (selectedSessionId.value === null) {
+    activityEntries.value = liveEntries
+  }
+}
+
+/**
+ * Trims {@link liveEntries} to {@link MAX_ACTIVITY_ENTRIES} and rebuilds the
+ * {@link toolCallIndex} from the surviving entries.
+ */
+function trimIfNeeded(): void {
+  if (liveEntries.length <= MAX_ACTIVITY_ENTRIES) return
+  liveEntries = liveEntries.slice(-MAX_ACTIVITY_ENTRIES)
+  toolCallIndex.clear()
+  for (let i = 0; i < liveEntries.length; i++) {
+    const e = liveEntries[i]
+    if (e.kind === 'tool_call') {
+      const id = e.data.toolUseId as string | undefined
+      if (id) toolCallIndex.set(id, i)
+    }
+  }
+}
+
+/**
  * Converts a raw {@link ActivityEntry} into a keyed {@link ProcessedEntry}
- * and appends it to the {@link activityEntries} signal.
- * For `tool_result` entries, resolves the matching `tool_call` instead.
+ * and appends it to the live buffer.
+ *
+ * When no session is selected ({@link selectedSessionId} is `null`), also
+ * pushes to the visible {@link activityEntries} signal. Otherwise the entry
+ * is buffered silently so the user can browse historical sessions without
+ * interruption.
  */
 function pushActivity(entry: ActivityEntry): void {
   const key = `e-${entryCounter++}`
 
   if (entry.kind === 'tool_result') {
     const toolUseId = entry.data.toolUseId as string | undefined
-    if (toolUseId) {
-      // Resolve into existing tool_call entry
-      activityEntries.value = activityEntries.value.map((e) => {
-        if (
-          e.kind === 'tool_call' &&
-          (e.data.toolUseId as string | undefined) === toolUseId
-        ) {
-          return {
-            ...e,
-            toolResult: {
-              content: String(entry.data.content ?? ''),
-              isError: entry.data.isError === true,
-            },
-          }
-        }
-        return e
-      })
+    const idx = toolUseId ? toolCallIndex.get(toolUseId) : undefined
+    if (idx !== undefined && liveEntries[idx]) {
+      liveEntries = liveEntries.slice()
+      liveEntries[idx] = {
+        ...liveEntries[idx],
+        toolResult: {
+          content: String(entry.data.content ?? ''),
+          isError: entry.data.isError === true,
+        },
+      }
+      syncSignal()
     }
     return
   }
@@ -86,7 +125,16 @@ function pushActivity(entry: ActivityEntry): void {
     issueName: entry.issueName,
     data: entry.data,
   }
-  activityEntries.value = [...activityEntries.value, processed]
+
+  liveEntries = [...liveEntries, processed]
+
+  if (entry.kind === 'tool_call') {
+    const toolUseId = entry.data.toolUseId as string | undefined
+    if (toolUseId) toolCallIndex.set(toolUseId, liveEntries.length - 1)
+  }
+
+  trimIfNeeded()
+  syncSignal()
 }
 
 /**
@@ -105,12 +153,17 @@ function logTerm(type: string, text: string): void {
     termType: type,
     termText: text,
   }
-  activityEntries.value = [...activityEntries.value, entry]
+  liveEntries = [...liveEntries, entry]
+  trimIfNeeded()
+  syncSignal()
 }
 
 function clearActivityLog(): void {
+  liveEntries = []
   activityEntries.value = []
   entryCounter = 0
+  toolCallIndex.clear()
+  issueCtxCache = null
 }
 
 function openPanel(title?: string): void {
@@ -300,20 +353,34 @@ function applyLiveStats(stats: {
 
 // ── Command message handler ───────────────────────────────────────────────────
 
+/** Cached issue context for the active command — avoids `find()` on every SSE message. */
+let issueCtxCache: {
+  id: string
+  ctx: { issueId: string; issueName: string }
+} | null = null
+
+/**
+ * Returns `{ issueId, issueName }` for the currently running issue, using a
+ * cache to avoid scanning the issues array on every SSE message.
+ */
+function getIssueCtx():
+  | { issueId: string; issueName: string }
+  | Record<string, never> {
+  const id = runningId.value
+  if (!id || id === '__auto__') return {}
+  if (issueCtxCache?.id === id) return issueCtxCache.ctx
+  const issue = issues.value.find((i) => i.id === id)
+  if (!issue) return {}
+  issueCtxCache = { id, ctx: { issueId: issue.id, issueName: issue.title } }
+  return issueCtxCache.ctx
+}
+
 /**
  * Processes a single message from the command SSE stream.
  *
  * @param data - Parsed JSON object from the SSE `data:` field
  */
 function handleMsg(data: Record<string, unknown>): void {
-  const activeIssue =
-    runningId.value && runningId.value !== '__auto__'
-      ? issues.value.find((i) => i.id === runningId.value)
-      : undefined
-  const issueCtx = activeIssue
-    ? { issueId: activeIssue.id, issueName: activeIssue.title }
-    : {}
-
   if (data.type === 'stdout') {
     const line = data.line as string
     if (line?.startsWith('__BARF_STATS__:')) {
@@ -330,7 +397,7 @@ function handleMsg(data: Record<string, unknown>): void {
         timestamp: Date.now(),
         source: 'command',
         kind: 'stdout',
-        ...issueCtx,
+        ...getIssueCtx(),
         data: { line },
       })
     }
@@ -339,7 +406,7 @@ function handleMsg(data: Record<string, unknown>): void {
       timestamp: Date.now(),
       source: 'command',
       kind: 'stderr',
-      ...issueCtx,
+      ...getIssueCtx(),
       data: { line: data.line },
     })
   } else if (data.type === 'done') {
@@ -403,21 +470,24 @@ export function runCommand(id: string, cmd: string): void {
 
   logSSE.connect(`/api/issues/${id}/logs`, (data) => {
     const entry = data as unknown as ActivityEntry
-    const issue = issues.value.find((i) => i.id === id)
+    const ctx = getIssueCtx()
     pushActivity({
       ...entry,
       issueId: entry.issueId ?? id,
-      issueName: entry.issueName ?? issue?.title,
+      issueName:
+        entry.issueName ?? ('issueName' in ctx ? ctx.issueName : undefined),
     })
-    if (entry.kind === 'token_update' && issue) {
+    if (entry.kind === 'token_update') {
+      const delta = {
+        input: Number(entry.data.input_tokens ?? 0),
+        output: Number(entry.data.output_tokens ?? 0),
+      }
       issues.value = issues.value.map((i) =>
         i.id === id
           ? {
               ...i,
-              total_input_tokens:
-                i.total_input_tokens + Number(entry.data.input_tokens ?? 0),
-              total_output_tokens:
-                i.total_output_tokens + Number(entry.data.output_tokens ?? 0),
+              total_input_tokens: i.total_input_tokens + delta.input,
+              total_output_tokens: i.total_output_tokens + delta.output,
             }
           : i,
       )
@@ -514,6 +584,12 @@ export async function fetchSessions(): Promise<void> {
  * loads the full history via byte-range API.
  */
 export async function selectSession(sessionId: string): Promise<void> {
+  // Toggle: clicking the already-selected session returns to live view
+  if (selectedSessionId.value === sessionId) {
+    deselectSession()
+    return
+  }
+
   selectedSessionId.value = sessionId
   const session = sessions.value.find((s) => s.sessionId === sessionId)
   if (!session || !session.issueId) return
@@ -535,7 +611,11 @@ export async function selectSession(sessionId: string): Promise<void> {
       `/api/sessions/${session.issueId}/logs?${params.toString()}`,
     )
     if (res.ok) {
-      const entries = (await res.json()) as Array<Record<string, unknown>>
+      let entries = (await res.json()) as Array<Record<string, unknown>>
+      // Cap historical entries to prevent browser overload on long sessions
+      if (entries.length > MAX_ACTIVITY_ENTRIES) {
+        entries = entries.slice(-MAX_ACTIVITY_ENTRIES)
+      }
       const processed: ProcessedEntry[] = entries.map((e, i) => ({
         key: `h-${i}`,
         kind: (e.kind as ProcessedEntry['kind']) ?? 'stdout',
@@ -559,6 +639,17 @@ export async function selectSession(sessionId: string): Promise<void> {
       })
     })
   }
+}
+
+/**
+ * Deselects the current session and restores the live command stream view.
+ */
+export function deselectSession(): void {
+  selectedSessionId.value = null
+  activityEntries.value = liveEntries
+  activityTitle.value = activeCommand.value
+    ? `barf ${activeCommand.value}`
+    : 'Activity Log'
 }
 
 /**
