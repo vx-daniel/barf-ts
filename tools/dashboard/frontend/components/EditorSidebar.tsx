@@ -93,14 +93,18 @@ function RelChip({
   onNavigate: (id: string) => void
 }) {
   return (
-    <button type="button" className="rel-chip" onClick={() => onNavigate(id)}>
+    <button
+      type="button"
+      className="btn btn-xs btn-ghost border border-neutral gap-[5px]"
+      onClick={() => onNavigate(id)}
+    >
       {issue && (
         <span
-          className="state-dot"
+          className="w-sm h-sm rounded-full shrink-0"
           style={{ background: stateColor(issue.state) }}
         />
       )}
-      <span className="rel-id">#{id}</span>
+      <span className="text-base-content/50 text-xs">#{id}</span>
       {issue && (
         <span>
           {issue.title.length > 28
@@ -145,14 +149,20 @@ export function EditorSidebar() {
     }
   }, [id])
 
-  // Toggle no-sidebar class on #app
+  // Toggle sidebar grid layout on #app
   useEffect(() => {
     const app = document.getElementById('app')
     if (!app) return
     if (id === null) {
-      app.classList.add('no-sidebar')
+      app.classList.add('no-sidebar', 'grid-cols-[1fr]')
+      app.classList.remove('grid-cols-[1fr_380px]')
+      app.style.gridTemplateAreas =
+        "'header' 'statusbar' 'main' 'bottom'"
     } else {
-      app.classList.remove('no-sidebar')
+      app.classList.remove('no-sidebar', 'grid-cols-[1fr]')
+      app.classList.add('grid-cols-[1fr_380px]')
+      app.style.gridTemplateAreas =
+        "'header header' 'statusbar statusbar' 'main sidebar' 'bottom bottom'"
     }
   }, [id])
 
@@ -250,14 +260,20 @@ export function EditorSidebar() {
       : (CMD_ACTIONS[issue.state as IssueState] ?? [])
 
   return (
-    <div id="sidebar" className="editor-panel">
+    <div
+      id="sidebar"
+      className="relative flex flex-col h-full overflow-hidden bg-base-200 border-l border-neutral"
+      style={{ gridArea: 'sidebar' }}
+    >
       {/* Header */}
-      <div id="editor-header">
-        <span id="editor-id">#{issue.id}</span>
-        <span id="editor-title">{issue.title}</span>
+      <div className="flex items-center gap-md px-2xl py-lg border-b border-neutral shrink-0">
+        <span className="text-sm text-base-content/50">#{issue.id}</span>
+        <span className="text-lg font-bold flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+          {issue.title}
+        </span>
         <button
           type="button"
-          id="editor-close"
+          className="btn btn-ghost btn-sm btn-circle"
           onClick={handleClose}
           aria-label="Close sidebar"
         >
@@ -266,15 +282,18 @@ export function EditorSidebar() {
       </div>
 
       {/* State row */}
-      <div id="editor-state-row">
-        <span id="editor-state-lbl" style={{ color, borderColor: color }}>
+      <div className="px-2xl py-md border-b border-neutral flex items-center gap-md flex-wrap shrink-0">
+        <span
+          className="badge badge-outline font-bold tracking-[0.06em]"
+          style={{ color, borderColor: color }}
+        >
           {STATE_LABELS[issue.state as IssueState] ?? issue.state}
         </span>
-        <span id="editor-trans">
+        <span className="flex gap-sm flex-wrap">
           {transitions.map((to) => (
             <button
               type="button"
-              className="tbtn"
+              className="btn btn-xs btn-ghost border border-neutral"
               key={to}
               onClick={() => doTransition(issue.id, to)}
             >
@@ -286,10 +305,12 @@ export function EditorSidebar() {
 
       {/* Relationships */}
       {(hasParent || hasChildren) && (
-        <div id="editor-rels" style={{ display: 'flex' }}>
+        <div className="px-2xl py-md border-b border-neutral shrink-0 flex flex-col gap-sm">
           {hasParent && (
-            <div id="editor-parent-row" className="rel-row">
-              <span className="rel-label">parent</span>
+            <div className="flex items-center gap-sm flex-wrap">
+              <span className="text-xs text-base-content/50 uppercase tracking-[0.06em] whitespace-nowrap min-w-[52px]">
+                parent
+              </span>
               <RelChip
                 id={issue.parent ?? ''}
                 issue={allIssues.find((i) => i.id === issue.parent)}
@@ -298,8 +319,10 @@ export function EditorSidebar() {
             </div>
           )}
           {hasChildren && (
-            <div id="editor-children-row" className="rel-row">
-              <span className="rel-label">children</span>
+            <div className="flex items-center gap-sm flex-wrap">
+              <span className="text-xs text-base-content/50 uppercase tracking-[0.06em] whitespace-nowrap min-w-[52px]">
+                children
+              </span>
               {issue.children.map((childId: string) => (
                 <RelChip
                   key={childId}
@@ -314,12 +337,12 @@ export function EditorSidebar() {
       )}
 
       {/* Tabs */}
-      <div id="editor-tabs">
+      <div className="tabs tabs-border shrink-0">
         {(['preview', 'edit', 'metadata'] as const).map((tab) => (
           <button
             type="button"
             key={tab}
-            className={`editor-tab${activeTab === tab ? ' active' : ''}`}
+            className={`tab tab-sm ${activeTab === tab ? 'tab-active' : ''}`}
             data-tab={tab}
             onClick={() => setActiveTab(tab)}
           >
@@ -329,31 +352,33 @@ export function EditorSidebar() {
       </div>
 
       {/* Content area */}
-      <div id="editor-content">
+      <div className="flex-1 overflow-hidden flex flex-col">
         <div
           id="editor-preview"
           ref={previewRef}
+          className="flex-1 overflow-y-auto px-3xl py-2xl text-base leading-[1.7]"
           style={{ display: activeTab === 'preview' ? 'block' : 'none' }}
         />
         <div
           id="editor-cm"
           ref={cmContainerRef}
+          className="flex-1 overflow-auto"
           style={{ display: activeTab === 'edit' ? '' : 'none' }}
         />
         <div
           id="editor-metadata"
           ref={metadataRef}
+          className="h-full overflow-auto"
           style={{ display: activeTab === 'metadata' ? 'block' : 'none' }}
         />
       </div>
 
       {/* Actions */}
-      <div id="editor-actions">
+      <div className="px-2xl py-lg border-t border-neutral flex gap-md flex-wrap shrink-0">
         {dirty && (
           <button
             type="button"
-            id="editor-save-btn"
-            className="mbtn primary"
+            className="btn btn-primary btn-sm"
             onClick={handleSave}
           >
             Save
@@ -386,13 +411,7 @@ export function EditorSidebar() {
 
         <button
           type="button"
-          className="abtn"
-          style={{
-            fontSize: '12px',
-            padding: '5px 14px',
-            borderColor: '#6b7280',
-            color: '#6b7280',
-          }}
+          className="btn btn-ghost btn-sm border border-neutral text-base-content/50"
           onClick={() => {
             if (confirm(`Delete issue #${issue.id}?`)) deleteIssue(issue.id)
           }}
@@ -400,7 +419,11 @@ export function EditorSidebar() {
           Delete
         </button>
 
-        {saveStatus && <span id="editor-save-status">{saveStatus}</span>}
+        {saveStatus && (
+          <span className="text-sm text-base-content/50 self-center ml-auto">
+            {saveStatus}
+          </span>
+        )}
       </div>
     </div>
   )

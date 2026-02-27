@@ -18,12 +18,20 @@ export function Header(): preact.JSX.Element {
   const isRunning = runningId.value !== null
 
   return (
-    <div id="header">
-      <h1>{'\u25C8'} barf dashboard</h1>
-      <span id="project-path">{models.value?.projectCwd ?? ''}</span>
+    <div
+      id="header"
+      className="flex items-center gap-xl px-3xl py-lg bg-base-200 border-b border-neutral"
+      style={{ gridArea: 'header' }}
+    >
+      <h1 className="text-xl font-bold text-primary whitespace-nowrap">
+        {'\u25C8'} barf dashboard
+      </h1>
+      <span className="text-base-content/50 text-sm flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+        {models.value?.projectCwd ?? ''}
+      </span>
       <button
         type="button"
-        className={`hbtn${isRunning ? ' active' : ''}`}
+        className={`btn btn-sm ${isRunning ? 'btn-primary' : 'btn-ghost border-neutral'}`}
         id="btn-auto"
         onClick={runAuto}
       >
@@ -31,7 +39,7 @@ export function Header(): preact.JSX.Element {
       </button>
       <button
         type="button"
-        className="hbtn"
+        className="btn btn-sm btn-ghost border-neutral"
         id="btn-new"
         onClick={() => {
           newIssueOpen.value = true
@@ -41,7 +49,7 @@ export function Header(): preact.JSX.Element {
       </button>
       <button
         type="button"
-        className="hbtn"
+        className="btn btn-sm btn-ghost border-neutral"
         id="btn-config"
         onClick={() => {
           configOpen.value = true

@@ -31,6 +31,7 @@
     "@sentry/node": "^10.40.0",
     "chalk": "^5.3.0",
     "commander": "^12.0.0",
+    "daisyui": "^5.5.19",
     "neverthrow": "^8.0.0",
     "openai": "^6.22.0",
     "ora": "^8.0.0",

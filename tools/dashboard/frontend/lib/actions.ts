@@ -21,11 +21,10 @@ import {
   selectedId,
   termInputVisible,
 } from '@dashboard/frontend/lib/state'
-import type {
-  ActivityEntry,
-  ProcessedEntry,
-} from '@dashboard/frontend/lib/types'
+import type { ProcessedEntry } from '@dashboard/frontend/lib/types'
 import { WSClient } from '@dashboard/frontend/lib/ws-client'
+import type { Issue } from '@/types/index'
+import type { ActivityEntry } from '@/types/schema/activity-schema'
 
 // ── Transport layer ───────────────────────────────────────────────────────────
 

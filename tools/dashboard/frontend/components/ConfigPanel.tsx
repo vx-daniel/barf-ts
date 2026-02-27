@@ -5,7 +5,7 @@
 
 import * as api from '@dashboard/frontend/lib/api-client'
 import { configOpen } from '@dashboard/frontend/lib/state'
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 
 interface FieldDef {
   key: string
@@ -162,6 +162,15 @@ export function ConfigPanel() {
   const [formValues, setFormValues] = useState<Record<string, unknown>>({})
   const [status, setStatus] = useState('')
   const [statusColor, setStatusColor] = useState('')
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  // Sync dialog with signal
+  useEffect(() => {
+    const dlg = dialogRef.current
+    if (!dlg) return
+    if (isOpen && !dlg.open) dlg.showModal()
+    if (!isOpen && dlg.open) dlg.close()
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -255,26 +264,27 @@ export function ConfigPanel() {
   let currentGroup = ''
 
   return (
-    <div
-      id="config-ov"
-      className={isOpen ? 'open' : ''}
-      role="dialog"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close()
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') close()
-      }}
-    >
-      <div id="config-modal">
-        <div id="config-header">
-          <span>Configuration</span>
-          <span id="config-path">{configPath}</span>
-          <button type="button" id="config-close" onClick={close}>
+    <dialog ref={dialogRef} className="modal" onClose={close}>
+      <div className="modal-box bg-base-200 border border-neutral max-w-xl max-h-[85vh] flex flex-col p-0">
+        {/* Header */}
+        <div className="flex items-center gap-lg px-[18px] py-2xl border-b border-neutral shrink-0">
+          <span className="text-lg font-semibold whitespace-nowrap">
+            Configuration
+          </span>
+          <span className="text-xs text-base-content/50 overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+            {configPath}
+          </span>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-circle ml-auto"
+            onClick={close}
+          >
             &times;
           </button>
         </div>
-        <div id="config-body">
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-[18px] py-xl">
           {FIELDS.map((field) => {
             const nodes: preact.JSX.Element[] = []
             if (field.group !== currentGroup) {
@@ -282,7 +292,7 @@ export function ConfigPanel() {
               nodes.push(
                 <h3
                   key={`group-${field.group}`}
-                  className="config-group-heading"
+                  className="text-sm uppercase tracking-[0.06em] text-primary mt-2xl mb-sm pb-xs border-b border-neutral first:mt-0"
                 >
                   {field.group}
                 </h3>,
@@ -295,7 +305,7 @@ export function ConfigPanel() {
             if (field.type === 'select' && field.options) {
               input = (
                 <select
-                  className="config-input"
+                  className="select select-bordered select-sm flex-1 bg-base-100"
                   id={`cfg-${field.key}`}
                   value={String(val ?? '')}
                   onChange={(e) =>
@@ -316,7 +326,7 @@ export function ConfigPanel() {
               input = (
                 <input
                   type="checkbox"
-                  className="config-checkbox"
+                  className="checkbox checkbox-primary checkbox-sm"
                   id={`cfg-${field.key}`}
                   checked={Boolean(val)}
                   onChange={(e) =>
@@ -342,7 +352,7 @@ export function ConfigPanel() {
               input = (
                 <input
                   type={inputType}
-                  className="config-input"
+                  className="input input-bordered input-sm flex-1 bg-base-100"
                   id={`cfg-${field.key}`}
                   value={String(val ?? '')}
                   placeholder={placeholder}
@@ -355,8 +365,11 @@ export function ConfigPanel() {
             }
 
             nodes.push(
-              <div key={field.key} className="config-row">
-                <label className="config-label" htmlFor={`cfg-${field.key}`}>
+              <div key={field.key} className="flex items-center gap-lg mb-sm">
+                <label
+                  className="text-sm text-base-content/60 min-w-[180px] shrink-0"
+                  htmlFor={`cfg-${field.key}`}
+                >
                   {field.label}
                 </label>
                 {input}
@@ -366,18 +379,26 @@ export function ConfigPanel() {
             return nodes
           })}
         </div>
-        <div id="config-footer">
-          <span id="config-status" style={{ color: statusColor || undefined }}>
+
+        {/* Footer */}
+        <div className="flex items-center gap-md px-[18px] py-xl border-t border-neutral shrink-0">
+          <span
+            className="text-sm text-base-content/50 flex-1"
+            style={{ color: statusColor || undefined }}
+          >
             {status}
           </span>
-          <button type="button" className="mbtn" onClick={close}>
+          <button type="button" className="btn btn-ghost" onClick={close}>
             Cancel
           </button>
-          <button type="button" className="mbtn primary" onClick={save}>
+          <button type="button" className="btn btn-primary" onClick={save}>
             Save
           </button>
         </div>
       </div>
-    </div>
+      <form method="dialog" className="modal-backdrop">
+        <button type="submit">close</button>
+      </form>
+    </dialog>
   )
 }

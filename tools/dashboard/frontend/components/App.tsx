@@ -53,12 +53,20 @@ export function App() {
   return (
     <>
       <Header />
-      <div id="statusbar">
+      <div
+        id="statusbar"
+        className="flex items-center gap-3xl px-3xl py-sm bg-base-200 border-b border-neutral text-sm min-h-0 overflow-hidden"
+        style={{ gridArea: 'statusbar' }}
+      >
         <StatusBar />
       </div>
-      <div id="main">
-        <div id="board-wrap">
-          <div id="board">
+      <div
+        id="main"
+        className="flex flex-col overflow-hidden"
+        style={{ gridArea: 'main' }}
+      >
+        <div className="flex-1 overflow-x-auto overflow-y-hidden px-3xl py-xl">
+          <div className="flex gap-lg h-full items-start">
             <KanbanBoard />
           </div>
         </div>

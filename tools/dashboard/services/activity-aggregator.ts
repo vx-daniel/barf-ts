@@ -6,7 +6,11 @@
  */
 import type { ActivityEntry } from '@/types/schema/activity-schema'
 
-export type { ActivityKind, ActivitySource, ActivityEntry } from '@/types/schema/activity-schema'
+// export type {
+//   ActivityEntry,
+//   ActivityKind,
+//   ActivitySource,
+// } from '@/types/schema/activity-schema'
 
 /**
  * Converts a raw JSONL SDK message into an {@link ActivityEntry}, or `null` if

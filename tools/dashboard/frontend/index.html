@@ -1,17 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="barf" class="h-full overflow-hidden">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>barf dashboard</title>
-<link rel="stylesheet" href="./styles/base.css">
-<link rel="stylesheet" href="./styles/kanban.css">
-<link rel="stylesheet" href="./styles/editor.css">
-<link rel="stylesheet" href="./styles/status.css">
-<link rel="stylesheet" href="./styles/activity.css">
 </head>
-<body>
-<div id="app" class="no-sidebar"></div>
+<body class="h-full overflow-hidden bg-bg text-text font-mono text-md">
+<div id="app" class="grid grid-rows-[auto_auto_1fr_auto] grid-cols-[1fr] h-full no-sidebar" style="grid-template-areas:'header' 'statusbar' 'main' 'bottom'"></div>
 <script type="module" src="./main.tsx"></script>
 </body>
 </html>

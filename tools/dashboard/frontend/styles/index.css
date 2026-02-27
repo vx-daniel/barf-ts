@@ -1,11 +1,92 @@
 @import "tailwindcss";
+@plugin "daisyui" {
+  themes: barf --default;
+  logs: true;
+}
 
-/* Existing custom design system — layered on top of Tailwind's reset */
-@import "./base.css";
-@import "./kanban.css";
-@import "./editor.css";
-@import "./status.css";
-@import "./activity.css";
+/* Custom daisyUI theme mapped to our design tokens */
+@plugin "daisyui/theme" {
+  name: "barf";
+  default: true;
+  color-scheme: dark;
+
+  --color-base-100: #0d0d1a;
+  --color-base-200: #161625;
+  --color-base-300: #1e1e32;
+  --color-base-content: #e2e8f0;
+
+  --color-primary: #a78bfa;
+  --color-primary-content: #ffffff;
+  --color-secondary: #7c3aed;
+  --color-secondary-content: #ffffff;
+  --color-accent: #a78bfa;
+  --color-accent-content: #ffffff;
+
+  --color-neutral: #2a2a45;
+  --color-neutral-content: #e2e8f0;
+
+  --color-info: #60a5fa;
+  --color-info-content: #ffffff;
+  --color-success: #22c55e;
+  --color-success-content: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-content: #000000;
+  --color-error: #ef4444;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 6px;
+  --radius-field: 6px;
+  --radius-box: 8px;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* ── Resize handles ──────────────────────────────────────────── */
+@layer components {
+  .resize-handle {
+    position: relative;
+    flex-shrink: 0;
+    background: transparent;
+    z-index: 10;
+  }
+  .resize-handle::after {
+    content: "";
+    position: absolute;
+    background: var(--color-border);
+    transition: background 0.15s;
+  }
+  .resize-handle:hover::after,
+  .resize-handle:active::after {
+    background: var(--color-accent);
+  }
+  .resize-handle-v {
+    width: 5px;
+    cursor: col-resize;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+  }
+  .resize-handle-v::after {
+    top: 0;
+    bottom: 0;
+    left: 2px;
+    width: 1px;
+  }
+  .resize-handle-h {
+    height: 5px;
+    cursor: row-resize;
+    width: 100%;
+  }
+  .resize-handle-h::after {
+    left: 0;
+    right: 0;
+    top: 2px;
+    height: 1px;
+  }
+}
 
 /* ── Design tokens ─────────────────────────────────────────────── */
 /* Single source of truth for the dashboard colour palette.        */
@@ -54,4 +135,31 @@
 
   /* Radius */
   --radius-default: 6px;
+
+  /* Typography — --text-* overrides Tailwind's text-xs/sm/base/etc. */
+  --font-mono: "SF Mono", "Fira Code", monospace;
+  --text-xs: 10px;
+  --text-xs--line-height: 1.4;
+  --text-sm: 11px;
+  --text-sm--line-height: 1.4;
+  --text-base: 12px;
+  --text-base--line-height: 1.5;
+  --text-md: 13px;
+  --text-md--line-height: 1.5;
+  --text-lg: 14px;
+  --text-lg--line-height: 1.5;
+  --text-xl: 15px;
+  --text-xl--line-height: 1.4;
+  --text-2xl: 16px;
+  --text-2xl--line-height: 1.4;
+
+  /* Spacing — used by p-*, m-*, gap-*, w-*, h-* */
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 8px;
+  --spacing-lg: 10px;
+  --spacing-xl: 12px;
+  --spacing-2xl: 14px;
+  --spacing-3xl: 16px;
+  --spacing-4xl: 20px;
 }

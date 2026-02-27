@@ -80,10 +80,15 @@ function parsePinoLog(line: string): PinoLog | null {
   }
 }
 
-function resolveToolMeta(toolName: string): { cls: string; badgeText: string } {
-  if (toolName === 'Task') return { cls: 'agent-card', badgeText: 'AGENT' }
-  if (toolName === 'Skill') return { cls: 'skill-card', badgeText: 'SKILL' }
-  return { cls: 'tool-card', badgeText: 'TOOL' }
+function resolveToolMeta(toolName: string): {
+  borderCls: string
+  badgeText: string
+} {
+  if (toolName === 'Task')
+    return { borderCls: 'border-l-[#2dd4bf]', badgeText: 'AGENT' }
+  if (toolName === 'Skill')
+    return { borderCls: 'border-l-accent', badgeText: 'SKILL' }
+  return { borderCls: 'border-l-info', badgeText: 'TOOL' }
 }
 
 function mainArgSnippet(
@@ -119,6 +124,22 @@ function mainArgSnippet(
       return first !== undefined ? truncate(String(first)) : ''
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Level color helpers
+// ---------------------------------------------------------------------------
+
+const LEVEL_COLOR: Record<string, string> = {
+  WARN: 'text-warning-light',
+  ERROR: 'text-danger-light',
+  FATAL: 'text-danger-light',
+}
+
+const MSG_COLOR: Record<string, string> = {
+  WARN: 'text-warning-light',
+  ERROR: 'text-danger-light',
+  FATAL: 'text-danger-light',
 }
 
 // ---------------------------------------------------------------------------
@@ -164,12 +185,22 @@ function IssueBadge({
 }) {
   if (!issueId) return null
   return (
-    <span className="pino-issue-id">
+    <span className="text-info shrink-0">
       #{issueId}
       {issueName ? `:${issueName}` : ''}
     </span>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Shared summary row styles
+// ---------------------------------------------------------------------------
+
+const summaryBase =
+  'flex gap-sm items-baseline px-md py-[2px] cursor-pointer list-none select-none opacity-80 hover:opacity-100 [&::marker]:hidden [&::-webkit-details-marker]:hidden'
+
+const argsJsonCls =
+  'text-xs leading-[1.4] m-0 px-md pl-3xl text-text-slate whitespace-pre overflow-x-auto'
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -185,16 +216,25 @@ function StdoutGroup({ entries }: { entries: ProcessedEntry[] }) {
   const summaryText = `\u25E6 Claude output${issueTag} \u00b7 ${count} line${count === 1 ? '' : 's'} \u00b7 ${fmtTime(first.timestamp)}`
 
   return (
-    <details className="turn-group" data-kind="stdout" open>
-      <summary className="turn-group-summary">{summaryText}</summary>
+    <details
+      className="border-l-2 border-l-[rgba(226,232,240,0.2)] my-xs pl-md"
+      data-kind="stdout"
+      open
+    >
+      <summary className="text-xs text-text-muted cursor-pointer py-[2px] list-none select-none hover:text-text [&::marker]:hidden [&::-webkit-details-marker]:hidden">
+        {summaryText}
+      </summary>
       {entries.map((e) => {
         const line = String(e.data.line ?? '')
 
         if (line.startsWith('__BARF_STATE__:')) {
           const state = line.slice('__BARF_STATE__:'.length).trim()
           return (
-            <div key={e.key} className="state-banner">
-              \u2192 {state}
+            <div
+              key={e.key}
+              className="bg-[#b45309] text-[#fef3c7] font-bold text-sm px-lg py-[3px] rounded-[3px] my-xs"
+            >
+              {'\u2192'} {state}
             </div>
           )
         }
@@ -204,7 +244,10 @@ function StdoutGroup({ entries }: { entries: ProcessedEntry[] }) {
           try {
             const parsed = JSON.parse(trimmed)
             return (
-              <pre key={e.key} className="json-block">
+              <pre
+                key={e.key}
+                className="text-xs leading-[1.4] my-[2px] px-md py-xs bg-[rgba(255,255,255,0.04)] rounded-[3px] overflow-x-auto text-[#a3e635] whitespace-pre"
+              >
                 {JSON.stringify(parsed, null, 2)}
               </pre>
             )
@@ -214,9 +257,11 @@ function StdoutGroup({ entries }: { entries: ProcessedEntry[] }) {
         }
 
         return (
-          <div key={e.key} className="stdout-line">
-            <span className="gutter-time">{fmtTime(e.timestamp)}</span>
-            <span className="line-text">{line}</span>
+          <div key={e.key} className="flex gap-md text-sm leading-[1.5]">
+            <span className="text-text-muted text-xs min-w-[60px] shrink-0 font-mono">
+              {fmtTime(e.timestamp)}
+            </span>
+            <span className="text-text flex-1 break-words">{line}</span>
           </div>
         )
       })}
@@ -229,50 +274,63 @@ function StderrRow({ entry }: { entry: ProcessedEntry }) {
   const pino = parsePinoLog(rawLine)
 
   if (pino) {
-    const lvlCls = `pino-level-${pino.levelName.toLowerCase()}`
-    let levelCls = ''
-    if (pino.levelName === 'WARN') levelCls = 'pino-warn'
-    else if (pino.levelName === 'ERROR' || pino.levelName === 'FATAL')
-      levelCls = 'pino-error'
-
-    const cssClass = `activity-row pino-row${levelCls ? ` ${levelCls}` : ''}`
+    const lvlColor = LEVEL_COLOR[pino.levelName] ?? 'text-text-muted'
+    const msgColor = MSG_COLOR[pino.levelName] ?? 'text-text-light'
     const extraEntries = Object.entries(pino.extra).filter(
       ([k]) => k !== 'title',
     )
 
     return (
-      <details className={cssClass} data-kind="stderr">
-        <summary className="activity-summary">
-          <span className="log-time">{fmtTime(entry.timestamp)}</span>
-          <span className={`pino-level ${lvlCls}`}>[{pino.levelName}]</span>
+      <details
+        className="m-0 border-l-[3px] border-l-success-light"
+        data-kind="stderr"
+      >
+        <summary className={`${summaryBase} flex-wrap`}>
+          <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+            {fmtTime(entry.timestamp)}
+          </span>
+          <span className={`font-mono shrink-0 basis-[5%] ${lvlColor}`}>
+            [{pino.levelName}]
+          </span>
           {pino.issueId && (
-            <span className="pino-issue-id">
+            <span className="text-info shrink-0">
               #{pino.issueId}
               {typeof pino.extra.title === 'string'
                 ? `:${pino.extra.title}`
                 : ''}
             </span>
           )}
-          {pino.name && <span className="pino-name">{pino.name}</span>}
-          <span className="pino-msg">{pino.msg}</span>
+          {pino.name && (
+            <span className="px-xs rounded-[2px] bg-[color-mix(in_srgb,var(--color-text-slate)_12%,transparent)] text-text-slate shrink-0 font-semibold">
+              {pino.name}
+            </span>
+          )}
+          <span className={msgColor}>{pino.msg}</span>
           {extraEntries.length > 0 && (
-            <span className="pino-extra">
+            <span className="text-text-muted shrink-0 font-mono">
               {extraEntries.map(([k, v]) => `${k}:${v}`).join('  ')}
             </span>
           )}
         </summary>
-        <pre className="args-json">{JSON.stringify(pino, null, 2)}</pre>
+        <pre className={argsJsonCls}>{JSON.stringify(pino, null, 2)}</pre>
       </details>
     )
   }
 
   return (
-    <details className="activity-row pino-row" data-kind="stderr">
-      <summary className="activity-summary">
-        <span className="log-time">{fmtTime(entry.timestamp)}</span>
-        <span className="pino-level pino-level-error">[STDERR]</span>
+    <details
+      className="m-0 border-l-[3px] border-l-success-light"
+      data-kind="stderr"
+    >
+      <summary className={summaryBase}>
+        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+          {fmtTime(entry.timestamp)}
+        </span>
+        <span className="font-mono shrink-0 basis-[5%] text-danger-light">
+          [STDERR]
+        </span>
         <IssueBadge issueId={entry.issueId} issueName={entry.issueName} />
-        <span className="pino-msg">{rawLine}</span>
+        <span className="text-text-light">{rawLine}</span>
       </summary>
     </details>
   )
@@ -281,7 +339,7 @@ function StderrRow({ entry }: { entry: ProcessedEntry }) {
 function ToolCard({ entry }: { entry: ProcessedEntry }) {
   const toolName = String(entry.data.tool ?? 'unknown')
   const args = entry.data.args as Record<string, unknown> | undefined
-  const { cls, badgeText } = resolveToolMeta(toolName)
+  const { borderCls, badgeText } = resolveToolMeta(toolName)
 
   let displayName = toolName
   if (toolName === 'Task' && args?.subagent_type)
@@ -291,21 +349,32 @@ function ToolCard({ entry }: { entry: ProcessedEntry }) {
   const snippet = args ? mainArgSnippet(toolName, args) : ''
 
   return (
-    <details className={`activity-row ${cls}`} data-kind="tool_call">
-      <summary className="activity-summary">
-        <span className="log-time">{fmtTime(entry.timestamp)}</span>
+    <details
+      className={`m-0 border-l-[3px] ${borderCls}`}
+      data-kind="tool_call"
+    >
+      <summary className={summaryBase}>
+        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+          {fmtTime(entry.timestamp)}
+        </span>
         <IssueBadge issueId={entry.issueId} issueName={entry.issueName} />
-        <span className="pino-level">[{badgeText}]</span>
-        <span className="pino-name">{displayName}</span>
-        {snippet && <span className="pino-msg">{snippet}</span>}
+        <span className="font-mono shrink-0 basis-[5%] text-text-muted">
+          [{badgeText}]
+        </span>
+        <span className="px-xs rounded-[2px] bg-[color-mix(in_srgb,var(--color-text-slate)_12%,transparent)] text-text-slate shrink-0 font-semibold">
+          {displayName}
+        </span>
+        {snippet && <span className="text-text-light">{snippet}</span>}
       </summary>
-      {args && <pre className="args-json">{JSON.stringify(args, null, 2)}</pre>}
+      {args && (
+        <pre className={argsJsonCls}>{JSON.stringify(args, null, 2)}</pre>
+      )}
       {entry.toolResult ? (
         <div
-          className={`result-slot${entry.toolResult.isError ? ' result-error' : ''}`}
+          className={`px-md pl-3xl py-xs text-xs italic ${entry.toolResult.isError ? 'text-danger-light not-italic' : 'text-text-muted'}`}
         >
           <pre
-            className="result-content"
+            className="m-0 whitespace-pre-wrap break-words text-text-light not-italic"
             title={
               entry.toolResult.content.length > 500
                 ? entry.toolResult.content
@@ -318,7 +387,9 @@ function ToolCard({ entry }: { entry: ProcessedEntry }) {
           </pre>
         </div>
       ) : (
-        <div className="result-slot">awaiting result\u2026</div>
+        <div className="px-md pl-3xl py-xs text-xs text-text-muted italic">
+          awaiting result{'\u2026'}
+        </div>
       )}
     </details>
   )
@@ -331,16 +402,23 @@ function TokenRow({ entry }: { entry: ProcessedEntry }) {
   const cacheRead = entry.data.cache_read_input_tokens ?? 0
 
   return (
-    <details className="activity-row token-row" data-kind="token_update">
-      <summary className="activity-summary">
-        <span className="log-time">{fmtTime(entry.timestamp)}</span>
+    <details
+      className="m-0 border-l-[3px] border-l-[#e202d7]"
+      data-kind="token_update"
+    >
+      <summary className={`${summaryBase} opacity-55`}>
+        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+          {fmtTime(entry.timestamp)}
+        </span>
         <IssueBadge issueId={entry.issueId} issueName={entry.issueName} />
-        <span className="pino-level pino-level-tokens">[TOKENS]</span>
-        <span className="pino-msg">
+        <span className="font-mono shrink-0 basis-[5%] text-success opacity-70">
+          [TOKENS]
+        </span>
+        <span className="text-text-light">
           +{String(inp)} in, +{String(out)} out
         </span>
       </summary>
-      <pre className="args-json">
+      <pre className={argsJsonCls}>
         {JSON.stringify(
           {
             input_tokens: inp,
@@ -358,14 +436,23 @@ function TokenRow({ entry }: { entry: ProcessedEntry }) {
 
 function ResultRow({ entry }: { entry: ProcessedEntry }) {
   return (
-    <details className="activity-row result-row" data-kind="result">
-      <summary className="activity-summary">
-        <span className="log-time">{fmtTime(entry.timestamp)}</span>
-        <span className="pino-level pino-level-result">[RESULT]</span>
+    <details
+      className="m-0 border-l-[3px] border-l-transparent"
+      data-kind="result"
+    >
+      <summary className={`${summaryBase} opacity-55`}>
+        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+          {fmtTime(entry.timestamp)}
+        </span>
+        <span className="font-mono shrink-0 basis-[5%] text-success-light">
+          [RESULT]
+        </span>
         <IssueBadge issueId={entry.issueId} issueName={entry.issueName} />
-        <span className="pino-msg">{String(entry.data.result ?? '')}</span>
+        <span className="text-text-light">
+          {String(entry.data.result ?? '')}
+        </span>
       </summary>
-      <pre className="args-json">{JSON.stringify(entry.data, null, 2)}</pre>
+      <pre className={argsJsonCls}>{JSON.stringify(entry.data, null, 2)}</pre>
     </details>
   )
 }
@@ -376,21 +463,30 @@ function ErrorBanner({ entry }: { entry: ProcessedEntry }) {
     errorText.length > 80 ? `${errorText.slice(0, 80)}\u2026` : errorText
 
   return (
-    <details className="activity-row error-row" data-kind="error">
-      <summary className="activity-summary">
-        <span className="log-time">{fmtTime(entry.timestamp)}</span>
-        <span className="pino-level pino-level-error">[ERROR]</span>
+    <details className="m-0 border-l-[3px] border-l-danger" data-kind="error">
+      <summary className={summaryBase}>
+        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+          {fmtTime(entry.timestamp)}
+        </span>
+        <span className="font-mono shrink-0 basis-[5%] text-danger-light">
+          [ERROR]
+        </span>
         <IssueBadge issueId={entry.issueId} issueName={entry.issueName} />
-        <span className="pino-msg">{truncated}</span>
+        <span className="text-text-light">{truncated}</span>
       </summary>
-      <pre className="args-json">{JSON.stringify(entry.data, null, 2)}</pre>
+      <pre className={argsJsonCls}>{JSON.stringify(entry.data, null, 2)}</pre>
     </details>
   )
 }
 
 function TermLine({ entry }: { entry: ProcessedEntry }) {
+  const typeStyles: Record<string, string> = {
+    info: 'text-info italic',
+    done: 'text-success-light font-bold',
+    error: 'text-danger-light font-bold',
+  }
   return (
-    <div className={`t-${entry.termType ?? 'info'}`}>
+    <div className={typeStyles[entry.termType ?? 'info'] ?? 'text-info italic'}>
       {entry.termText ?? ''}
     </div>
   )
@@ -416,7 +512,9 @@ function FilterBar({
           <button
             type="button"
             key={f.kind}
-            className={`filter-btn${isActive ? ' active' : ''}`}
+            className={`btn btn-xs ${
+              isActive ? 'btn-primary btn-outline' : 'btn-ghost border-neutral'
+            }`}
             data-kind={f.kind}
             onClick={() => onToggle(f.kind)}
           >
@@ -566,7 +664,11 @@ export function ActivityLog() {
       const line = String(e.data.line ?? '')
       const state = line.slice('__BARF_STATE__:'.length).trim()
       return (
-        <div key={e.key} className="state-banner" data-kind="stdout">
+        <div
+          key={e.key}
+          className="bg-[#b45309] text-[#fef3c7] font-bold text-sm px-lg py-[3px] rounded-[3px] my-xs"
+          data-kind="stdout"
+        >
           {'\u2192'} {state}
         </div>
       )
@@ -591,39 +693,61 @@ export function ActivityLog() {
   }
 
   return (
-    <div id="bottom" className={isOpen ? 'open' : ''}>
-      <div id="activity-header">
-        <span id="activity-title">{headerTitle}</span>
-        <div id="activity-controls">
-          <FilterBar active={activeFilters} onToggle={handleFilterToggle} />
-          <button
-            type="button"
-            id="activity-close"
-            onClick={() => {
-              activityOpen.value = false
-            }}
-          >
-            {'\u2715'}
-          </button>
+    <div
+      id="bottom"
+      className="border-t border-neutral flex flex-col bg-base-100"
+      style={{
+        gridArea: 'bottom',
+        maxHeight: isOpen ? '300px' : undefined,
+      }}
+    >
+      {/* Header — always visible, clickable to toggle */}
+      <div
+        className="flex items-center justify-between px-lg py-xs border-b border-neutral shrink-0 cursor-pointer select-none hover:bg-base-200 transition-colors"
+        onClick={() => {
+          activityOpen.value = !activityOpen.value
+        }}
+      >
+        <div className="flex items-center gap-md">
+          <span className="text-xs text-text-muted">
+            {isOpen ? '\u25BC' : '\u25B6'}
+          </span>
+          <span className="text-sm text-text-muted">{headerTitle || 'Activity'}</span>
+        </div>
+        <div className="flex gap-sm items-center" onClick={(e) => e.stopPropagation()}>
+          {isOpen && (
+            <FilterBar active={activeFilters} onToggle={handleFilterToggle} />
+          )}
         </div>
       </div>
 
-      <div id="activity-log" ref={logRef}>
-        {grouped.map(renderItem)}
-      </div>
+      {/* Log content — only when open */}
+      {isOpen && (
+        <>
+          <div
+            ref={logRef}
+            className="flex-1 overflow-y-auto px-xl py-md text-sm leading-[1.6]"
+          >
+            {grouped.map(renderItem)}
+          </div>
 
-      <div id="term-input-row" className={showInput ? 'visible' : ''}>
-        <span id="term-input-prompt">answer &gt;</span>
-        <input
-          ref={inputRef}
-          id="term-input"
-          type="text"
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="type your answer and press Enter"
-          onKeyDown={handleInputKeyDown}
-        />
-      </div>
+          {/* Terminal input row */}
+          <div
+            className={`items-center gap-md px-lg py-[5px] border-t border-neutral shrink-0 ${showInput ? 'flex' : 'hidden'}`}
+          >
+            <span className="text-sm text-info whitespace-nowrap">answer &gt;</span>
+            <input
+              ref={inputRef}
+              className="flex-1 bg-transparent border-none text-text font-inherit text-sm outline-none placeholder:text-text-muted"
+              type="text"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="type your answer and press Enter"
+              onKeyDown={handleInputKeyDown}
+            />
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { fetchIssues } from '@dashboard/frontend/lib/actions'
 import * as api from '@dashboard/frontend/lib/api-client'
 import { newIssueOpen } from '@dashboard/frontend/lib/state'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useRef } from 'preact/hooks'
 
 /**
  * New-issue modal that reads the {@link newIssueOpen} signal to control visibility.
@@ -9,81 +9,74 @@ import { useEffect, useRef, useState } from 'preact/hooks'
  * {@link api.createIssue} then refreshes the issue list.
  */
 export function NewIssueModal(): preact.JSX.Element | null {
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
   const titleRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
   const isOpen = newIssueOpen.value
 
   useEffect(() => {
-    if (isOpen) {
-      setTitle('')
-      setBody('')
+    const dlg = dialogRef.current
+    if (!dlg) return
+    if (isOpen && !dlg.open) {
+      dlg.showModal()
       const t = setTimeout(() => titleRef.current?.focus(), 50)
       return () => clearTimeout(t)
     }
+    if (!isOpen && dlg.open) {
+      dlg.close()
+    }
   }, [isOpen])
-
-  if (!isOpen) return null
 
   const close = (): void => {
     newIssueOpen.value = false
   }
 
-  const submit = async (): Promise<void> => {
-    if (!title.trim()) return
-    await api.createIssue(title.trim(), body.trim() || undefined)
+  const submit = async (form: HTMLFormElement): Promise<void> => {
+    const data = new FormData(form)
+    const title = String(data.get('title') ?? '').trim()
+    if (!title) return
+    const body = String(data.get('body') ?? '').trim() || undefined
+    await api.createIssue(title, body)
     newIssueOpen.value = false
     await fetchIssues()
   }
 
-  const handleOverlayClick = (e: MouseEvent): void => {
-    if (e.target === e.currentTarget) close()
-  }
-
-  const handleTitleKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      void submit()
-    }
-  }
-
   return (
-    <div
-      id="modal-ov"
-      className="open"
-      role="dialog"
-      onClick={handleOverlayClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          newIssueOpen.value = false
-        }
-      }}
-    >
-      <div id="modal">
-        <h3>New Issue</h3>
-        <input
-          ref={titleRef}
-          type="text"
-          placeholder="Title"
-          value={title}
-          onInput={(e) => setTitle((e.target as HTMLInputElement).value)}
-          onKeyDown={handleTitleKeyDown}
-        />
-        <textarea
-          placeholder="Body (optional)"
-          value={body}
-          onInput={(e) => setBody((e.target as HTMLTextAreaElement).value)}
-        />
-        <div id="modal-btns">
-          <button type="button" onClick={() => close()}>
-            Cancel
-          </button>
-          <button type="button" onClick={() => void submit()}>
-            Create
-          </button>
-        </div>
+    <dialog ref={dialogRef} className="modal" onClose={close}>
+      <div className="modal-box bg-base-200 border border-neutral max-w-md">
+        <h3 className="text-lg font-bold mb-4">New Issue</h3>
+        <form
+          method="dialog"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submit(e.currentTarget as HTMLFormElement)
+          }}
+        >
+          <input
+            ref={titleRef}
+            name="title"
+            className="input input-bordered w-full mb-3 bg-base-100"
+            type="text"
+            placeholder="Title"
+          />
+          <textarea
+            name="body"
+            className="textarea textarea-bordered w-full mb-3 bg-base-100"
+            placeholder="Body (optional)"
+          />
+          <div className="modal-action">
+            <button type="button" className="btn btn-ghost" onClick={close}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Create
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+      <form method="dialog" className="modal-backdrop">
+        <button type="submit">close</button>
+      </form>
+    </dialog>
   )
 }

@@ -5,7 +5,7 @@
 
 import * as api from '@dashboard/frontend/lib/api-client'
 import { interviewTarget } from '@dashboard/frontend/lib/state'
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 
 interface Question {
   question: string
@@ -59,6 +59,7 @@ export function InterviewModal(): preact.JSX.Element | null {
   const [selectedOpt, setSelectedOpt] = useState<string | null>(null)
   const [otherText, setOtherText] = useState('')
   const [textareaVal, setTextareaVal] = useState('')
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
   // Reset state when a new interview opens
   useEffect(() => {
@@ -85,6 +86,14 @@ export function InterviewModal(): preact.JSX.Element | null {
     setTextareaVal('')
     setError(null)
   }, [currentIdx])
+
+  // Sync dialog open state with signal
+  useEffect(() => {
+    const dlg = dialogRef.current
+    if (!dlg) return
+    if (target && !dlg.open) dlg.showModal()
+    if (!target && dlg.open) dlg.close()
+  }, [target])
 
   if (!target) return null
 
@@ -147,24 +156,28 @@ export function InterviewModal(): preact.JSX.Element | null {
   }
 
   return (
-    <div className="modal-overlay" style={{ display: 'flex' }}>
-      <div className="modal-card">
-        <div className="interview-hdr">
-          <h2>Interview: #{issue.id}</h2>
-          <span className="interview-progress">
+    <dialog ref={dialogRef} className="modal" onClose={handleCancel}>
+      <div className="modal-box bg-base-200 border border-neutral max-w-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold m-0">Interview: #{issue.id}</h2>
+          <span className="text-sm text-base-content/60">
             Question {currentIdx + 1} of {questions.length}
           </span>
         </div>
 
-        <p className="interview-q">{q.question}</p>
+        <p className="text-md mb-4 leading-relaxed">{q.question}</p>
 
         {q.options && q.options.length > 0 ? (
-          <div className="interview-opts">
+          <div className="flex flex-col gap-sm mb-4">
             {[...q.options, 'Other'].map((opt) => (
-              <label key={opt} className="interview-opt">
+              <label
+                key={opt}
+                className="flex items-center gap-md text-base cursor-pointer px-md py-sm rounded-default hover:bg-base-300"
+              >
                 <input
                   type="radio"
                   name="interview-answer"
+                  className="radio radio-primary radio-sm"
                   value={opt}
                   checked={selectedOpt === opt}
                   onChange={() => setSelectedOpt(opt)}
@@ -174,7 +187,7 @@ export function InterviewModal(): preact.JSX.Element | null {
             ))}
             <input
               type="text"
-              className="interview-other-input"
+              className="input input-bordered w-full mt-sm bg-base-100"
               placeholder="Type your answer..."
               style={{ display: selectedOpt === 'Other' ? 'block' : 'none' }}
               value={otherText}
@@ -185,7 +198,7 @@ export function InterviewModal(): preact.JSX.Element | null {
           </div>
         ) : (
           <textarea
-            className="interview-textarea"
+            className="textarea textarea-bordered w-full mb-4 bg-base-100"
             rows={4}
             placeholder="Type your answer..."
             value={textareaVal}
@@ -195,18 +208,26 @@ export function InterviewModal(): preact.JSX.Element | null {
           />
         )}
 
-        <div className="interview-btns">
+        <div className="modal-action">
           {currentIdx > 0 && (
-            <button type="button" className="mbtn" onClick={handleBack}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleBack}
+            >
               Back
             </button>
           )}
-          <button type="button" className="mbtn" onClick={handleCancel}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={handleCancel}
+          >
             Cancel
           </button>
           <button
             type="button"
-            className="mbtn primary"
+            className="btn btn-primary"
             disabled={submitting}
             onClick={handleNext}
           >
@@ -214,8 +235,11 @@ export function InterviewModal(): preact.JSX.Element | null {
           </button>
         </div>
 
-        {error && <div className="interview-err">{error}</div>}
+        {error && <div className="text-error text-sm mt-md">{error}</div>}
       </div>
-    </div>
+      <form method="dialog" className="modal-backdrop">
+        <button type="submit">close</button>
+      </form>
+    </dialog>
   )
 }

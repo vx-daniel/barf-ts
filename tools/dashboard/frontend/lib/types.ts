@@ -2,12 +2,15 @@
  * Frontend-only types for the dashboard panels.
  * Re-exports shared types from `src/` so panel code can import from one place.
  */
-export type {
-  ActivityEntry,
-  ActivityKind,
-  ActivitySource,
-} from '@/types/schema/activity-schema'
+// export type {
+//   ActivityEntry,
+//   ActivityKind,
+//   ActivitySource,
+// } from '@/types/schema/activity-schema'
 export type { Issue } from '@/types/schema/issue-schema'
+
+// Import ActivityKind for interface usage
+import type { ActivityKind } from '@/types/schema/activity-schema'
 
 /**
  * A rendered activity entry for the reactive activity log.

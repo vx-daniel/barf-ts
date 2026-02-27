@@ -63,10 +63,10 @@ export function StatusBar() {
   const ctxPct = selected?.context_usage_percent
 
   function ctxClass(pct: number | null | undefined): string {
-    if (pct == null) return 'sb-stat-value'
-    if (pct > 80) return 'sb-stat-value danger'
-    if (pct > 60) return 'sb-stat-value warning'
-    return 'sb-stat-value healthy'
+    if (pct == null) return ''
+    if (pct > 80) return 'text-error'
+    if (pct > 60) return 'text-warning'
+    return 'text-success'
   }
 
   const stats = selected
@@ -74,7 +74,7 @@ export function StatusBar() {
         in: fmt(selected.total_input_tokens),
         out: fmt(selected.total_output_tokens),
         ctx: ctxPct != null ? `${ctxPct}%` : '\u2014',
-        ctxClass: ctxClass(ctxPct),
+        ctxCls: ctxClass(ctxPct),
         runs: String(selected.run_count),
         time: fmtDuration(selected.total_duration_seconds),
       }
@@ -82,35 +82,48 @@ export function StatusBar() {
         in: fmt(totalIn),
         out: fmt(totalOut),
         ctx: `${String(allIssues.length)} issues`,
-        ctxClass: 'sb-stat-value',
+        ctxCls: '',
         runs: String(totalRuns),
         time: fmtDuration(totalDur),
       }
 
   const statDefs = [
-    { label: 'In', value: stats.in, cls: 'sb-stat-value' },
-    { label: 'Out', value: stats.out, cls: 'sb-stat-value' },
-    { label: 'Ctx', value: stats.ctx, cls: stats.ctxClass },
-    { label: 'Runs', value: stats.runs, cls: 'sb-stat-value' },
-    { label: 'Time', value: stats.time, cls: 'sb-stat-value' },
+    { label: 'In', value: stats.in, cls: '' },
+    { label: 'Out', value: stats.out, cls: '' },
+    { label: 'Ctx', value: stats.ctx, cls: stats.ctxCls },
+    { label: 'Runs', value: stats.runs, cls: '' },
+    { label: 'Time', value: stats.time, cls: '' },
   ]
 
   return (
     <>
-      <div id="sb-command" className={active ? 'visible' : ''}>
-        <div className="spinner"></div>
-        <span id="sb-cmd-text">{active ?? ''}</span>
-        <span id="sb-cmd-timer">{active ? fmtDuration(elapsed) : ''}</span>
+      {/* Active command indicator */}
+      <div
+        className={`items-center gap-md px-lg py-[3px] rounded-default border ${
+          active ? 'flex' : 'hidden'
+        }`}
+        style={{
+          background:
+            'color-mix(in srgb, var(--color-state-in-progress) 10%, transparent)',
+          borderColor:
+            'color-mix(in srgb, var(--color-state-in-progress) 30%, transparent)',
+        }}
+      >
+        <span className="loading loading-spinner loading-xs text-warning" />
+        <span className="text-state-in-progress font-semibold">
+          {active ?? ''}
+        </span>
+        <span className="text-base-content/50">
+          {active ? fmtDuration(elapsed) : ''}
+        </span>
       </div>
 
-      <div
-        id="sb-summary"
-        className={`sb-summary${selected ? '' : ' visible'}`}
-      >
+      {/* Summary chips (when no issue selected) */}
+      <div className={`items-center gap-sm ${selected ? 'hidden' : 'flex'}`}>
         {STATE_ORDER.filter((s) => counts[s]).map((state) => (
           <span
             key={state}
-            className="sb-state-chip"
+            className="badge badge-outline badge-sm font-semibold tracking-[0.04em] whitespace-nowrap"
             style={{ borderColor: stateColor(state), color: stateColor(state) }}
           >
             {state.replace('_', ' ')} {counts[state]}
@@ -118,17 +131,27 @@ export function StatusBar() {
         ))}
       </div>
 
-      <div id="sb-issue" className={selected ? 'visible' : ''}>
-        <span className="sb-issue-label">Issue:</span>
-        <span id="sb-issue-id">{selected ? `#${selected.id}` : ''}</span>
-        <span id="sb-issue-title">{selected?.title ?? ''}</span>
+      {/* Selected issue info */}
+      <div className={`items-center gap-xl ${selected ? 'flex' : 'hidden'}`}>
+        <span className="text-base-content/50">Issue:</span>
+        <span className="text-primary font-semibold">
+          {selected ? `#${selected.id}` : ''}
+        </span>
+        <span className="text-base-content max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap">
+          {selected?.title ?? ''}
+        </span>
       </div>
 
-      <div className="sb-stats">
+      {/* Stats */}
+      <div className="flex items-center gap-xl ml-auto">
         {statDefs.map(({ label, value, cls }) => (
-          <div key={label} className="sb-stat">
-            <span className="sb-stat-label">{label}</span>
-            <span className={cls}>{value}</span>
+          <div key={label} className="flex items-center gap-xs">
+            <span className="text-base-content/50 text-xs uppercase tracking-[0.04em]">
+              {label}
+            </span>
+            <span className={`font-semibold text-base-content ${cls}`}>
+              {value}
+            </span>
           </div>
         ))}
       </div>
