@@ -130,7 +130,7 @@ async function router(req: Request): Promise<Response> {
 
 // ── Start server ─────────────────────────────────────────────────────────────
 
-Bun.serve({
+Bun.serve<{ issueId: string }>({
   port,
   idleTimeout: 255, // max — SSE streams are long-lived
   fetch(req, server) {
@@ -149,12 +149,12 @@ Bun.serve({
   },
   websocket: {
     open(ws) {
-      const { issueId } = ws.data as { issueId: string }
+      const { issueId } = ws.data
       startInterviewProc(ws, svc, issueId)
     },
     message(ws, message) {
       const proc = wsProcs.get(ws)
-      if (proc?.stdin) {
+      if (proc?.stdin && typeof proc.stdin !== 'number') {
         const line =
           typeof message === 'string'
             ? message

@@ -18,10 +18,10 @@ export {
 } from './issue-schema'
 
 // ── Activity Log ─────────────────────────────────────────────────────────────
-export {
-  type ActivityKind,
-  type ActivitySource,
-  type ActivityEntry,
+export type {
+  ActivityKind,
+  ActivitySource,
+  ActivityEntry,
 } from './activity-schema'
 
 // ── Configuration ────────────────────────────────────────────────────────────

@@ -702,8 +702,9 @@ export function ActivityLog() {
       }}
     >
       {/* Header — always visible, clickable to toggle */}
-      <div
-        className="flex items-center justify-between px-lg py-xs border-b border-neutral shrink-0 cursor-pointer select-none hover:bg-base-200 transition-colors"
+      <button
+        type="button"
+        className="flex items-center justify-between px-lg py-xs border-b border-neutral shrink-0 cursor-pointer select-none hover:bg-base-200 transition-colors w-full bg-transparent text-inherit"
         onClick={() => {
           activityOpen.value = !activityOpen.value
         }}
@@ -712,14 +713,16 @@ export function ActivityLog() {
           <span className="text-xs text-text-muted">
             {isOpen ? '\u25BC' : '\u25B6'}
           </span>
-          <span className="text-sm text-text-muted">{headerTitle || 'Activity'}</span>
+          <span className="text-sm text-text-muted">
+            {headerTitle || 'Activity'}
+          </span>
         </div>
-        <div className="flex gap-sm items-center" onClick={(e) => e.stopPropagation()}>
-          {isOpen && (
-            <FilterBar active={activeFilters} onToggle={handleFilterToggle} />
-          )}
+      </button>
+      {isOpen && (
+        <div className="flex gap-sm items-center justify-end px-lg py-xs border-b border-neutral shrink-0">
+          <FilterBar active={activeFilters} onToggle={handleFilterToggle} />
         </div>
-      </div>
+      )}
 
       {/* Log content — only when open */}
       {isOpen && (
@@ -735,13 +738,15 @@ export function ActivityLog() {
           <div
             className={`items-center gap-md px-lg py-[5px] border-t border-neutral shrink-0 ${showInput ? 'flex' : 'hidden'}`}
           >
-            <span className="text-sm text-info whitespace-nowrap">answer &gt;</span>
+            <span className="text-sm text-info whitespace-nowrap">
+              answer &gt;
+            </span>
             <input
               ref={inputRef}
               className="flex-1 bg-transparent border-none text-text font-inherit text-sm outline-none placeholder:text-text-muted"
               type="text"
               autoComplete="off"
-              spellCheck={false}
+              spellcheck={false}
               placeholder="type your answer and press Enter"
               onKeyDown={handleInputKeyDown}
             />

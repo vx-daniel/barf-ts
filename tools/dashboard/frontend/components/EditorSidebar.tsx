@@ -156,8 +156,7 @@ export function EditorSidebar() {
     if (id === null) {
       app.classList.add('no-sidebar', 'grid-cols-[1fr]')
       app.classList.remove('grid-cols-[1fr_380px]')
-      app.style.gridTemplateAreas =
-        "'header' 'statusbar' 'main' 'bottom'"
+      app.style.gridTemplateAreas = "'header' 'statusbar' 'main' 'bottom'"
     } else {
       app.classList.remove('no-sidebar', 'grid-cols-[1fr]')
       app.classList.add('grid-cols-[1fr_380px]')

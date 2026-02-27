@@ -968,7 +968,7 @@ scheduleRefresh();
 
 // ── Start server ───────────────────────────────────────────────────────────────
 
-Bun.serve({
+Bun.serve<{ issueId: string }>({
   port,
   fetch(req, server) {
     const url = new URL(req.url)
@@ -983,12 +983,12 @@ Bun.serve({
   },
   websocket: {
     open(ws) {
-      const { issueId } = ws.data as { issueId: string }
+      const { issueId } = ws.data
       startInterviewProc(ws, issueId)
     },
     message(ws, message) {
       const proc = wsProcs.get(ws)
-      if (proc?.stdin) {
+      if (proc?.stdin && typeof proc.stdin !== 'number') {
         const line =
           typeof message === 'string'
             ? message
