@@ -2,88 +2,127 @@
 
 **Source:** `tools/dashboard/`
 
-The dashboard is a Bun HTTP server with a Vanilla TypeScript frontend. It provides a visual interface for managing issues, monitoring runs, and interacting with the interview flow.
+The dashboard is a Bun HTTP server with a Preact frontend. It provides a visual interface for managing issues, monitoring runs, and interacting with the interview flow.
 
 ## Architecture
 
 ```
 tools/dashboard/
-  server.ts                 Bun.serve entry point
+  server.ts                   Bun.serve entry point (port 3333, idleTimeout 255)
+  build.ts                    Bun bundler + Tailwind CLI v4
   routes/
-    api.ts                  REST endpoints (issue CRUD, config, transitions)
-    sse.ts                  Server-Sent Events (stream log tailing)
+    api.ts                    REST endpoints (issue CRUD, config, transitions, interview)
+    sse.ts                    SSE streaming (command output, log tailing)
+    ws.ts                     WebSocket for interactive interview subprocess
   services/
-    issue-service.ts        wraps IssueProvider + Config for HTTP layer
-    log-reader.ts           parse .barf/streams/*.jsonl files
-    activity-aggregator.ts  merge events from multiple sources
+    issue-service.ts          DI container (wraps IssueProvider + Config)
+    log-reader.ts             JSONL tail with byte-offset tracking
+    activity-aggregator.ts    SDK message → ActivityEntry parser
   frontend/
-    main.ts                 boot: mount panels, init WebSocket/SSE clients
-    panels/
-      kanban.ts             issues grouped by state columns
-      status.ts             summary stats + active command display
-      editor.ts             issue detail view (title, body, state, transitions)
-      config.ts             view/edit .barfrc configuration
-      activity-log.ts       streaming output, interview terminal
-      interview-modal.ts    interactive interview UI
-    api-client.ts           typed fetch wrappers for REST endpoints
-    sse-client.ts           SSE connection + event routing
-    ws-client.ts            WebSocket for interview input
+    main.tsx                  Entry: render KanbanBoard + StatusBar
+    lib/
+      state.ts               @preact/signals (issues, selectedId, runningId, etc.)
+      actions.ts             Business logic, SSE/WS singletons, immutable updates
+      api-client.ts          Typed fetch wrappers for REST endpoints
+      sse-client.ts          EventSource listener (command streaming)
+      ws-client.ts           WebSocket client (interview)
+      constants.ts           STATE_COLORS, STATE_LABELS, STATE_ORDER, CMD_ACTIONS
+      types.ts               TypeScript interfaces
+      format.ts              UI formatters (dates, tokens, etc.)
+      issue-helpers.ts       Issue state/metadata helpers
+      dom.ts                 DOM query/manipulation utilities
+      resizer.ts             Drag-to-resize panel handler
+    components/              Preact components (KanbanBoard, StatusBar, etc.)
+    styles/                  Tailwind CSS source
 ```
 
 ## REST API (`routes/api.ts`)
 
 ```
-GET  /api/issues              list all issues
-GET  /api/issues/:id          get single issue
-POST /api/issues              create issue
-PUT  /api/issues/:id          update issue (body, frontmatter fields)
-DEL  /api/issues/:id          delete issue
-POST /api/issues/:id/transition  transition state
-GET  /api/config              get parsed config
-PUT  /api/config              write .barfrc
-GET  /api/stats               aggregate stats (counts by state, token totals)
+GET    /api/issues              list all issues
+POST   /api/issues              create issue { title, body }
+GET    /api/issues/:id          get single issue
+PUT    /api/issues/:id          update issue (title, body, frontmatter fields)
+DELETE /api/issues/:id          delete issue
+PUT    /api/issues/:id/transition   transition state { state }
+POST   /api/issues/:id/interview    process interview Q&A, evaluate, update issue
+GET    /api/config              get parsed config (API keys masked)
+PUT    /api/config              save config to .barfrc (preserves comments + unknown keys)
 ```
 
-## SSE Streaming (`routes/sse.ts`)
+## SSE Command Streaming (`routes/sse.ts`)
 
-Real-time log streaming to the frontend via Server-Sent Events:
+Run barf commands and stream output to the frontend:
 
 ```
-GET /api/sse/stream?issueId=ISS-001
-
-Server streams events:
-  data: {"type": "log", "issueId": "ISS-001", "content": "..."}
-  data: {"type": "tool_use", "name": "Bash", "input": "..."}
-  data: {"type": "complete", "outcome": "success"}
-  data: {"type": "heartbeat"}
+GET|POST /api/auto              spawn "barf auto", stream stdout/stderr as SSE
+POST     /api/auto/stop         kill active process
+GET|POST /api/issues/:id/run/:cmd   run single command (plan/build/audit/triage) on issue
+GET      /api/issues/:id/logs       SSE tail of .barf/streams/{id}.jsonl (polls 500ms)
+GET      /api/issues/:id/logs/history   full JSONL history as JSON array
 ```
 
-The SSE endpoint tails `.barf/streams/<issueId>.jsonl` (written by `consumeSDKQuery` when `STREAM_LOG_DIR` is set) and forwards parsed events to the browser.
+SSE event format:
+```
+data: {"type": "stdout|stderr|error|done", "line": "...", "exitCode": 0}
+```
 
-## Frontend Data Flow
+ANSI color codes are stripped from output before sending.
+
+## WebSocket Interview (`routes/ws.ts`)
+
+```
+GET /api/issues/:id/run/interview   (with upgrade: websocket)
+```
+
+Spawns `barf interview --issue {id}` subprocess, pipes stdin/stdout/stderr over WebSocket. Active processes tracked in `wsProcs` Map for cleanup on disconnect.
+
+## Frontend Architecture
+
+### Signals (reactive state)
+
+| Signal | Type | Description |
+|--------|------|-------------|
+| `issues` | `Issue[]` | Full issue list, refreshed every 5s + after commands |
+| `selectedId` | `string?` | Currently-open issue in editor |
+| `runningId` | `string?` | Issue with active command, or `'__auto__'` |
+| `pauseRefresh` | `boolean` | Suppress polling during SSE streaming |
+| `models` | `Record` | Model config from `.barfrc` |
+| `activeCommand` | `string?` | Label for status bar (e.g. `"build #42"`) |
+| `activityEntries` | `Entry[]` | Ordered activity log for session |
+
+### Data Flow
 
 ```mermaid
 flowchart TD
     A([Page load]) --> B[GET /api/issues]
     A --> C[GET /api/config]
-    A --> D[GET /api/stats]
-    A --> E[SSE /api/sse/stream]
+    A --> D[5-second poll timer]
 
-    B --> F[Kanban panel\ncolumns by state]
-    C --> G[Config panel\nform fields]
-    D --> H[Status panel\naggregate stats]
-    E --> I[Activity Log\nstreaming output]
+    B --> F[KanbanBoard\ncolumns by state]
+    C --> G[Config panel]
 
     F --> J{click issue}
     J --> K[Editor panel\nbody + frontmatter]
-    K --> L[POST /api/issues/:id/transition]
-    L --> F
 
-    I --> M{needs_interview?}
-    M -- yes --> N[Interview modal\nWebSocket input]
-    N --> O[PUT /api/issues/:id\nset needs_interview=false]
-    O --> F
+    K --> L{run command}
+    L --> M[SSE /api/issues/:id/run/:cmd]
+    M --> N[Activity Log\nstreaming output]
+    M --> O[StatusBar\nactive command + timer]
+
+    N --> P{needs_interview?}
+    P -- yes --> Q[Interview modal\nWebSocket input]
+    Q --> R[POST /api/issues/:id/interview]
+    R --> F
 ```
+
+### Key Frontend Patterns
+
+- **Signals auto-subscribe** Preact components — only re-render when dependent signals change
+- **Immutable updates**: `issues.value = issues.value.map(i => i.id===id ? {...i,...updates} : i)`
+- **SSE/WS managed at module level** in `lib/actions.ts` (singletons)
+- **`htm/preact` tagged templates** — no JSX compilation needed, no build config
+- **DaisyUI + Tailwind** for styling — responsive, dark-mode compatible
 
 ## Interview Flow (Dashboard)
 
@@ -99,20 +138,25 @@ sequenceDiagram
     U->>K: click issue
     K->>E: open editor
     U->>M: open interview modal
-    M->>U: display questions one at a time
+    M->>U: display questions
     U->>M: type answers
-    M->>S: WebSocket: submit answers
-    S->>S: append answers to issue body\nset needs_interview=false
-    S->>K: SSE: issue updated
-    K->>K: refresh — issue moves to GROOMED
+    M->>S: POST /api/issues/:id/interview
+    S->>S: call claude CLI with interview_eval prompt
+    S->>S: evaluate answers, update issue
+    S->>K: issue refreshed → moves to GROOMED
 ```
 
 ## Running the Dashboard
 
 ```bash
-bun run tools/dashboard/server.ts
-# or
-barf dashboard  # (if CLI command exists)
+bun run dashboard          # build frontend + start server on port 3333
+bun run dashboard:build    # build frontend only (to dist/)
 ```
 
-Dashboard reads the same `.barfrc` config as the CLI — it operates on the same issue provider and config.
+The dashboard reads the same `.barfrc` config as the CLI — it operates on the same issue provider and configuration. The `--cwd`, `--config`, and `--port` CLI args are supported.
+
+## Build Process (`build.ts`)
+
+1. Bundle TypeScript: `tools/dashboard/frontend/main.tsx` → `dist/main.js` (minified + sourcemap)
+2. Build CSS: Tailwind CLI v4 processes `frontend/styles/index.css` → `dist/styles.css` (minified)
+3. Copy HTML: rewrites asset paths for dist directory

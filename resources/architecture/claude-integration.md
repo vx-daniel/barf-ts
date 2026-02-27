@@ -2,7 +2,7 @@
 
 **Source:** `src/core/claude/`
 
-barf uses `@anthropic-ai/claude-agent-sdk` directly (not the Claude CLI subprocess). Each issue iteration is a single SDK query with streaming.
+barf uses `@anthropic-ai/claude-agent-sdk` directly for main orchestration (plan/build/split). Triage uses the `claude` CLI subprocess for one-shot calls. Each issue iteration is a single SDK query with streaming.
 
 ## Components
 
@@ -10,19 +10,27 @@ barf uses `@anthropic-ai/claude-agent-sdk` directly (not the Claude CLI subproce
 claude/
   iteration.ts    runClaudeIteration — entry point per iteration
   stream.ts       consumeSDKQuery — async stream consumption + token tracking
-  context.ts      context limits, overflow threshold, error types
-  display.ts      TTY progress rendering
+  context.ts      MODEL_CONTEXT_LIMITS, getThreshold(), context limit registry
+  display.ts      TTY progress rendering (sticky header, context %)
 ```
 
 ## Iteration Flow
 
+```typescript
+runClaudeIteration(prompt, model, config, issueId?, displayContext?)
+// Returns ResultAsync<IterationResult, Error>
 ```
-runClaudeIteration(prompt, config, issueId, iterNum)
-├── compute token threshold = contextLimit(model) × contextUsagePercent
-├── create AbortController (claudeTimeout)
-├── optionally open JSONL stream log file
-├── call consumeSDKQuery(query, threshold, abortSignal, logStream)
-└── return IterationResult { outcome, tokens, contextPercent, duration }
+
+```
+1. Compute token threshold = getContextLimit(model) × contextUsagePercent / 100
+2. Create AbortController with claudeTimeout
+3. Open JSONL stream log file (if DISABLE_LOG_STREAM not set)
+4. Create SDK query with:
+   - permissionMode: 'bypassPermissions'
+   - settingSources: []  (no CLAUDE.md loaded by SDK)
+   - CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '100'  (disable auto-compact)
+5. Call consumeSDKQuery(query, threshold, abortSignal, logStream)
+6. Return IterationResult { outcome, tokens, outputTokens, rateLimitResetsAt? }
 ```
 
 ## Stream Consumer (`stream.ts`)
@@ -30,49 +38,65 @@ runClaudeIteration(prompt, config, issueId, iterNum)
 ```mermaid
 flowchart TD
     A([consumeSDKQuery]) --> B[for await message of sdk.stream]
-    B --> C{message.type?}
-    C -- usage --> D[Accumulate tokens\nskip sub-agent turns]
-    D --> E{tokens > threshold?}
-    E -- yes --> F([return overflow])
-    E -- no --> G[Update TTY progress]
+    B --> C{message type?}
+    C -- assistant + main context --> D[Accumulate input tokens\nparent_tool_use_id === null only]
+    D --> E{tokens >= threshold?}
+    E -- yes --> F[throw ContextOverflowError]
+    E -- no --> G[Update TTY progress display]
     G --> B
-    C -- rate_limit --> H([return rate_limited + resetsAt])
-    C -- other --> I{abortSignal\naborted?}
-    I -- yes --> J([return error])
-    I -- no --> K[Append to JSONL log]
-    K --> B
-    B -- stream ended --> L([return success + tokens + contextPercent])
+    C -- rate_limit error --> H[throw RateLimitError with resetsAt]
+    C -- tool_use content --> I[Extract tool name for display]
+    I --> B
+    C -- other --> J[Append to JSONL log if enabled]
+    J --> B
+    B -- stream ended --> K([return success + final token counts])
 ```
+
+Key design: token tracking only counts **main-context assistant messages** (`parent_tool_use_id === null`), not sub-agent turns. This accurately reflects how much of the context window is consumed.
 
 ## Context Management (`context.ts`)
 
 ```typescript
-// Context window sizes by model
+// Default context limit for unknown models
+const DEFAULT_CONTEXT_LIMIT = 200_000
+
+// Mutable registry — model → token limit
+const MODEL_CONTEXT_LIMITS: Map<string, number>
+// Pre-registered: claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5-20251001
+
+// Get limit for a model (falls back to DEFAULT_CONTEXT_LIMIT)
 getContextLimit(model: string): number
 
-// Interrupt threshold
-getThreshold(model, percent): number
-// e.g. claude-sonnet-4-5 @ 75% → 0.75 × 200_000 = 150_000 tokens
+// Compute interrupt threshold
+getThreshold(model: string, contextUsagePercent: number): number
+// e.g. claude-sonnet-4-6 @ 75% → floor(0.75 × 200,000) = 150,000 tokens
 
-// Errors (returned as outcomes, not thrown)
-ContextOverflowError   // tokens exceeded threshold
-RateLimitError         // API 429
+// Register custom model limit at runtime (for tests)
+setContextLimit(model: string, limit: number): void
 ```
 
 Context limit is checked **during streaming** — barf interrupts the iteration as soon as the threshold is crossed, rather than waiting for Claude to finish. This gives the loop a chance to split before the context is completely exhausted.
 
+## Error Types
+
+| Error | Trigger | Outcome |
+|-------|---------|---------|
+| `ContextOverflowError` | Tokens >= threshold during streaming | Caught → `'overflow'` outcome |
+| `RateLimitError` | API 429 during streaming | Caught → `'rate_limited'` outcome |
+| AbortSignal timeout | `claudeTimeout` exceeded | Caught → `'error'` outcome |
+
 ## TTY Display (`display.ts`)
 
-Writes to stderr when attached to a terminal:
+Writes a 2-line sticky header to stderr when attached to a terminal:
 
 ```
-[ISS-001] build | IN_PROGRESS — Add user authentication
-  → Bash (47,230 / 150,000 tokens)
+▶ build  001  IN_PROGRESS  Add user authentication
+[  ▓▓▓▓▓▓▓░░░░░░░░░░  125,000 / 200,000 tokens (62%) - tool_use: Bash ]
 ```
 
-- Header: issueId, mode, state, title
-- Progress line: current tool name + running token count / threshold
-- Cleaned up on completion
+- Line 1: Mode, issue ID, state, title (truncated to 50 chars)
+- Line 2: Progress bar, token count / threshold, current tool name
+- Cleared on completion
 
 ## Prompt Template System (`src/core/prompts.ts`)
 
@@ -82,39 +106,39 @@ Prompts are markdown files embedded at compile time via Bun import attributes:
 import planPrompt from './prompts/PROMPT_plan.md' with { type: 'text' };
 ```
 
-Template variables are injected via simple string replacement (not a template engine):
+Template variables are injected via `injectTemplateVars()` — simple `$KEY` / `${KEY}` string replacement (no eval, no shell injection):
 
-```
-{BARF_ISSUE_FILE}    → absolute path to issue markdown
-{BARF_ISSUE_ID}      → e.g. ISS-001
-{BARF_PLAN_FILE}     → absolute path to plan file
-{BARF_ISSUES_DIR}    → issues directory
-{BARF_PROJECT_ROOT}  → project root
-```
+| Variable | Description |
+|----------|-------------|
+| `$BARF_ISSUE_FILE` | Absolute path to issue markdown |
+| `$BARF_ISSUE_ID` | Issue identifier |
+| `$BARF_MODE` | Current mode (plan/build/split) |
+| `$BARF_ITERATION` | Zero-based iteration number |
+| `$ISSUES_DIR` | Issues directory |
+| `$PLAN_DIR` | Plans directory |
 
-Prompts are **re-read from disk per iteration** when `promptDir` is configured, allowing live editing during long runs.
+When `PROMPT_DIR` is configured, prompts are **re-read from disk per iteration**, allowing live editing during long runs. Missing files fall back to compiled-in defaults.
 
 ## Stream Logging
 
-When `STREAM_LOG_DIR` is set in `.barfrc`:
+When `DISABLE_LOG_STREAM` is not set (default), raw SDK messages are appended per-issue:
 
 ```
 .barf/streams/
-  ISS-001.jsonl     ← one file per issue, all iterations appended
-  ISS-002.jsonl
+  001.jsonl     ← one file per issue, all iterations appended
+  002.jsonl
 ```
 
-Each line is a raw SDK message as JSON. Useful for debugging Claude's reasoning and tool usage patterns.
+Each line is a raw SDK message as JSON. Useful for debugging Claude's reasoning and tool usage patterns. The dashboard's activity log also reads these files.
 
 ## Models
 
 Each mode can use a different model (configured in `.barfrc`):
 
-| Config Key | Default Use |
-|-----------|-------------|
-| `triageModel` | triage evaluation |
-| `planModel` | planning iteration |
-| `buildModel` | build iterations |
-| `splitModel` | generating split child issues |
-| `extendedContextModel` | after maxAutoSplits exhausted |
-| `auditModel` | audit evaluation |
+| Config Key | Default | Used For |
+|-----------|---------|----------|
+| `TRIAGE_MODEL` | `claude-haiku-4-5-20251001` | Triage evaluation (CLI subprocess) |
+| `PLAN_MODEL` | `claude-opus-4-6` | Planning iterations (SDK) |
+| `BUILD_MODEL` | `claude-sonnet-4-6` | Build iterations (SDK) |
+| `SPLIT_MODEL` | `claude-sonnet-4-6` | Split child issue generation (SDK) |
+| `EXTENDED_CONTEXT_MODEL` | `claude-opus-4-6` | Escalation after maxAutoSplits (SDK) |

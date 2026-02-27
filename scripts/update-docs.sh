@@ -46,6 +46,11 @@ Read the codebase thoroughly, then rewrite (or create from scratch if missing) e
    - Update the feature list, problem statement, and technical requirements to match the current implementation.
    - Keep the overall PRD structure (Executive Summary, Problem Statement, Requirements, etc.).
 
+5. **resources/architecture** 
+   - Provides a high-level overview of the architecture of barf, including how the CLI, core, agents, and dashboard interact. Make additional diagrams if helpful. 
+   - This is not a code walkthrough, but rather an architectural overview that explains the main components and their interactions.
+   - This is meant for new developers to understand the big picture before diving into the code.
+
 ## How to approach this
 
 1. Use Read/Glob/Grep tools to explore the codebase:
@@ -64,7 +69,7 @@ PROMPT_EOF
 
 claude --print \
   --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
-  "$PROMPT"
+  -p "$PROMPT"
 
 echo ""
 echo "==> Done. Changed files:"

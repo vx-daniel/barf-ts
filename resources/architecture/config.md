@@ -7,91 +7,101 @@ barf is configured via a `.barfrc` file in `KEY=VALUE` format (shell-style, no q
 ## Loading
 
 ```typescript
-loadConfig(path?: string): Config
-// Searches for .barfrc in cwd → parent dirs → home dir
-// Never throws; falls back to all defaults if not found
-// parseBarfrc(content) → Result<Config, ZodError>
+loadConfig(path?: string): Result<Config, Error>
+// Reads .barfrc from specified path or cwd
+// parseBarfrc(content) → key-value pairs → ConfigSchema.parse()
+// All fields have defaults — missing .barfrc yields a valid Config
 ```
 
-## Key Settings
+## Settings by Category
 
 ### Paths
 
-```ini
-issuesDir=./issues          # where issue .md files live
-planDir=./plans             # where plan files live
-barfDir=./.barf             # lock files, stream logs, temp files
-promptDir=./prompts         # optional: custom prompt overrides
-logFile=./.barf/barf.log    # pino log output
-```
+| Key | Default | Description |
+|-----|---------|-------------|
+| `ISSUES_DIR` | `issues` | Where issue `.md` files live |
+| `PLAN_DIR` | `plans` | Where plan files are saved |
+| `BARF_DIR` | `.barf` | Lock files, stream logs, temp files |
+| `PROMPT_DIR` | `""` | Custom prompt overrides (empty = built-in) |
+| `LOG_FILE` | `.barf/barf.jsonl` | Pino log output file |
 
 ### AI Models
 
-```ini
-triageModel=claude-haiku-4-5        # one-shot triage
-planModel=claude-sonnet-4-5         # planning iterations
-buildModel=claude-sonnet-4-5        # build iterations
-splitModel=claude-sonnet-4-5        # generating split child issues
-extendedContextModel=claude-opus-4  # after maxAutoSplits exhausted
-auditModel=claude-sonnet-4-5        # audit evaluation
-```
+| Key | Default | Description |
+|-----|---------|-------------|
+| `TRIAGE_MODEL` | `claude-haiku-4-5-20251001` | One-shot triage (CLI subprocess) |
+| `PLAN_MODEL` | `claude-opus-4-6` | Planning iterations (SDK) |
+| `BUILD_MODEL` | `claude-sonnet-4-6` | Build iterations (SDK) |
+| `SPLIT_MODEL` | `claude-sonnet-4-6` | Split child issue generation (SDK) |
+| `EXTENDED_CONTEXT_MODEL` | `claude-opus-4-6` | After maxAutoSplits exhausted (SDK) |
 
 ### Context & Iteration Control
 
-```ini
-contextUsagePercent=75      # interrupt Claude at 75% of context window
-maxAutoSplits=3             # split up to 3 times before escalating to extendedContextModel
-maxIterations=0             # 0 = unlimited; N = cap iterations per runLoop call
-claudeTimeout=300000        # ms before aborting an iteration (default: 5 min)
-```
+| Key | Default | Description |
+|-----|---------|-------------|
+| `CONTEXT_USAGE_PERCENT` | `75` | Interrupt Claude at this % of context window (1–100) |
+| `MAX_AUTO_SPLITS` | `3` | Split up to N times before escalating |
+| `MAX_ITERATIONS` | `0` | Cap iterations per runLoop call (0 = unlimited) |
+| `MAX_VERIFY_RETRIES` | `3` | Max verification attempts before giving up |
+| `CLAUDE_TIMEOUT` | `3600` | Seconds before aborting an iteration |
 
 ### Issue Provider
 
-```ini
-issueProvider=local         # 'local' (default) or 'github'
-githubRepo=owner/repo       # required when issueProvider=github
-```
+| Key | Default | Description |
+|-----|---------|-------------|
+| `ISSUE_PROVIDER` | `local` | `local` or `github` |
+| `GITHUB_REPO` | `""` | `owner/repo` — required when `ISSUE_PROVIDER=github` |
 
 ### Pre-Completion Gates
 
-```ini
-fixCommands=bun run lint --fix,bun run format   # comma-separated, best-effort
-testCommand=bun test                             # must pass to complete
-```
+| Key | Default | Description |
+|-----|---------|-------------|
+| `FIX_COMMANDS` | `""` | Comma-separated, best-effort (e.g. `biome check --apply`) |
+| `TEST_COMMAND` | `""` | Must pass to complete (e.g. `bun test`) |
+| `PUSH_STRATEGY` | `iteration` | `iteration` / `on_complete` / `manual` |
 
 ### Audit
 
-```ini
-auditProvider=claude        # 'openai' | 'gemini' | 'claude' | 'codex'
-OPENAI_API_KEY=sk-...
-GEMINI_API_KEY=...
-ANTHROPIC_API_KEY=sk-ant-...
-```
+| Key | Default | Description |
+|-----|---------|-------------|
+| `AUDIT_PROVIDER` | `openai` | `openai` / `gemini` / `claude` / `codex` |
+| `AUDIT_MODEL` | `gpt-4o` | OpenAI audit model |
+| `CLAUDE_AUDIT_MODEL` | `claude-sonnet-4-6` | Claude audit provider model |
+| `GEMINI_MODEL` | `gemini-1.5-pro` | Gemini audit provider model |
+| `OPENAI_API_KEY` | `""` | Also reads `~/.codex/auth.json` |
+| `GEMINI_API_KEY` | `""` | Required for `AUDIT_PROVIDER=gemini` |
+| `ANTHROPIC_API_KEY` | `""` | Required for `AUDIT_PROVIDER=claude` |
 
-### Misc
+### Logging
 
-```ini
-pushStrategy=none           # 'none' | 'auto' — auto-push after VERIFIED
-disableLogStream=false      # disable per-issue JSONL stream logging
-STREAM_LOG_DIR=.barf/streams  # set to enable stream logging
-LOG_PRETTY=1                # human-readable pino output (dev)
-LOG_LEVEL=info              # pino log level
-```
+| Key | Default | Description |
+|-----|---------|-------------|
+| `LOG_LEVEL` | `info` | Pino log level |
+| `LOG_PRETTY` | `false` | Human-readable output (dev only) |
+| `DISABLE_LOG_STREAM` | `false` | Disable per-issue JSONL stream logs |
 
-## Schema (`src/types/schema/config-schema.ts`)
+### Observability
 
-`ConfigSchema` is a Zod object schema. All fields have defaults — a missing `.barfrc` yields a valid Config. The config is validated once at startup; failures are logged and defaults used.
+| Key | Default | Description |
+|-----|---------|-------------|
+| `SENTRY_DSN` | `""` | Sentry error tracking (empty = disabled) |
+| `SENTRY_ENVIRONMENT` | `development` | Sentry environment tag |
+| `SENTRY_TRACES_SAMPLE_RATE` | `0.2` | Sentry tracing sample rate (0.0–1.0) |
 
-## Environment Fallbacks
+## Schema
 
-- `ANTHROPIC_API_KEY` — also read from env var
-- `OPENAI_API_KEY` — also checked in `~/.codex/auth.json`
-- `LOG_PRETTY`, `LOG_LEVEL` — only from env (not in .barfrc)
+`ConfigSchema` is a Zod 4 object schema in `src/types/schema/config-schema.ts`. All fields have defaults — a missing `.barfrc` yields a valid Config. The schema validates at load time; parse errors are reported and defaults used.
 
 ## Per-Issue Overrides
 
 Some config values can be overridden per-issue in frontmatter:
 
-```yaml
-context_usage_percent: 60   # override contextUsagePercent for this issue only
-```
+| Frontmatter Field | Overrides | Effect |
+|-------------------|-----------|--------|
+| `context_usage_percent` | `CONTEXT_USAGE_PERCENT` | Raise/lower context threshold for one issue |
+
+## Environment Variable Fallbacks
+
+- `LOG_PRETTY` and `LOG_LEVEL` can be set as env vars (override `.barfrc`)
+- `OPENAI_API_KEY` falls back to `~/.codex/auth.json` if not in `.barfrc`
+- `ANTHROPIC_API_KEY` also read from environment

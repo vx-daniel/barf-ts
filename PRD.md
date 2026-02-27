@@ -1,7 +1,7 @@
 # Product Requirements Document: barf
 
 **Version**: 2.0.0
-**Last Updated**: 2026-02-25
+**Last Updated**: 2026-02-26
 **Status**: Active Development
 
 ## Executive Summary
@@ -43,11 +43,11 @@
 
 ### Success Criteria
 
-- ✅ Developers can queue issues and leave barf to process them autonomously
-- ✅ >95% of completed issues pass verification on first attempt
-- ✅ Context overflow handled without manual intervention
-- ✅ Full state visibility: developers know which issues are planned, in-progress, verified
-- ✅ Support both local file-based and GitHub Issues workflows
+- Developers can queue issues and leave barf to process them autonomously
+- >95% of completed issues pass verification on first attempt
+- Context overflow handled without manual intervention
+- Full state visibility: developers know which issues are planned, in-progress, verified
+- Support both local file-based and GitHub Issues workflows
 
 ---
 
@@ -98,7 +98,7 @@ barf audit --all  # Review completed work
 **Flow**:
 1. Developer creates issues in `issues/` directory with acceptance criteria
 2. Runs `barf auto`
-3. barf triages issues, writes plans, implements features, verifies results
+3. barf triages issues (NEW → GROOMED), writes plans (GROOMED → PLANNED), implements features (PLANNED → COMPLETED), verifies results (COMPLETED → VERIFIED)
 4. Developer reviews verified issues and merges changes
 
 **Success Outcome**: 80%+ of issues complete verification without manual intervention
@@ -108,7 +108,7 @@ barf audit --all  # Review completed work
 **Actor**: System
 **Trigger**: Claude context usage exceeds `CONTEXT_USAGE_PERCENT` threshold
 **Flow**:
-1. barf detects context at 75% (configurable)
+1. barf detects context at 75% (configurable) via async iterator on SDK stream
 2. If `split_count < MAX_AUTO_SPLITS`: runs split prompt, creates child issues
 3. Else: escalates to `EXTENDED_CONTEXT_MODEL` (e.g., claude-opus-4-6)
 4. Continues processing without user intervention
@@ -121,9 +121,9 @@ barf audit --all  # Review completed work
 **Trigger**: Completed issue fails `bun run build`, `bun run check`, or `bun test`
 **Flow**:
 1. barf runs verification commands after Claude marks issue complete
-2. On failure: creates fix sub-issue with error output
+2. On failure: creates fix sub-issue with `is_verify_fix=true` and error output
 3. Claude attempts fix (up to `MAX_VERIFY_RETRIES` times)
-4. If all retries exhausted: issue stays `COMPLETED` (not `VERIFIED`), logs failure
+4. If all retries exhausted: issue stays `COMPLETED` with `verify_exhausted=true`, logs failure
 
 **Success Outcome**: Most verification failures self-heal; persistent failures flagged for manual review
 
@@ -133,12 +133,38 @@ barf audit --all  # Review completed work
 **Trigger**: Developer wants to process GitHub issues with AI
 **Flow**:
 1. Run `barf init --provider github --repo owner/repo`
-2. barf creates `barf:new`, `barf:planned`, etc. labels
+2. barf creates `barf:new`, `barf:groomed`, `barf:planned`, etc. labels
 3. Tag issues with `barf:new`
 4. Run `barf auto`
 5. barf processes issues, updates labels, writes plans to repo
 
 **Success Outcome**: Team workflow stays in GitHub; no separate issue tracker needed
+
+### UC-5: Issue Interview Flow
+
+**Actor**: Developer + AI
+**Trigger**: Triage determines issue requirements are under-specified
+**Flow**:
+1. `barf auto` triages a NEW issue and sets `needs_interview=true`
+2. Clarifying questions appended to issue body
+3. Developer runs `/barf-interview` Claude Code slash command to answer interactively
+4. Interview evaluation determines if answers are sufficient (may ask follow-ups)
+5. Once satisfied, issue moves to GROOMED and proceeds to planning
+
+**Success Outcome**: Under-specified issues are fleshed out before wasting compute on planning
+
+### UC-6: Web Dashboard Monitoring
+
+**Actor**: Developer
+**Trigger**: Developer wants real-time visibility into barf operations
+**Flow**:
+1. Developer runs `bun run dashboard` to start the web UI
+2. Kanban board shows all issues by state with real-time updates
+3. Developer can trigger plan/build/triage/audit commands from the UI
+4. SSE streams show live Claude output during execution
+5. Interactive interview flow available via WebSocket
+
+**Success Outcome**: Full visibility and control without leaving the browser
 
 ---
 
@@ -152,12 +178,12 @@ barf audit --all  # Review completed work
 **Description**: Validated state transitions prevent invalid states
 
 **States**:
-- `NEW` → `PLANNED` → `IN_PROGRESS` → `COMPLETED` → `VERIFIED`
+- `NEW` → `GROOMED` → `PLANNED` → `IN_PROGRESS` → `COMPLETED` → `VERIFIED`
 - Side-states: `STUCK`, `SPLIT` (terminal)
 
 **Acceptance Criteria**:
 - State transitions validated against `VALID_TRANSITIONS` map
-- Invalid transitions rejected with clear error messages
+- Invalid transitions rejected with `InvalidTransitionError`
 - `needs_interview` flag orthogonal to state (set by triage)
 
 #### F-2: Automated Triage
@@ -166,8 +192,8 @@ barf audit --all  # Review completed work
 **Description**: Fast Claude call evaluates if issue has clear requirements
 
 **Behavior**:
-- Uses `TRIAGE_MODEL` (claude-haiku-4-5 for speed/cost)
-- Sets `needs_interview=false` if requirements clear → auto-proceeds to planning
+- Uses `TRIAGE_MODEL` (claude-haiku-4-5 for speed/cost) via CLI subprocess
+- Sets `needs_interview=false` + transitions to `GROOMED` if requirements clear
 - Sets `needs_interview=true` + appends questions to issue body if under-specified
 - Developer runs `/barf-interview` Claude Code skill to answer questions before planning
 
@@ -182,14 +208,15 @@ barf audit --all  # Review completed work
 **Description**: Claude explores codebase and writes implementation plan
 
 **Behavior**:
-- Reads issue + acceptance criteria
-- Uses Glob/Grep to explore relevant code
+- Uses `PLAN_MODEL` via Claude Agent SDK
+- Reads issue + acceptance criteria + AGENTS.md
+- Uses Glob/Grep to explore relevant code (parallel subagents)
 - Writes plan to `PLAN_DIR/{issueId}.md`
-- Transitions `NEW → PLANNED`
+- barf detects plan file → transitions `GROOMED → PLANNED`
 
 **Acceptance Criteria**:
 - Plan references specific files and line numbers
-- Plan includes step-by-step implementation strategy
+- Plan includes step-by-step TDD implementation strategy
 - Plan considers existing patterns and conventions
 
 #### F-4: Automated Build
@@ -198,10 +225,11 @@ barf audit --all  # Review completed work
 **Description**: Claude implements plan, checking acceptance criteria between iterations
 
 **Behavior**:
-- Reads plan file
-- Implements changes iteratively
+- Uses `BUILD_MODEL` via Claude Agent SDK
+- Reads plan file, implements changes iteratively
 - Checks acceptance criteria after each iteration
 - Transitions `PLANNED → IN_PROGRESS → COMPLETED` when all criteria met
+- Runs pre-complete fix commands and test command before completion
 
 **Acceptance Criteria**:
 - Acceptance criteria checkboxes (`- [ ]`) tracked
@@ -216,12 +244,12 @@ barf audit --all  # Review completed work
 **Behavior**:
 - After `COMPLETED`, runs `bun run build`, `bun run check`, `bun test`
 - If all pass: `COMPLETED → VERIFIED`
-- If any fail: creates fix sub-issue, retries up to `MAX_VERIFY_RETRIES`
-- If retries exhausted: stays `COMPLETED`, logs failure
+- If any fail: creates fix sub-issue with `is_verify_fix=true`, retries up to `MAX_VERIFY_RETRIES`
+- If retries exhausted: stays `COMPLETED` with `verify_exhausted=true`
 
 **Acceptance Criteria**:
 - Verification runs after every completion
-- Fix sub-issues include full error output
+- Fix sub-issues include full error output (stdout/stderr per check)
 - Retry limit prevents infinite loops
 
 #### F-6: Context Overflow Mitigation
@@ -231,17 +259,17 @@ barf audit --all  # Review completed work
 
 **Strategy**:
 ```
-if context_usage >= CONTEXT_USAGE_PERCENT:
+if input_tokens >= threshold (contextUsagePercent% of model limit):
   if split_count < MAX_AUTO_SPLITS:
-    run split prompt → create child issues
+    run split prompt → create child issues → plan each child
   else:
     switch to EXTENDED_CONTEXT_MODEL → continue
 ```
 
 **Acceptance Criteria**:
-- Context monitoring via async iterator on Claude stdout stream
+- Context monitoring via async iterator on SDK stream (tracks main-context tokens only)
 - Split prompt decomposes issue into well-defined children
-- Escalation preserves full conversation context
+- Escalation switches model and continues in same loop
 
 #### F-7: Provider Abstraction
 
@@ -249,13 +277,13 @@ if context_usage >= CONTEXT_USAGE_PERCENT:
 **Description**: Pluggable backends for issue storage
 
 **Providers**:
-- **Local**: Frontmatter markdown files in `ISSUES_DIR` (POSIX mkdir locking)
-- **GitHub**: GitHub Issues via `gh` CLI (label-based locking)
+- **Local**: Frontmatter markdown files in `ISSUES_DIR` (POSIX `O_CREAT|O_EXCL` atomic locking, stale lock sweep)
+- **GitHub**: GitHub Issues via `gh` CLI (label-based state mapping, `barf:locked` label for locking)
 
 **Acceptance Criteria**:
-- `IssueProvider` interface with `list()`, `load()`, `save()`, `lock()`, `unlock()`
+- `IssueProvider` abstract class with `fetchIssue`, `listIssues`, `createIssue`, `writeIssue`, `deleteIssue`, `lockIssue`, `unlockIssue`, `isLocked`
 - Factory pattern selects provider from `ISSUE_PROVIDER` config
-- Adding new provider requires only implementing interface
+- Adding new provider requires only extending abstract class
 
 #### F-8: AI Audit
 
@@ -263,43 +291,82 @@ if context_usage >= CONTEXT_USAGE_PERCENT:
 **Description**: External AI reviews completed work for quality/compliance
 
 **Behavior**:
-- Uses `AUDIT_PROVIDER` (openai | gemini | claude)
-- Reads completed issue + plan + changes
-- Validates against project rules (`.claude/rules/*.md`)
-- Outputs structured audit report (Zod schema)
+- Uses `AUDIT_PROVIDER` (openai | gemini | claude | codex)
+- Phase 1: runs test, lint, format checks in parallel
+- Phase 2: loads project rules (`.claude/rules/*.md`), sends audit prompt with results
+- Validates response against `AuditResponseSchema` (Zod)
+- On failure: creates findings issue via `provider.createIssue()`
 
 **Acceptance Criteria**:
 - Audit results include severity, category, affected files
-- Reports saved to audit log for compliance tracking
+- Categories: `failing_check`, `unmet_criteria`, `rule_violation`, `production_readiness`
 - Configurable per-provider models
+
+#### F-9: Interview Flow
+
+**Priority**: P1 (Should Have)
+**Description**: Interactive clarification of under-specified issues
+
+**Behavior**:
+- Triage sets `needs_interview=true` and appends questions to issue body
+- `/barf-interview` Claude Code slash command conducts interactive Q&A
+- `interview_eval` prompt evaluates answer sufficiency, may ask follow-ups
+- Max 5 questions per turn, 2-3 follow-ups per evaluation
+
+**Acceptance Criteria**:
+- Interview questions are specific and actionable
+- Evaluation prevents premature completion of under-specified issues
+- Once satisfied, issue proceeds to GROOMED → planning
+
+#### F-10: Web Dashboard
+
+**Priority**: P2 (Nice to Have)
+**Description**: Browser-based UI for monitoring and controlling barf
+
+**Behavior**:
+- Bun HTTP server (default port 3333) with REST API, SSE, and WebSocket
+- Kanban board showing issues grouped by state
+- Real-time command streaming (plan, build, triage, audit, auto) via SSE
+- Interactive interview flow via WebSocket subprocess
+- Issue editor, config editor, activity log
+
+**Acceptance Criteria**:
+- Dashboard reflects issue state changes in real-time
+- Commands can be triggered and monitored from the UI
+- Config changes persist to `.barfrc` preserving comments
 
 ### Non-Functional Requirements
 
 #### NFR-1: Reliability
 
-- **Subprocess Isolation**: Claude runs in subprocess; crashes don't kill barf
-- **Locking**: POSIX mkdir locking (local) or label-based (GitHub) prevents concurrent access
-- **Timeouts**: `CLAUDE_TIMEOUT` kills hung processes
+- **SDK Integration**: Claude Agent SDK with `bypassPermissions` mode; auto-compact disabled (barf controls context)
+- **Locking**: POSIX atomic locking (local) or label-based (GitHub) prevents concurrent access; dead-PID sweep on construction
+- **Timeouts**: `CLAUDE_TIMEOUT` aborts via AbortController
 - **Error Handling**: All I/O returns `Result`/`ResultAsync`; no thrown errors except CLI boundary
+- **Error Tracking**: Optional Sentry integration (`SENTRY_DSN`) for production monitoring
 
 #### NFR-2: Observability
 
-- **Structured Logging**: Pino JSON to stderr + log file
-- **Stream Logging**: Optional raw Claude output to `STREAM_LOG_DIR/{issueId}.jsonl`
-- **State Visibility**: `barf status` shows all issues + current state
-- **Context Tracking**: `context_usage_percent` field on each issue
+- **Structured Logging**: Pino JSON to stderr + configurable log file (`LOG_FILE`)
+- **Stream Logging**: Raw Claude SDK output to `.barf/streams/{issueId}.jsonl` (unless `DISABLE_LOG_STREAM`)
+- **State Visibility**: `barf status` shows all issues + current state (text or JSON format)
+- **Session Stats**: Per-issue cumulative token counts, duration, and iteration counts persisted to frontmatter
+- **Dashboard Stats**: `__BARF_STATS__:` structured JSON lines emitted per iteration for dashboard consumption
+- **Web Dashboard**: `bun run dashboard` serves a Preact-based dashboard with SSE + WebSocket for real-time monitoring
 
 #### NFR-3: Performance
 
-- **Batch Builds**: `--batch N` runs N issues concurrently (default: 1)
-- **Fast Triage**: Haiku model completes triage in <10s per issue
+- **Batch Builds**: `--batch N` runs N issues concurrently via `Promise.allSettled` (default: 1)
+- **Fast Triage**: Haiku model via CLI subprocess completes triage in <10s per issue
 - **Incremental Planning**: Plan files prevent re-planning on retry
+- **Compile-time Prompts**: Templates embedded via Bun import attributes; no runtime file I/O for defaults
 
 #### NFR-4: Security
 
-- **Shell Injection Prevention**: `execFileNoThrow` uses spawn, not shell execution
-- **Secret Management**: API keys in `.barfrc`, not committed to git
-- **Validation**: All external input validated via Zod schemas
+- **Shell Injection Prevention**: `execFileNoThrow` uses `Bun.spawn` with args array, never shell strings
+- **Secret Management**: API keys in `.barfrc` (not committed) or `~/.codex/auth.json` fallback
+- **Validation**: All external input validated via Zod 4 schemas
+- **SDK Isolation**: `settingSources: []` — no CLAUDE.md loaded by SDK; all context from prompt only
 
 ---
 
@@ -313,7 +380,7 @@ graph TB
     Commands --> Core[Core Orchestration]
 
     Core --> Issue[Issue Management]
-    Core --> Claude[Claude Subprocess]
+    Core --> SDK[Claude Agent SDK]
     Core --> Batch[Batch Orchestration]
     Core --> Verify[Verification]
     Core --> Audit[Audit]
@@ -322,22 +389,36 @@ graph TB
     Provider --> Local[Local FS Provider]
     Provider --> GitHub[GitHub Provider]
 
-    Claude --> Context[Context Monitoring]
-    Claude --> Prompts[Prompt Templates]
+    SDK --> Stream[Stream Consumer]
+    SDK --> Context[Context Monitor]
+    SDK --> Prompts[Prompt Templates]
 
-    Batch --> Triage[Triage Loop]
+    Batch --> Triage[Triage<br/>CLI subprocess]
     Batch --> Plan[Plan Loop]
     Batch --> Build[Build Loop]
 
-    Verify --> Tests[Run Tests]
+    Verify --> Checks[Run build/check/test]
     Verify --> SubIssue[Create Fix Sub-Issue]
 
-    Audit --> OpenAI[OpenAI API]
-    Audit --> Gemini[Gemini API]
-    Audit --> ClaudeAPI[Claude API]
+    Audit --> AuditProvider[Audit Provider]
+    AuditProvider --> OpenAI[OpenAI]
+    AuditProvider --> Gemini[Gemini]
+    AuditProvider --> ClaudeAPI[Claude API]
+    AuditProvider --> Codex[Codex]
+
+    Dashboard[Web Dashboard] --> DashAPI[REST API]
+    Dashboard --> SSE[SSE Streaming]
+    Dashboard --> WS[WebSocket Interview]
+    DashAPI --> Provider
 ```
 
 ### Key Design Decisions
+
+#### Claude Agent SDK (not subprocess)
+
+**Decision**: Main orchestration (plan/build/split) uses `@anthropic-ai/claude-agent-sdk` directly
+**Rationale**: Direct SDK control over permissions, auto-compact, and token tracking
+**Exception**: Triage still uses CLI subprocess for one-shot calls (`claude -p`)
 
 #### State Machine Enforcement
 
@@ -357,9 +438,15 @@ graph TB
 **Rationale**: Explicit error handling without exceptions; railway-oriented programming
 **Trade-off**: More verbose than try/catch, but errors visible in types
 
+#### Dependency Injection
+
+**Decision**: All core functions accept injectable dependencies (`RunLoopDeps`, `AutoDeps`, `AuditDeps`, `ExecFn`)
+**Rationale**: Enables comprehensive unit testing with mocks (488 tests across 42 files)
+**Trade-off**: Additional type complexity, but full testability without I/O
+
 #### Async Stream Parsing
 
-**Decision**: Monitor Claude stdout stream for context usage via async iterator
+**Decision**: Monitor SDK stream for context usage via async iterator
 **Rationale**: Real-time detection without polling or hooks
 **Trade-off**: More complex than post-execution parsing, but catches overflow mid-conversation
 
@@ -382,30 +469,39 @@ graph TB
 | `BARF_DIR` | path | `.barf` | Internal state directory |
 | `ISSUES_DIR` | path | `issues` | Issue file directory (local provider) |
 | `PLAN_DIR` | path | `plans` | Plan file directory |
-| `TRIAGE_MODEL` | model | `claude-haiku-4-5` | Triage model (fast/cheap) |
-| `PLAN_MODEL` | model | `claude-opus-4-6` | Planning model |
-| `BUILD_MODEL` | model | `claude-sonnet-4-6` | Build model |
-| `SPLIT_MODEL` | model | `claude-sonnet-4-6` | Split model |
-| `EXTENDED_CONTEXT_MODEL` | model | `claude-opus-4-6` | Escalation model |
-| `AUDIT_PROVIDER` | `openai \| gemini \| claude` | `openai` | Audit AI provider |
+| `TRIAGE_MODEL` | model | `claude-haiku-4-5-20251001` | Triage model (fast/cheap, CLI subprocess) |
+| `PLAN_MODEL` | model | `claude-opus-4-6` | Planning model (SDK) |
+| `BUILD_MODEL` | model | `claude-sonnet-4-6` | Build model (SDK) |
+| `SPLIT_MODEL` | model | `claude-sonnet-4-6` | Split model (SDK) |
+| `EXTENDED_CONTEXT_MODEL` | model | `claude-opus-4-6` | Escalation model (SDK) |
+| `AUDIT_PROVIDER` | `openai \| gemini \| claude \| codex` | `openai` | Audit AI provider |
 | `AUDIT_MODEL` | model | `gpt-4o` | Provider-specific audit model |
+| `CLAUDE_AUDIT_MODEL` | model | `claude-sonnet-4-6` | Claude audit provider model |
+| `GEMINI_MODEL` | model | `gemini-1.5-pro` | Gemini audit provider model |
 | `CONTEXT_USAGE_PERCENT` | 1-100 | `75` | Context threshold for overflow action |
 | `MAX_AUTO_SPLITS` | int | `3` | Max splits before escalation |
-| `MAX_VERIFY_RETRIES` | int | `3` | Max verification fix attempts |
 | `MAX_ITERATIONS` | int | `0` | Max build iterations (0 = unlimited) |
-| `CLAUDE_TIMEOUT` | seconds | `3600` | Claude subprocess timeout |
+| `MAX_VERIFY_RETRIES` | int | `3` | Max verification retry attempts |
+| `CLAUDE_TIMEOUT` | seconds | `3600` | Claude timeout via AbortController |
 | `TEST_COMMAND` | shell | — | Run after each build iteration |
+| `FIX_COMMANDS` | comma-sep | — | Best-effort fix commands before test |
 | `PUSH_STRATEGY` | `iteration \| on_complete \| manual` | `iteration` | When to git push |
 | `PROMPT_DIR` | path | — | Custom prompt template directory |
-| `STREAM_LOG_DIR` | path | — | Raw Claude output logging |
+| `DISABLE_LOG_STREAM` | boolean | `false` | Disable raw Claude JSONL stream logs |
+| `LOG_FILE` | path | `.barf/barf.jsonl` | Structured log file |
+| `LOG_LEVEL` | string | `info` | Pino log level |
+| `LOG_PRETTY` | boolean | `false` | Human-readable logs |
+| `SENTRY_DSN` | string | — | Sentry error tracking (empty = disabled) |
+| `SENTRY_ENVIRONMENT` | string | `development` | Sentry environment tag |
+| `SENTRY_TRACES_SAMPLE_RATE` | float | `0.2` | Sentry tracing sample rate |
 
-### Environment Variables
+### API Keys
 
-- `OPENAI_API_KEY`: OpenAI API key (when `AUDIT_PROVIDER=openai`)
-- `GEMINI_API_KEY`: Google Gemini API key (when `AUDIT_PROVIDER=gemini`)
-- `ANTHROPIC_API_KEY`: Anthropic API key (when `AUDIT_PROVIDER=claude`)
-- `LOG_LEVEL`: Pino log level (`debug`, `info`, `warn`, `error`)
-- `LOG_PRETTY`: Set to `1` for human-readable logs (dev only)
+| Key | Source | Notes |
+|-----|--------|-------|
+| `OPENAI_API_KEY` | `.barfrc` or `~/.codex/auth.json` | Required for `AUDIT_PROVIDER=openai` |
+| `GEMINI_API_KEY` | `.barfrc` | Required for `AUDIT_PROVIDER=gemini` |
+| `ANTHROPIC_API_KEY` | `.barfrc` | Required for `AUDIT_PROVIDER=claude` |
 
 ---
 
@@ -435,13 +531,13 @@ graph TB
 
 - [ ] **Multi-Agent Locking**: Support concurrent `barf auto` processes on different issues
 - [ ] **GitLab/Linear Providers**: Add provider implementations for GitLab Issues, Linear
-- [ ] **Streaming UI**: Real-time TUI for monitoring concurrent builds
 - [ ] **Custom Audit Rules**: Per-project audit rulesets beyond global `.claude/rules/*.md`
+- [ ] **Dashboard Improvements**: Enhanced real-time dashboard with filtering and analytics
 
 ### Phase 3 (Q3 2026)
 
 - [ ] **Team Workflows**: Issue assignment, review queues, approval gates
-- [ ] **Metrics Dashboard**: Web UI for tracking verification rates, common failures
+- [ ] **Metrics Dashboard**: Persistent metrics for tracking verification rates, common failures
 - [ ] **Plugin System**: Extensible hooks for custom pre/post-build logic
 - [ ] **Cloud Sync**: Optional cloud backend for cross-machine issue state
 
@@ -463,19 +559,24 @@ graph TB
 - **Acceptance Criteria**: Checklist in issue body defining "done"
 - **Verification**: Automated build/lint/test run after completion
 - **Triage**: Fast AI evaluation of issue clarity
+- **Groomed**: Post-triage state indicating requirements are clear
+- **Interview**: Interactive Q&A to clarify under-specified issues
 - **Split**: Decomposition of large issue into child issues
 - **Escalation**: Switch to larger context model when splits exhausted
-- **Provider**: Pluggable backend for issue storage (local, GitHub, etc.)
+- **Provider**: Pluggable backend for issue storage (local, GitHub)
+- **Audit Provider**: Pluggable AI backend for code review (OpenAI, Gemini, Claude, Codex)
+- **Dashboard**: Web UI for monitoring and controlling barf operations
 
 ### References
 
 - [Bun](https://bun.sh) — JavaScript runtime and toolkit
-- [Claude CLI](https://claude.ai/download) — Anthropic Claude command-line interface
+- [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk) — Anthropic Claude Agent SDK
 - [neverthrow](https://github.com/supermacro/neverthrow) — Type-safe error handling
 - [Zod 4](https://zod.dev) — TypeScript-first schema validation
+- [Pino](https://getpino.io/) — Fast JSON logger for Node.js
 
 ---
 
 **Document Owner**: Daniel
-**Last Review**: 2026-02-25
-**Next Review**: 2026-03-25
+**Last Review**: 2026-02-26
+**Next Review**: 2026-03-26
