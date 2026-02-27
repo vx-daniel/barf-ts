@@ -14,6 +14,7 @@ import {
   statusCommand,
   triageCommand,
   updateCheckCommand,
+  updateCommand,
 } from '@/cli/commands'
 
 /**
@@ -167,6 +168,18 @@ program
   )
   .action(async (opts) => {
     await updateCheckCommand(opts.repo)
+  })
+
+program
+  .command('update')
+  .description('Self-update barf to the latest release')
+  .option(
+    '--repo <owner/repo>',
+    'GitHub repo to download from',
+    'danielstedman/barf-ts',
+  )
+  .action(async (opts) => {
+    await updateCommand(opts.repo)
   })
 
 program.parseAsync(process.argv).catch(async (error: unknown) => {

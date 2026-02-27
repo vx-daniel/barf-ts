@@ -1,12 +1,20 @@
-# barf
+# BARF - Build And Run Framework
+
+![woof](barf.png)
+
+**Issue-Driven Autonomous Development based on the Ralph Playbook**
+
+BARF is a bash tool that implements the [Ralph playbook](https://github.com/ClaytonFarr/ralph-playbook) methodology with a focus on **issue-driven development**. Point it at an issue (local file, GitHub, GitLab), and it autonomously clarifies, plans, and implements.
 
 AI issue orchestration CLI. Feeds issues to Claude one at a time, tracks state, and handles context overflow automatically.
 
 ```
-barf plan        # Claude writes an implementation plan
-barf build       # Claude implements the plan
-barf audit       # audit completed work with an AI provider
-barf auto        # orchestrate all stages automatically
+barf plan           # Claude writes an implementation plan
+barf build          # Claude implements the plan
+barf audit          # audit completed work with an AI provider
+barf auto           # orchestrate all stages automatically
+barf update-check   # check for new versions
+barf update         # self-update to the latest release
 ```
 
 ## Documentation
@@ -36,7 +44,7 @@ When Claude's context fills up, barf either splits the issue into sub-issues or 
 ### Prerequisites
 
 - [Claude CLI](https://claude.ai/download) — **required** (used by triage, plan, and build)
-- [gh CLI](https://cli.github.com) — optional, needed for GitHub Issues provider and `barf update-check`
+- [gh CLI](https://cli.github.com) — optional, needed for GitHub Issues provider, `barf update-check`, and `barf update`
 
 ### Install from release (recommended)
 
@@ -70,10 +78,11 @@ Or run from source without compiling:
 bun run dev <command>
 ```
 
-### Check for updates
+### Updating
 
 ```bash
-barf update-check
+barf update-check        # check if a newer version is available
+barf update              # download and install the latest release
 ```
 
 ## Setup
