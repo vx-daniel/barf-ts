@@ -31,6 +31,21 @@ import { z } from 'zod'
  * @category Configuration
  * @group Configuration
  */
+/** Available audit provider backends. */
+export const AuditProviderSchema = z.enum(['openai', 'gemini', 'claude', 'codex'])
+/** @category Configuration */
+export type AuditProvider = z.infer<typeof AuditProviderSchema>
+
+/** Git push timing strategies. */
+export const PushStrategySchema = z.enum(['iteration', 'on_complete', 'manual'])
+/** @category Configuration */
+export type PushStrategy = z.infer<typeof PushStrategySchema>
+
+/** Issue storage backend options. */
+export const IssueProviderSchema = z.enum(['local', 'github'])
+/** @category Configuration */
+export type IssueProvider = z.infer<typeof IssueProviderSchema>
+
 export const ConfigSchema = z.object({
   /** Directory where issue markdown files are stored. Relative to project root. */
   issuesDir: z.string().default('issues'),
@@ -57,9 +72,7 @@ export const ConfigSchema = z.object({
   /** OpenAI API key for the OpenAI audit provider. */
   openaiApiKey: z.string().default(''),
   /** Which audit provider to use for code review. */
-  auditProvider: z
-    .enum(['openai', 'gemini', 'claude', 'codex'])
-    .default('openai'),
+  auditProvider: AuditProviderSchema.default('openai'),
   /** Google Gemini API key for the Gemini audit provider. */
   geminiApiKey: z.string().default(''),
   /** Gemini model identifier for the Gemini audit provider. */
@@ -77,11 +90,9 @@ export const ConfigSchema = z.object({
   /** Model used when escalating past maxAutoSplits (larger context window). */
   extendedContextModel: z.string().default('claude-opus-4-6'),
   /** When to push commits: after each iteration, on completion, or manually. */
-  pushStrategy: z
-    .enum(['iteration', 'on_complete', 'manual'])
-    .default('iteration'),
+  pushStrategy: PushStrategySchema.default('iteration'),
   /** Issue storage backend: local filesystem or GitHub Issues. */
-  issueProvider: z.enum(['local', 'github']).default('local'),
+  issueProvider: IssueProviderSchema.default('local'),
   /** GitHub repository slug (owner/repo) for the GitHub issue provider. */
   githubRepo: z.string().default(''),
   /** Set to true to disable per-issue raw Claude stream logs written to `.barf/streams/{issueId}.jsonl`. */
@@ -96,6 +107,12 @@ export const ConfigSchema = z.object({
   logLevel: z.string().default('info'),
   /** Enable pretty-printed log output (for development). */
   logPretty: z.boolean().default(false),
+  /** Sentry DSN for error monitoring and operational observability. Empty means disabled. */
+  sentryDsn: z.string().default(''),
+  /** Sentry environment tag (e.g. 'production', 'development'). */
+  sentryEnvironment: z.string().default('development'),
+  /** Sentry traces sample rate (0.0–1.0). Controls what fraction of transactions are sent. */
+  sentryTracesSampleRate: z.coerce.number().min(0).max(1).default(0.2),
 })
 
 /**

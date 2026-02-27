@@ -13,6 +13,7 @@ export {
   // Issue Model
   IssueStateSchema,
   type IssueState,
+  VALID_TRANSITIONS,
   IssueSchema,
   type Issue,
   // Configuration

@@ -12,9 +12,17 @@
 export {
   IssueStateSchema,
   type IssueState,
+  VALID_TRANSITIONS,
   IssueSchema,
   type Issue,
 } from './issue-schema'
+
+// ── Activity Log ─────────────────────────────────────────────────────────────
+export type {
+  ActivityKind,
+  ActivitySource,
+  ActivityEntry,
+} from './activity-schema'
 
 // ── Configuration ────────────────────────────────────────────────────────────
 export { ConfigSchema, type Config } from './config-schema'

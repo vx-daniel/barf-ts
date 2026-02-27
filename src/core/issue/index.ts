@@ -6,27 +6,11 @@ import {
   type Issue,
   IssueSchema,
   type IssueState,
+  VALID_TRANSITIONS,
 } from '@/types'
 
-/**
- * The allowed state transitions in the barf issue lifecycle.
- *
- * Used by {@link validateTransition} to reject illegal moves.
- * Terminal states (`SPLIT`, `VERIFIED`) have empty arrays — no further transitions allowed.
- * `COMPLETED` is an intermediate state; only `VERIFIED` is the true terminal after verification.
- *
- * @category Issue Model
- */
-export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
-  NEW: ['GROOMED', 'STUCK'],
-  GROOMED: ['PLANNED', 'STUCK', 'SPLIT'],
-  PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
-  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
-  STUCK: ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
-  SPLIT: [],
-  COMPLETED: ['VERIFIED'],
-  VERIFIED: [],
-}
+// Re-export so existing consumers (`tools/dashboard/routes/api.ts`, etc.) don't break.
+export { VALID_TRANSITIONS }
 
 /**
  * Parses a frontmatter markdown string into a validated {@link Issue}.

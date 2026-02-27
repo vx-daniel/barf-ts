@@ -1,106 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="barf" class="h-full overflow-hidden">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>barf dashboard</title>
-<link rel="stylesheet" href="./styles/base.css">
-<link rel="stylesheet" href="./styles/kanban.css">
-<link rel="stylesheet" href="./styles/editor.css">
-<link rel="stylesheet" href="./styles/status.css">
-<link rel="stylesheet" href="./styles/activity.css">
 </head>
-<body>
-<div id="app" class="no-sidebar">
-  <!-- Header -->
-  <div id="header">
-    <h1>&#9672; barf dashboard</h1>
-    <span id="project-path"></span>
-    <button type="button" class="hbtn" id="btn-auto">&#x25B6; Auto</button>
-    <button type="button" class="hbtn" id="btn-new">+ New Issue</button>
-    <button type="button" class="hbtn" id="btn-config">&#x2699; Config</button>
-    <span id="refresh-ind">&#x27F3; 5s</span>
-  </div>
-
-  <!-- Status bar (persistent, always visible when active) -->
-  <div id="statusbar"></div>
-
-  <!-- Main: kanban board -->
-  <div id="main">
-    <div id="board-wrap"><div id="board"></div></div>
-  </div>
-
-  <!-- Sidebar: editor + status -->
-  <div id="sidebar">
-    <div id="editor-panel">
-      <div id="editor-header">
-        <span id="editor-id"></span>
-        <span id="editor-title"></span>
-        <button type="button" id="editor-close">&#x2715;</button>
-      </div>
-      <div id="editor-state-row">
-        <span id="editor-state-lbl"></span>
-        <div id="editor-trans"></div>
-      </div>
-      <div id="editor-rels">
-        <div id="editor-parent-row" class="rel-row"></div>
-        <div id="editor-children-row" class="rel-row"></div>
-      </div>
-      <div id="editor-tabs">
-        <button type="button" class="editor-tab active" data-tab="preview">Preview</button>
-        <button type="button" class="editor-tab" data-tab="edit">Edit</button>
-        <button type="button" class="editor-tab" data-tab="metadata">Metadata</button>
-      </div>
-      <div id="editor-content">
-        <div id="editor-preview"></div>
-        <div id="editor-cm"></div>
-        <div id="editor-metadata"></div>
-      </div>
-      <div id="editor-actions"></div>
-    </div>
-  </div>
-
-  <!-- Bottom: activity log -->
-  <div id="bottom"></div>
-</div>
-
-<!-- New Issue Modal -->
-<div id="modal-ov">
-  <div id="modal">
-    <h2>New Issue</h2>
-    <label for="modal-ttl">Title</label>
-    <input id="modal-ttl" type="text" placeholder="Short description of the work item">
-    <label for="modal-bdy">Body (optional)</label>
-    <textarea id="modal-bdy" rows="5" placeholder="## Description&#10;..."></textarea>
-    <div id="modal-btns">
-      <button type="button" class="mbtn" id="modal-cancel">Cancel</button>
-      <button type="button" class="mbtn primary" id="modal-submit">Create</button>
-    </div>
-  </div>
-</div>
-
-<!-- Interview Modal -->
-<div id="interview-ov" class="modal-overlay" style="display:none">
-  <div id="interview-modal" class="modal-card"></div>
-</div>
-
-<!-- Config Modal -->
-<div id="config-ov">
-  <div id="config-modal">
-    <div id="config-header">
-      <h2>&#x2699; Configuration</h2>
-      <span id="config-path"></span>
-      <button type="button" id="config-close">&#x2715;</button>
-    </div>
-    <div id="config-body"></div>
-    <div id="config-footer">
-      <span id="config-status"></span>
-      <button type="button" class="mbtn" id="config-cancel">Cancel</button>
-      <button type="button" class="mbtn primary" id="config-save">Save</button>
-    </div>
-  </div>
-</div>
-
-<script type="module" src="./main.ts"></script>
+<body class="h-full overflow-hidden bg-bg text-text font-mono text-md">
+<div id="app" class="grid grid-rows-[auto_auto_1fr_auto] grid-cols-[1fr] h-full no-sidebar" style="grid-template-areas:'header' 'statusbar' 'main' 'bottom'"></div>
+<script type="module" src="./main.tsx"></script>
 </body>
 </html>

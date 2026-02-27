@@ -31,6 +31,12 @@
       "semicolons": "asNeeded"
     }
   },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  },
   "json": {
     "formatter": {
       "indentStyle": "space",

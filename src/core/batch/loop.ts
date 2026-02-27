@@ -24,6 +24,11 @@ import { verifyIssue } from '@/core/verification'
 import type { Config, DisplayContext } from '@/types'
 import type { LoopMode } from '@/types/schema/mode-schema'
 import { createLogger } from '@/utils/logger'
+import {
+  addBreadcrumb,
+  captureException,
+  setIssueContext,
+} from '@/utils/sentry'
 import { toError } from '@/utils/toError'
 import {
   handleOverflow,
@@ -91,6 +96,8 @@ async function runLoopImpl(
     lastContextSize: 0,
     sessionStartTime: Date.now(),
   }
+
+  setIssueContext(issueId, mode, 'locked')
 
   try {
     // Build mode: transition to IN_PROGRESS on first iteration
@@ -206,6 +213,12 @@ async function runLoopImpl(
         },
         'iteration complete',
       )
+      addBreadcrumb({
+        category: 'iteration',
+        message: `Iteration ${state.iteration}: ${outcome}`,
+        data: { issueId, iteration: state.iteration, outcome, tokens },
+        level: outcome === 'error' ? 'error' : 'info',
+      })
 
       process.stdout.write(
         `__BARF_STATS__:${JSON.stringify({
@@ -252,6 +265,10 @@ async function runLoopImpl(
           { issueId, iteration: state.iteration },
           'claude returned error — stopping loop',
         )
+        captureException(new Error('Claude iteration error'), {
+          tags: { issueId, mode },
+          extra: { iteration: state.iteration, tokens },
+        })
         break
       }
 

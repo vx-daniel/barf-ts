@@ -2,7 +2,7 @@
  * Dashboard issue service — wraps {@link LocalIssueProvider} and {@link Config}
  * so route handlers receive a single dependency instead of scattered globals.
  */
-import { resolve, join } from 'path'
+import { join, resolve } from 'path'
 import { loadConfig } from '@/core/config'
 import { LocalIssueProvider } from '@/core/issue/providers/local'
 import type { Config } from '@/types'

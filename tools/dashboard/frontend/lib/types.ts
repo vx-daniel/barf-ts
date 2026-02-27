@@ -1,81 +1,33 @@
 /**
  * Frontend-only types for the dashboard panels.
+ * Re-exports shared types from `src/` so panel code can import from one place.
  */
+// export type {
+//   ActivityEntry,
+//   ActivityKind,
+//   ActivitySource,
+// } from '@/types/schema/activity-schema'
+export type { Issue } from '@/types/schema/issue-schema'
+
+// Import ActivityKind for interface usage
+import type { ActivityKind } from '@/types/schema/activity-schema'
 
 /**
- * Discriminates the kind of activity entry displayed in the activity log.
- * Maps to the event types emitted by the barf orchestration loop over SSE.
+ * A rendered activity entry for the reactive activity log.
+ * Extends the raw {@link ActivityEntry} with a stable key for React-style
+ * keyed rendering and an optional resolved tool result.
  */
-export type ActivityKind =
-  | 'stdout'
-  | 'stderr'
-  | 'tool_call'
-  | 'tool_result'
-  | 'token_update'
-  | 'result'
-  | 'error'
-
-/**
- * Origin of an activity entry — whether it came from a CLI subprocess
- * (`command`) or directly from the Claude SDK stream (`sdk`).
- */
-export type ActivitySource = 'command' | 'sdk'
-
-/**
- * A single entry in the real-time activity feed, representing one event from
- * the barf orchestration loop (tool call, token update, error, etc.).
- */
-export interface ActivityEntry {
-  timestamp: number
-  source: ActivitySource
+export interface ProcessedEntry {
+  key: string
   kind: ActivityKind
+  timestamp: number
   issueId?: string
   issueName?: string
   data: Record<string, unknown>
-}
-
-/**
- * Snapshot of the currently active barf run, pushed over SSE and rendered
- * in the status panel. All fields may be null/zero when no run is active.
- */
-export interface StatusData {
-  issueId: string | null
-  state: string
-  totalInputTokens: number
-  totalOutputTokens: number
-  contextUsagePercent: number | null
-  runCount: number
-  totalDurationSeconds: number
-  activeCommand: string | null
-  commandStartTime: number | null
-  models: {
-    planModel: string
-    buildModel: string
-    auditModel: string
-  } | null
-}
-
-/**
- * Represents a barf issue as returned by the `/api/issues` REST endpoints.
- * Mirrors the frontmatter fields parsed by the issue provider.
- */
-export interface Issue {
-  id: string
-  title: string
-  state: string
-  parent: string
-  children: string[]
-  split_count: number
-  force_split: boolean
-  context_usage_percent?: number
-  needs_interview?: boolean
-  verify_count: number
-  is_verify_fix?: boolean
-  verify_exhausted?: boolean
-  total_input_tokens: number
-  total_output_tokens: number
-  total_duration_seconds: number
-  total_iterations: number
-  run_count: number
-  body: string
+  /** For tool_call entries: resolved result once the tool_result arrives. */
+  toolResult?: { content: string; isError: boolean }
+  /** For synthetic termLog entries: CSS type suffix (e.g. 'info', 'error', 'done'). */
+  termType?: string
+  /** For synthetic termLog entries: the display text. */
+  termText?: string
 }

@@ -3,7 +3,7 @@
  *
  * Used by the activity log SSE endpoint to tail `{streamLogDir}/{issueId}.jsonl`.
  */
-import { existsSync, openSync, readSync, statSync, closeSync } from 'fs'
+import { closeSync, existsSync, openSync, readSync, statSync } from 'fs'
 
 export interface LogLine {
   offset: number

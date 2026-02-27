@@ -4,10 +4,18 @@
  * These are the single source of truth for state colours, labels, ordering,
  * and the command actions available per state. Import from here — do not
  * redeclare locally in panel files.
+ *
+ * All state maps are typed as `Record<IssueState, ...>` so adding a new state
+ * to {@link IssueStateSchema} causes a compile error here until updated.
  */
+import type { IssueState } from '@/types/schema/issue-schema'
 
-/** Canonical rendering order for kanban columns. */
-export const STATE_ORDER = [
+/**
+ * Canonical rendering order for kanban columns.
+ * Differs from {@link IssueStateSchema} order — side-states (`STUCK`, `SPLIT`)
+ * are placed at the end for a cleaner kanban layout.
+ */
+export const STATE_ORDER: readonly IssueState[] = [
   'NEW',
   'GROOMED',
   'PLANNED',
@@ -16,22 +24,26 @@ export const STATE_ORDER = [
   'VERIFIED',
   'STUCK',
   'SPLIT',
-] as const
+]
 
-/** Accent colour for each {@link IssueState} value, used for badges and borders. */
-export const STATE_COLORS = {
-  NEW: '#6b7280',
-  GROOMED: '#3b82f6',
-  PLANNED: '#f59e0b',
-  IN_PROGRESS: '#f97316',
-  COMPLETED: '#22c55e',
-  VERIFIED: '#10b981',
-  STUCK: '#ef4444',
-  SPLIT: '#a855f7',
-} satisfies Record<string, string>
+/**
+ * Accent colour for each {@link IssueState} value, used for badges and borders.
+ * Values reference CSS custom properties defined in the `@theme` block
+ * (`styles/index.css`) so the palette has a single source of truth.
+ */
+export const STATE_COLORS: Record<IssueState, string> = {
+  NEW: 'var(--color-state-new)',
+  GROOMED: 'var(--color-state-groomed)',
+  PLANNED: 'var(--color-state-planned)',
+  IN_PROGRESS: 'var(--color-state-in-progress)',
+  COMPLETED: 'var(--color-state-completed)',
+  VERIFIED: 'var(--color-state-verified)',
+  STUCK: 'var(--color-state-stuck)',
+  SPLIT: 'var(--color-state-split)',
+}
 
 /** Human-readable label for each {@link IssueState} value. */
-export const STATE_LABELS = {
+export const STATE_LABELS: Record<IssueState, string> = {
   NEW: 'NEW',
   GROOMED: 'GROOMED',
   PLANNED: 'PLANNED',
@@ -40,10 +52,10 @@ export const STATE_LABELS = {
   VERIFIED: 'VERIFIED',
   STUCK: 'STUCK',
   SPLIT: 'SPLIT',
-} satisfies Record<string, string>
+}
 
 /** CLI commands available to run for issues in each state. */
-export const CMD_ACTIONS = {
+export const CMD_ACTIONS: Record<IssueState, string[]> = {
   NEW: [],
   GROOMED: ['plan'],
   PLANNED: ['plan', 'build'],
@@ -52,7 +64,7 @@ export const CMD_ACTIONS = {
   VERIFIED: [],
   STUCK: ['plan'],
   SPLIT: [],
-} satisfies Record<string, string[]>
+}
 
 /**
  * Returns the accent colour for a given issue state, falling back to the
@@ -64,8 +76,21 @@ export const CMD_ACTIONS = {
  * @param state - An {@link IssueState} string value
  * @returns A CSS hex colour string
  */
-export function stateColor(state: string): string {
-  return (STATE_COLORS as Record<string, string>)[state] ?? STATE_COLORS.NEW
+export function stateColor(state: IssueState | string): string {
+  return STATE_COLORS[state as IssueState] ?? STATE_COLORS.NEW
+}
+
+/**
+ * Returns a red/orange/green colour based on context usage percentage.
+ * Used for progress bar fills on kanban cards.
+ *
+ * @param pct - Context usage percentage (0-100)
+ * @returns A CSS hex colour string
+ */
+export function contextBarColor(pct: number): string {
+  if (pct > 80) return 'var(--color-danger)'
+  if (pct > 60) return 'var(--color-state-in-progress)'
+  return 'var(--color-success)'
 }
 
 /** CSS class applied to action buttons, keyed by command name. */

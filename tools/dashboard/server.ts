@@ -7,30 +7,32 @@
  * Serves an interactive dashboard for a barf project: kanban board, issue editor,
  * status panel, and activity log. REST API + SSE + WebSocket.
  */
-import { resolve } from 'path'
-import { IssueService } from '@dashboard/services/issue-service'
+
 import {
-  handleListIssues,
-  handleGetIssue,
   handleCreateIssue,
-  handleUpdateIssue,
   handleDeleteIssue,
-  handleTransition,
-  handleInterview,
   handleGetConfig,
+  handleGetIssue,
+  handleInterview,
+  handleListIssues,
   handleSaveConfig,
+  handleTransition,
+  handleUpdateIssue,
   jsonError,
 } from '@dashboard/routes/api'
 import {
-  handleRunCommand,
-  handleRunAuto,
-  handleStopActive,
-  handleLogTail,
   handleLogHistory,
+  handleLogTail,
+  handleRunAuto,
+  handleRunCommand,
+  handleStopActive,
   isAllowedCommand,
 } from '@dashboard/routes/sse'
-import { startInterviewProc, wsProcs } from '@dashboard/routes/ws'
 import { serveStatic } from '@dashboard/routes/static'
+import { startInterviewProc, wsProcs } from '@dashboard/routes/ws'
+import { IssueService } from '@dashboard/services/issue-service'
+import * as Sentry from '@sentry/node'
+import { resolve } from 'path'
 
 // ── CLI arg parsing ──────────────────────────────────────────────────────────
 
@@ -54,6 +56,16 @@ function parseArgs(): {
 
 const { projectCwd, configPath, port } = parseArgs()
 const svc = new IssueService({ projectCwd, configPath })
+
+// Initialise Sentry when a DSN is configured
+if (svc.config.sentryDsn) {
+  Sentry.init({
+    dsn: svc.config.sentryDsn,
+    environment: svc.config.sentryEnvironment,
+    tracesSampleRate: svc.config.sentryTracesSampleRate,
+    release: 'barf-dashboard@2.0.0',
+  })
+}
 
 // ── Router ───────────────────────────────────────────────────────────────────
 
@@ -118,7 +130,7 @@ async function router(req: Request): Promise<Response> {
 
 // ── Start server ─────────────────────────────────────────────────────────────
 
-Bun.serve({
+Bun.serve<{ issueId: string }>({
   port,
   idleTimeout: 255, // max — SSE streams are long-lived
   fetch(req, server) {
@@ -130,16 +142,19 @@ Bun.serve({
       const upgraded = server.upgrade(req, { data: { issueId: wsMatch[1] } })
       if (upgraded) return undefined
     }
-    return router(req)
+    return router(req).catch((error: unknown) => {
+      Sentry.captureException(error)
+      return new Response('Internal server error', { status: 500 })
+    })
   },
   websocket: {
     open(ws) {
-      const { issueId } = ws.data as { issueId: string }
+      const { issueId } = ws.data
       startInterviewProc(ws, svc, issueId)
     },
     message(ws, message) {
       const proc = wsProcs.get(ws)
-      if (proc?.stdin) {
+      if (proc?.stdin && typeof proc.stdin !== 'number') {
         const line =
           typeof message === 'string'
             ? message

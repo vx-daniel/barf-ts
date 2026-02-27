@@ -4,6 +4,7 @@ import { Command } from 'commander'
 import { loadConfig } from '@/core/config'
 import { createIssueProvider } from '@/core/issue/factory'
 import { logger, setLoggerConfig } from '@/utils/logger'
+import { captureException, flushSentry, initSentry } from '@/utils/sentry'
 import {
   auditCommand,
   autoCommand,
@@ -53,7 +54,9 @@ program
     if (opts.cwd) {
       process.chdir(resolve(opts.cwd))
     }
-    setLoggerConfig(loadConfig(program.opts().config))
+    const config = loadConfig(program.opts().config)
+    setLoggerConfig(config)
+    initSentry(config)
   })
 
 program
@@ -153,4 +156,9 @@ program
     await auditCommand(provider, { issue: opts.issue, all: opts.all }, config)
   })
 
-program.parseAsync(process.argv)
+program.parseAsync(process.argv).catch(async (error: unknown) => {
+  logger.fatal({ err: error }, 'unhandled CLI error')
+  captureException(error)
+  await flushSentry()
+  process.exit(1)
+})
