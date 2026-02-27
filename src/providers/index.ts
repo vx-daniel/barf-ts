@@ -1,9 +1,9 @@
 /** @module Audit Providers */
 import { AuditProvider } from '@/providers/base'
-import { OpenAIAuditProvider } from '@/providers/openai'
-import { GeminiAuditProvider } from '@/providers/gemini'
 import { ClaudeAuditProvider } from '@/providers/claude'
 import { CodexAuditProvider } from '@/providers/codex'
+import { GeminiAuditProvider } from '@/providers/gemini'
+import { OpenAIAuditProvider } from '@/providers/openai'
 import type { Config } from '@/types'
 
 export { AuditProvider }
@@ -12,8 +12,8 @@ export { GeminiAuditProvider }
 export { ClaudeAuditProvider }
 export { CodexAuditProvider }
 export type {
-  ChatResult,
   ChatOptions,
+  ChatResult,
   PingResult,
   ProviderInfo,
 } from '@/providers/base'

@@ -4,5 +4,5 @@
  * @module Triage
  */
 
-export { type ExecFn, triageIssue } from './triage'
 export { formatQuestionsSection, parseTriageResponse } from './parse'
+export { type ExecFn, triageIssue } from './triage'

@@ -6,7 +6,12 @@
  */
 
 import { App } from '@dashboard/frontend/components/App'
-import { fetchConfig, fetchIssues } from '@dashboard/frontend/lib/actions'
+import {
+  fetchAuditGate,
+  fetchConfig,
+  fetchIssues,
+  fetchSessions,
+} from '@dashboard/frontend/lib/actions'
 import {
   mountBottomResizer,
   mountSidebarResizer,
@@ -27,10 +32,16 @@ mountBottomResizer()
 // ── Polling ──────────────────────────────────────────────────────────────────
 
 setInterval(() => {
-  if (!pauseRefresh.value) void fetchIssues()
+  if (!pauseRefresh.value) {
+    void fetchIssues()
+    void fetchSessions()
+    void fetchAuditGate()
+  }
 }, 5000)
 
 // ── Start ────────────────────────────────────────────────────────────────────
 
 void fetchConfig()
 void fetchIssues()
+void fetchSessions()
+void fetchAuditGate()

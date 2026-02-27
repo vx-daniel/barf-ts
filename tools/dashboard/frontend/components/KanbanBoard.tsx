@@ -11,12 +11,17 @@ import {
   CMD_ACTIONS,
   CMD_CLASS,
   contextBarColor,
+  STATE_EMOJI,
   STATE_LABELS,
   STATE_ORDER,
   stateColor,
 } from '@dashboard/frontend/lib/constants'
 import { getNewIssueActions } from '@dashboard/frontend/lib/issue-helpers'
-import { issues, runningId } from '@dashboard/frontend/lib/state'
+import {
+  interviewTarget,
+  issues,
+  runningId,
+} from '@dashboard/frontend/lib/state'
 import type { Issue } from '@dashboard/frontend/lib/types'
 import type { IssueState } from '@/types/schema/issue-schema'
 
@@ -51,14 +56,27 @@ function KanbanCard({ issue }: { issue: Issue }) {
         if (e.key === 'Enter' || e.key === ' ') openCard(issue)
       }}
     >
-      <div className="card-body p-md pr-[9px]">
-        <div className="text-xs text-base-content/50">#{issue.id}</div>
+      <div className="card-body p-md pr-[0.5625rem]">
+        <div className="flex items-center gap-xs">
+          <span className="text-xs text-base-content/50">#{issue.id}</span>
+          {(issue.state === 'STUCK' || issue.state === 'SPLIT') && (
+            <span
+              className="badge badge-xs font-bold border-0"
+              style={{
+                background: stateColor(issue.state),
+                color: 'var(--color-base-100)',
+              }}
+            >
+              {issue.state === 'SPLIT' ? 'SPLIT' : 'STUCK'}
+            </span>
+          )}
+        </div>
         <div className="text-base leading-[1.4] break-words">{issue.title}</div>
         {issue.context_usage_percent != null && (
           <div className="mt-sm flex items-center gap-sm">
-            <div className="flex-1 h-[3px] bg-neutral rounded-[2px] overflow-hidden">
+            <div className="flex-1 h-[3px] bg-neutral rounded-[0.125rem] overflow-hidden">
               <div
-                className="h-full rounded-[2px] transition-[width] duration-300"
+                className="h-full rounded-[0.125rem] transition-[width] duration-300"
                 style={{
                   width: `${issue.context_usage_percent}%`,
                   background: contextBarColor(issue.context_usage_percent),
@@ -72,7 +90,7 @@ function KanbanCard({ issue }: { issue: Issue }) {
         )}
         {(issue.parent?.trim() ||
           (issue.children && issue.children.length > 0)) && (
-          <div className="flex gap-[5px] mt-[5px] flex-wrap">
+          <div className="flex gap-[0.3125rem] mt-[0.3125rem] flex-wrap">
             {issue.parent?.trim() && (
               <span className="badge badge-outline badge-xs">
                 {'\u2191'} {issue.parent}
@@ -86,13 +104,15 @@ function KanbanCard({ issue }: { issue: Issue }) {
           </div>
         )}
         {actions.length > 0 && (
-          <div className="flex gap-xs mt-[7px] flex-wrap">
+          <div className="flex gap-xs mt-[0.4375rem] flex-wrap">
             {actions.map((cmd) => (
               <button
                 type="button"
                 key={cmd}
                 className={`btn btn-outline  btn-xs ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
-                disabled={runningId.value !== null}
+                disabled={
+                  runningId.value !== null || interviewTarget.value !== null
+                }
                 onClick={(e: MouseEvent) => {
                   e.stopPropagation()
                   runCommand(issue.id, cmd)
@@ -115,15 +135,21 @@ function KanbanCard({ issue }: { issue: Issue }) {
  */
 function KanbanColumn({ state }: { state: IssueState }) {
   const color = stateColor(state)
-  const stateIssues = issues.value.filter((i) => i.state === state)
+  // STUCK column absorbs SPLIT issues — both are "blocked" side-states
+  const stateIssues =
+    state === 'STUCK'
+      ? issues.value.filter((i) => i.state === 'STUCK' || i.state === 'SPLIT')
+      : issues.value.filter((i) => i.state === state)
 
   return (
-    <div className="flex flex-col w-[200px] min-w-[200px] bg-base-200 border border-neutral rounded-default overflow-hidden max-h-[calc(100%-4px)]">
+    <div className="flex flex-col flex-1 min-w-[10rem] bg-base-200 border border-neutral rounded-default overflow-hidden max-h-[calc(100%-4px)]">
       <div
         className="px-lg py-md text-sm font-bold tracking-[0.08em] uppercase border-b border-neutral flex items-center justify-between shrink-0 border-t-[3px]"
         style={{ color, borderTopColor: color }}
       >
-        <span>{STATE_LABELS[state] ?? state}</span>
+        <span>
+          {STATE_EMOJI[state]} {STATE_LABELS[state] ?? state}
+        </span>
         <span className="badge badge-sm bg-base-300 border-0 text-base-content/50">
           {stateIssues.length}
         </span>

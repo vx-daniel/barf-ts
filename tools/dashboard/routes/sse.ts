@@ -1,10 +1,11 @@
 /**
  * SSE routes — command streaming + JSONL log tailing.
  */
-import { join } from 'path'
+
+import { parseLogMessage } from '@dashboard/services/activity-aggregator'
 import type { IssueService } from '@dashboard/services/issue-service'
 import { readNewLines } from '@dashboard/services/log-reader'
-import { parseLogMessage } from '@dashboard/services/activity-aggregator'
+import { join } from 'path'
 
 const ALLOWED_COMMANDS = ['plan', 'build', 'audit', 'triage'] as const
 type AllowedCommand = (typeof ALLOWED_COMMANDS)[number]
@@ -242,6 +243,35 @@ export function handleLogHistory(svc: IssueService, issueId: string): Response {
 
   const logPath = join(svc.projectCwd, '.barf/streams', `${issueId}.jsonl`)
   const { lines } = readNewLines(logPath, 0)
+  const entries = lines
+    .map((l) => parseLogMessage(l.data))
+    .filter((e): e is NonNullable<typeof e> => e !== null)
+
+  return new Response(JSON.stringify(entries), {
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+/**
+ * Returns JSONL entries for a specific session (byte-range scoped).
+ *
+ * Query params: `issueId`, `streamOffset`, `streamEndOffset`
+ */
+export function handleSessionLogHistory(
+  svc: IssueService,
+  issueId: string,
+  streamOffset: number,
+  streamEndOffset: number | undefined,
+): Response {
+  if (svc.config.disableLogStream) {
+    return new Response(
+      JSON.stringify({ error: 'Stream logging is disabled' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  const logPath = join(svc.projectCwd, '.barf/streams', `${issueId}.jsonl`)
+  const { lines } = readNewLines(logPath, streamOffset, streamEndOffset)
   const entries = lines
     .map((l) => parseLogMessage(l.data))
     .filter((e): e is NonNullable<typeof e> => e !== null)

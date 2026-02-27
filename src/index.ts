@@ -1,10 +1,7 @@
 /** @module CLI Commands */
-import { resolve } from 'path'
+
 import { Command } from 'commander'
-import { loadConfig } from '@/core/config'
-import { createIssueProvider } from '@/core/issue/factory'
-import { logger, setLoggerConfig } from '@/utils/logger'
-import { captureException, flushSentry, initSentry } from '@/utils/sentry'
+import { resolve } from 'path'
 import {
   auditCommand,
   autoCommand,
@@ -16,6 +13,10 @@ import {
   updateCheckCommand,
   updateCommand,
 } from '@/cli/commands'
+import { loadConfig } from '@/core/config'
+import { createIssueProvider } from '@/core/issue/factory'
+import { logger, setLoggerConfig } from '@/utils/logger'
+import { captureException, flushSentry, initSentry } from '@/utils/sentry'
 
 /**
  * Creates the issue provider for `config`.
@@ -115,7 +116,11 @@ program
     const provider = getProvider(config)
     await buildCommand(
       provider,
-      { issue: opts.issue, batch: opts.batch ?? 1, max: opts.max ?? 0 },
+      {
+        issue: opts.issue,
+        batch: opts.batch ?? config.maxConcurrency,
+        max: opts.max ?? 0,
+      },
       config,
     )
   })
@@ -127,12 +132,21 @@ program
   )
   .option('--batch <n>', 'Max concurrent builds', parseInt)
   .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
+  .option(
+    '--audit-gate',
+    'Enable periodic audit gate (triggers after AUDIT_AFTER_N_COMPLETED issues, default 10)',
+    false,
+  )
   .action(async (opts) => {
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
     await autoCommand(
       provider,
-      { batch: opts.batch ?? 1, max: opts.max ?? 0 },
+      {
+        batch: opts.batch ?? config.maxConcurrency,
+        max: opts.max ?? 0,
+        auditGate: opts.auditGate,
+      },
       config,
     )
   })

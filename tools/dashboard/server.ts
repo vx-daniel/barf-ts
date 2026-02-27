@@ -9,22 +9,32 @@
  */
 
 import {
+  handleCancelAuditGate,
   handleCreateIssue,
   handleDeleteIssue,
+  handleGetAuditGate,
   handleGetConfig,
   handleGetIssue,
   handleInterview,
   handleListIssues,
   handleSaveConfig,
   handleTransition,
+  handleTriggerAuditGate,
   handleUpdateIssue,
   jsonError,
 } from '@dashboard/routes/api'
+import {
+  handleArchiveSession,
+  handleDeleteSession,
+  handleListSessions,
+  handleStopSession,
+} from '@dashboard/routes/sessions'
 import {
   handleLogHistory,
   handleLogTail,
   handleRunAuto,
   handleRunCommand,
+  handleSessionLogHistory,
   handleStopActive,
   isAllowedCommand,
 } from '@dashboard/routes/sse'
@@ -85,6 +95,30 @@ async function router(req: Request): Promise<Response> {
     return handleRunAuto(svc)
   if (method === 'POST' && path === '/api/auto/stop') return handleStopActive()
 
+  // Audit gate routes
+  if (method === 'GET' && path === '/api/audit-gate')
+    return handleGetAuditGate(svc)
+  if (method === 'POST' && path === '/api/audit-gate/trigger')
+    return handleTriggerAuditGate(svc)
+  if (method === 'POST' && path === '/api/audit-gate/cancel')
+    return handleCancelAuditGate(svc)
+
+  // Session routes
+  if (method === 'GET' && path === '/api/sessions')
+    return handleListSessions(svc)
+
+  const sessionStopMatch = path.match(/^\/api\/sessions\/(\d+)\/stop$/)
+  if (sessionStopMatch && method === 'POST')
+    return handleStopSession(svc, parseInt(sessionStopMatch[1], 10))
+
+  const sessionDeleteMatch = path.match(/^\/api\/sessions\/([^/]+)$/)
+  if (sessionDeleteMatch && method === 'DELETE')
+    return handleDeleteSession(svc, decodeURIComponent(sessionDeleteMatch[1]))
+
+  const sessionArchiveMatch = path.match(/^\/api\/sessions\/([^/]+)\/archive$/)
+  if (sessionArchiveMatch && method === 'POST')
+    return handleArchiveSession(svc, decodeURIComponent(sessionArchiveMatch[1]))
+
   const issueMatch = path.match(/^\/api\/issues\/([^/]+)$/)
   if (issueMatch) {
     const id = issueMatch[1]
@@ -120,6 +154,15 @@ async function router(req: Request): Promise<Response> {
   const logHistoryMatch = path.match(/^\/api\/issues\/([^/]+)\/logs\/history$/)
   if (logHistoryMatch && method === 'GET')
     return handleLogHistory(svc, logHistoryMatch[1])
+
+  // Session-scoped log history: /api/sessions/:issueId/logs?offset=N&end=N
+  const sessionLogMatch = path.match(/^\/api\/sessions\/([^/]+)\/logs$/)
+  if (sessionLogMatch && method === 'GET') {
+    const offset = parseInt(url.searchParams.get('offset') ?? '0', 10)
+    const endParam = url.searchParams.get('end')
+    const endOffset = endParam ? parseInt(endParam, 10) : undefined
+    return handleSessionLogHistory(svc, sessionLogMatch[1], offset, endOffset)
+  }
 
   // Static files (frontend)
   const staticResponse = serveStatic(path)

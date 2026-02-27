@@ -283,5 +283,3 @@ export async function handleBuildCompletion(
   )
   return 'continue'
 }
-  return 'continue'
-}

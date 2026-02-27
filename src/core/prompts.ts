@@ -7,21 +7,21 @@ import { createLogger } from '@/utils/logger'
 
 export type { PromptMode } from '@/types/schema/mode-schema'
 
-// Built-in prompt templates — embedded at compile time via Bun import attributes
-import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
-import buildPromptTemplate from '@/prompts/PROMPT_build.md' with {
-  type: 'text',
-}
-import splitPromptTemplate from '@/prompts/PROMPT_split.md' with {
-  type: 'text',
-}
 import auditPromptTemplate from '@/prompts/PROMPT_audit.md' with {
   type: 'text',
 }
-import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with {
+import buildPromptTemplate from '@/prompts/PROMPT_build.md' with {
   type: 'text',
 }
 import interviewEvalPromptTemplate from '@/prompts/PROMPT_interview_eval.md' with {
+  type: 'text',
+}
+// Built-in prompt templates — embedded at compile time via Bun import attributes
+import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
+import splitPromptTemplate from '@/prompts/PROMPT_split.md' with {
+  type: 'text',
+}
+import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with {
   type: 'text',
 }
 

@@ -10,18 +10,18 @@
  */
 import { z } from 'zod'
 import { IssueStateSchema } from './issue-schema'
-import { LoopModeSchema } from './mode-schema'
+import { BarfModeSchema } from './mode-schema'
 
 /**
  * Runtime mode that acquired the lock.
  *
- * Alias for {@link LoopModeSchema} — locks are only acquired during
- * orchestration loop execution (plan, build, or split modes).
+ * Superset of {@link LoopModeSchema} — includes orchestration modes (plan,
+ * build, split) plus `interview` for dashboard interview locking.
  *
  * @category Locking
  * @group Locking
  */
-export const LockModeSchema = LoopModeSchema
+export const LockModeSchema = BarfModeSchema
 
 /**
  * A barf lock mode. Derived from {@link LockModeSchema}.

@@ -112,6 +112,10 @@ export const ConfigSchema = z.object({
   logLevel: z.string().default('info'),
   /** Enable pretty-printed log output (for development). */
   logPretty: z.boolean().default(false),
+  /** Maximum number of issues to process concurrently in batch/auto modes. */
+  maxConcurrency: z.number().int().min(1).default(1),
+  /** Number of completed issues before auto-triggering an audit gate. 0 = disabled. */
+  auditAfterNCompleted: z.number().int().nonnegative().default(0),
   /** Sentry DSN for error monitoring and operational observability. Empty means disabled. */
   sentryDsn: z.string().default(''),
   /** Sentry environment tag (e.g. 'production', 'development'). */

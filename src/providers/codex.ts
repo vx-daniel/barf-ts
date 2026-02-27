@@ -1,24 +1,25 @@
 /** @module Audit Providers */
 import { ok, okAsync, type Result, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
+import type { Config } from '@/types'
+import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
-import { execFileNoThrow } from '@/utils/execFileNoThrow'
-import type { Config } from '@/types'
 
 /**
  * Injectable subprocess function — mirrors {@link execFileNoThrow}'s signature.
  * Pass a mock in tests to avoid spawning a real codex process.
  */
 export type ExecFn = typeof execFileNoThrow
+
 import {
-  toTokenUsage,
-  type ChatResult,
   type ChatOptions,
+  type ChatResult,
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage,
+  toTokenUsage,
 } from '@/types/schema/provider-schema'
 
 const logger = createLogger('codex')

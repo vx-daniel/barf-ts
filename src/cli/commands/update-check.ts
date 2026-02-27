@@ -1,7 +1,8 @@
 /** @module CLI Commands */
-import { platform, arch } from 'os'
-import { dirname, join } from 'path'
+
 import chalk from 'chalk'
+import { arch, platform } from 'os'
+import { dirname, join } from 'path'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { logger } from '@/utils/logger'
 

@@ -13,12 +13,15 @@ import {
   activityEntries,
   activityOpen,
   activityTitle,
+  auditGate,
   interviewTarget,
   issues,
   models,
   pauseRefresh,
   runningId,
   selectedId,
+  selectedSessionId,
+  sessions,
   termInputVisible,
 } from '@dashboard/frontend/lib/state'
 import type { ProcessedEntry } from '@dashboard/frontend/lib/types'
@@ -487,4 +490,183 @@ export function onActivityClose(): void {
   stopActive()
   runningId.value = null
   pauseRefresh.value = false
+}
+
+// ── Session management ──────────────────────────────────────────────────────
+
+/**
+ * Fetches the session list from the API and updates the signal.
+ */
+export async function fetchSessions(): Promise<void> {
+  try {
+    const res = await fetch('/api/sessions')
+    if (res.ok) {
+      sessions.value = await res.json()
+    }
+  } catch {
+    // Silently ignore — session list is best-effort
+  }
+}
+
+/**
+ * Selects a session in the browser and loads its activity entries.
+ * For running sessions, starts SSE tailing. For completed sessions,
+ * loads the full history via byte-range API.
+ */
+export async function selectSession(sessionId: string): Promise<void> {
+  selectedSessionId.value = sessionId
+  const session = sessions.value.find((s) => s.sessionId === sessionId)
+  if (!session || !session.issueId) return
+
+  activityOpen.value = true
+  activityTitle.value = `${session.mode ?? 'session'} #${session.issueId}`
+  activityEntries.value = []
+
+  // Load historical entries via byte-range
+  const params = new URLSearchParams({
+    offset: String(session.streamOffset ?? 0),
+  })
+  if (session.streamEndOffset !== undefined) {
+    params.set('end', String(session.streamEndOffset))
+  }
+
+  try {
+    const res = await fetch(
+      `/api/sessions/${session.issueId}/logs?${params.toString()}`,
+    )
+    if (res.ok) {
+      const entries = (await res.json()) as Array<Record<string, unknown>>
+      const processed: ProcessedEntry[] = entries.map((e, i) => ({
+        key: `h-${i}`,
+        kind: (e.kind as ProcessedEntry['kind']) ?? 'stdout',
+        timestamp: (e.timestamp as number) ?? Date.now(),
+        issueId: session.issueId,
+        data: (e.data as Record<string, unknown>) ?? {},
+      }))
+      activityEntries.value = processed
+    }
+  } catch {
+    // Silently ignore
+  }
+
+  // For running sessions, also start live tailing
+  if (session.status === 'running') {
+    logSSE.connect(`/api/issues/${session.issueId}/logs`, (data) => {
+      const entry = data as unknown as ActivityEntry
+      pushActivity({
+        ...entry,
+        issueId: session.issueId,
+      })
+    })
+  }
+}
+
+/**
+ * Stops a running session by PID.
+ */
+export async function stopSessionByPid(pid: number): Promise<void> {
+  try {
+    await fetch(`/api/sessions/${pid}/stop`, { method: 'POST' })
+    await fetchSessions()
+  } catch {
+    // Silently ignore
+  }
+}
+
+/**
+ * Stops all running sessions by sending SIGTERM to each one.
+ */
+export async function stopAllSessions(): Promise<void> {
+  const running = sessions.value.filter((s) => s.status === 'running')
+  await Promise.all(running.map((s) => stopSessionByPid(s.pid)))
+}
+
+/**
+ * Deletes a completed or crashed session from the index.
+ */
+export async function deleteSessionById(sessionId: string): Promise<void> {
+  try {
+    await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+    })
+    if (selectedSessionId.value === sessionId) {
+      selectedSessionId.value = null
+    }
+    await fetchSessions()
+  } catch {
+    // Silently ignore
+  }
+}
+
+/**
+ * Archives a completed or crashed session.
+ */
+export async function archiveSessionById(sessionId: string): Promise<void> {
+  try {
+    await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/archive`, {
+      method: 'POST',
+    })
+    if (selectedSessionId.value === sessionId) {
+      selectedSessionId.value = null
+    }
+    await fetchSessions()
+  } catch {
+    // Silently ignore
+  }
+}
+
+// ── Audit gate ─────────────────────────────────────────────────────────────
+
+/**
+ * Fetches the current audit gate state and updates the signal.
+ */
+export async function fetchAuditGate(): Promise<void> {
+  try {
+    const res = await fetch('/api/audit-gate')
+    if (res.ok) {
+      auditGate.value = await res.json()
+    }
+  } catch {
+    // Silently ignore
+  }
+}
+
+/**
+ * Triggers the audit gate via the dashboard.
+ */
+export async function triggerAuditGate(): Promise<void> {
+  try {
+    const res = await fetch('/api/audit-gate/trigger', { method: 'POST' })
+    if (res.ok) {
+      await fetchAuditGate()
+    } else {
+      const data = await res.json()
+      logTerm('error', `Audit gate trigger failed: ${data.error}`)
+    }
+  } catch (e) {
+    logTerm(
+      'error',
+      `Audit gate trigger failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
+  }
+}
+
+/**
+ * Cancels the audit gate via the dashboard.
+ */
+export async function cancelAuditGate(): Promise<void> {
+  try {
+    const res = await fetch('/api/audit-gate/cancel', { method: 'POST' })
+    if (res.ok) {
+      await fetchAuditGate()
+    } else {
+      const data = await res.json()
+      logTerm('error', `Audit gate cancel failed: ${data.error}`)
+    }
+  } catch (e) {
+    logTerm(
+      'error',
+      `Audit gate cancel failed: ${e instanceof Error ? e.message : String(e)}`,
+    )
+  }
 }

@@ -63,11 +63,13 @@ export function writeProgress(
   contextLimit: number,
   lastTool: string,
   stderrWrite: (data: string) => void,
+  issueId?: string,
 ): void {
   const pct = Math.round((tokens / contextLimit) * 100)
   const toolPart = lastTool ? `  |  ${lastTool}` : ''
+  const prefix = issueId ? `[${issueId}] ` : ''
   stderrWrite(
-    `\r\x1b[K  context: ${tokens.toLocaleString()} / ${contextLimit.toLocaleString()} (${pct}%)${toolPart}`,
+    `\r\x1b[K  ${prefix}context: ${tokens.toLocaleString()} / ${contextLimit.toLocaleString()} (${pct}%)${toolPart}`,
   )
 }
 

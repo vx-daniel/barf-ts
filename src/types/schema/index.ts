@@ -8,102 +8,117 @@
  * @module Configuration
  */
 
-// ── Issue Model ──────────────────────────────────────────────────────────────
-export {
-  IssueStateSchema,
-  type IssueState,
-  VALID_TRANSITIONS,
-  IssueSchema,
-  type Issue,
-} from './issue-schema'
-
 // ── Activity Log ─────────────────────────────────────────────────────────────
 export type {
+  ActivityEntry,
   ActivityKind,
   ActivitySource,
-  ActivityEntry,
 } from './activity-schema'
-
-// ── Configuration ────────────────────────────────────────────────────────────
-export { ConfigSchema, type Config } from './config-schema'
-
-// ── Locking ──────────────────────────────────────────────────────────────────
+// ── Audit Gate ──────────────────────────────────────────────────────────────
 export {
-  LockModeSchema,
-  type LockMode,
-  LockInfoSchema,
-  type LockInfo,
-} from './lock-schema'
-
-// ── Modes ────────────────────────────────────────────────────────────────────
-export {
-  BarfModeSchema,
-  type BarfMode,
-  LoopModeSchema,
-  type LoopMode,
-  PromptModeSchema,
-  type PromptMode,
-  AutoSelectModeSchema,
-  type AutoSelectMode,
-} from './mode-schema'
-
-// ── Claude Stream Events ─────────────────────────────────────────────────────
-export { ClaudeEventSchema, type ClaudeEvent } from './events-schema'
-
-// ── Display ──────────────────────────────────────────────────────────────────
-export { DisplayContextSchema, type DisplayContext } from './display-schema'
-
-// ── Claude Iteration ─────────────────────────────────────────────────────────
-export {
-  IterationOutcomeSchema,
-  type IterationOutcome,
-  IterationResultSchema,
-  type IterationResult,
-} from './claude-schema'
-
-// ── Batch Orchestration ──────────────────────────────────────────────────────
-export { OverflowDecisionSchema, type OverflowDecision } from './batch-schema'
-
-// ── Subprocess Execution ─────────────────────────────────────────────────────
-export { ExecResultSchema, type ExecResult } from './exec-schema'
-
+  type AuditGate,
+  AuditGateSchema,
+  type AuditGateState,
+  AuditGateStateSchema,
+  type AuditGateTrigger,
+  AuditGateTriggerSchema,
+} from './audit-gate-schema'
 // ── Audit ────────────────────────────────────────────────────────────────────
 export {
-  AuditCategorySchema,
   type AuditCategory,
-  AuditSeveritySchema,
-  type AuditSeverity,
-  AuditFindingSchema,
+  AuditCategorySchema,
   type AuditFinding,
-  AuditResponseSchema,
+  AuditFindingSchema,
   type AuditResponse,
+  AuditResponseSchema,
+  type AuditSeverity,
+  AuditSeveritySchema,
 } from './audit-schema'
-
-// ── Session Stats ────────────────────────────────────────────────────────────
+// ── Batch Orchestration ──────────────────────────────────────────────────────
+export { type OverflowDecision, OverflowDecisionSchema } from './batch-schema'
+// ── Claude Iteration ─────────────────────────────────────────────────────────
 export {
-  SessionStatsSchema,
-  type SessionStats,
-  formatSessionStatsBlock,
-  StageLogEntrySchema,
-  type StageLogEntry,
-  type StageLogInput,
-  formatStageLogEntry,
-} from './session-stats-schema'
+  type IterationOutcome,
+  IterationOutcomeSchema,
+  type IterationResult,
+  IterationResultSchema,
+} from './claude-schema'
+// ── Configuration ────────────────────────────────────────────────────────────
+export { type Config, ConfigSchema } from './config-schema'
 
-// ── Verification ─────────────────────────────────────────────────────────────
+// ── Display ──────────────────────────────────────────────────────────────────
+export { type DisplayContext, DisplayContextSchema } from './display-schema'
+// ── Claude Stream Events ─────────────────────────────────────────────────────
+export { type ClaudeEvent, ClaudeEventSchema } from './events-schema'
+// ── Subprocess Execution ─────────────────────────────────────────────────────
+export { type ExecResult, ExecResultSchema } from './exec-schema'
+// ── Issue Model ──────────────────────────────────────────────────────────────
 export {
-  VerifyCheckSchema,
-  type VerifyCheck,
-  VerifyFailureSchema,
-  type VerifyFailure,
-  VerifyResultSchema,
-  type VerifyResult,
-} from './verification-schema'
-
+  type Issue,
+  IssueSchema,
+  type IssueState,
+  IssueStateSchema,
+  VALID_TRANSITIONS,
+} from './issue-schema'
+// ── Locking ──────────────────────────────────────────────────────────────────
+export {
+  type LockInfo,
+  LockInfoSchema,
+  type LockMode,
+  LockModeSchema,
+} from './lock-schema'
+// ── Modes ────────────────────────────────────────────────────────────────────
+export {
+  type AutoSelectMode,
+  AutoSelectModeSchema,
+  type BarfMode,
+  BarfModeSchema,
+  type LoopMode,
+  LoopModeSchema,
+  type PromptMode,
+  PromptModeSchema,
+} from './mode-schema'
 // ── Pre-Completion ───────────────────────────────────────────────────────────
 export {
-  FixStepSchema,
   type FixStep,
-  PreCompleteResultSchema,
+  FixStepSchema,
   type PreCompleteResult,
+  PreCompleteResultSchema,
 } from './pre-complete-schema'
+
+// ── Session Index ────────────────────────────────────────────────────────
+export {
+  type AuditGateEvent,
+  AuditGateEventSchema,
+  type AutoEndEvent,
+  AutoEndEventSchema,
+  type AutoStartEvent,
+  AutoStartEventSchema,
+  type Session,
+  type SessionEndEvent,
+  SessionEndEventSchema,
+  type SessionIndexEvent,
+  SessionIndexEventSchema,
+  type SessionStartEvent,
+  SessionStartEventSchema,
+  type SessionStatus,
+} from './session-index-schema'
+// ── Session Stats ────────────────────────────────────────────────────────────
+export {
+  formatSessionStatsBlock,
+  formatStageLogEntry,
+  type SessionStats,
+  SessionStatsSchema,
+  type StageLogEntry,
+  StageLogEntrySchema,
+  type StageLogInput,
+} from './session-stats-schema'
+// ── Verification ─────────────────────────────────────────────────────────────
+export {
+  type VerifyCheck,
+  VerifyCheckSchema,
+  type VerifyFailure,
+  VerifyFailureSchema,
+  type VerifyResult,
+  VerifyResultSchema,
+} from './verification-schema'

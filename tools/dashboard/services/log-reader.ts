@@ -12,24 +12,29 @@ export interface LogLine {
 
 /**
  * Reads new JSONL lines from `filePath` starting at `fromOffset`.
+ * When `toOffset` is provided, reads only up to that byte position
+ * (used for session-scoped reads).
  * Returns parsed lines and the new byte offset.
  */
 export function readNewLines(
   filePath: string,
   fromOffset: number,
+  toOffset?: number,
 ): { lines: LogLine[]; newOffset: number } {
   if (!existsSync(filePath)) {
     return { lines: [], newOffset: fromOffset }
   }
 
   const stat = statSync(filePath)
-  if (stat.size <= fromOffset) {
+  const endOffset =
+    toOffset !== undefined ? Math.min(toOffset, stat.size) : stat.size
+  if (endOffset <= fromOffset) {
     return { lines: [], newOffset: fromOffset }
   }
 
   const fd = openSync(filePath, 'r')
   try {
-    const bytesToRead = stat.size - fromOffset
+    const bytesToRead = endOffset - fromOffset
     const buf = Buffer.alloc(bytesToRead)
     readSync(fd, buf, 0, bytesToRead, fromOffset)
     const text = buf.toString('utf8')
@@ -45,7 +50,7 @@ export function readNewLines(
       }
       currentOffset += Buffer.byteLength(`${raw}\n`, 'utf8')
     }
-    return { lines, newOffset: stat.size }
+    return { lines, newOffset: endOffset }
   } finally {
     closeSync(fd)
   }

@@ -1,9 +1,9 @@
 /** @module Issue Model */
-import { ResultAsync, errAsync } from 'neverthrow'
+import { errAsync, ResultAsync } from 'neverthrow'
+import { parseAcceptanceCriteria, validateTransition } from '@/core/issue'
 import type { Issue, IssueState, LockMode, StageLogInput } from '@/types'
 import { formatStageLogEntry } from '@/types'
 import type { AutoSelectMode } from '@/types/schema/mode-schema'
-import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 
 export type { AutoSelectMode } from '@/types/schema/mode-schema'
 

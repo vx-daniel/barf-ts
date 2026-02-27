@@ -8,15 +8,15 @@
  * @module Orchestration
  */
 
-export {
-  DEFAULT_CONTEXT_LIMIT,
-  getContextLimit,
-  setContextLimit,
-  getThreshold,
-} from './context'
-export { consumeSDKQuery } from './stream'
-export { runClaudeIteration } from './iteration'
 export type {
   IterationOutcome,
   IterationResult,
 } from '@/types/schema/claude-schema'
+export {
+  DEFAULT_CONTEXT_LIMIT,
+  getContextLimit,
+  getThreshold,
+  setContextLimit,
+} from './context'
+export { runClaudeIteration } from './iteration'
+export { consumeSDKQuery } from './stream'

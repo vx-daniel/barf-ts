@@ -8,6 +8,7 @@
  * JSON when possible.
  */
 
+import { SessionList } from '@dashboard/frontend/components/SessionList'
 import { wsClient } from '@dashboard/frontend/lib/actions'
 import {
   activityEntries,
@@ -197,7 +198,7 @@ function IssueBadge({
 // ---------------------------------------------------------------------------
 
 const summaryBase =
-  'flex gap-sm items-baseline px-md py-[2px] cursor-pointer list-none select-none opacity-80 hover:opacity-100 [&::marker]:hidden [&::-webkit-details-marker]:hidden'
+  'flex gap-sm items-baseline px-md py-[0.125rem] cursor-pointer list-none select-none opacity-80 hover:opacity-100 [&::marker]:hidden [&::-webkit-details-marker]:hidden'
 
 const argsJsonCls =
   'text-xs leading-[1.4] m-0 px-md pl-3xl text-text-slate whitespace-pre overflow-x-auto'
@@ -221,7 +222,7 @@ function StdoutGroup({ entries }: { entries: ProcessedEntry[] }) {
       data-kind="stdout"
       open
     >
-      <summary className="text-xs text-text-muted cursor-pointer py-[2px] list-none select-none hover:text-text [&::marker]:hidden [&::-webkit-details-marker]:hidden">
+      <summary className="text-xs text-text-muted cursor-pointer py-[0.125rem] list-none select-none hover:text-text [&::marker]:hidden [&::-webkit-details-marker]:hidden">
         {summaryText}
       </summary>
       {entries.map((e) => {
@@ -232,7 +233,7 @@ function StdoutGroup({ entries }: { entries: ProcessedEntry[] }) {
           return (
             <div
               key={e.key}
-              className="bg-[#b45309] text-[#fef3c7] font-bold text-sm px-lg py-[3px] rounded-[3px] my-xs"
+              className="bg-[#b45309] text-[#fef3c7] font-bold text-sm px-lg py-[0.1875rem] rounded-[0.1875rem] my-xs"
             >
               {'\u2192'} {state}
             </div>
@@ -246,7 +247,7 @@ function StdoutGroup({ entries }: { entries: ProcessedEntry[] }) {
             return (
               <pre
                 key={e.key}
-                className="text-xs leading-[1.4] my-[2px] px-md py-xs bg-[rgba(255,255,255,0.04)] rounded-[3px] overflow-x-auto text-[#a3e635] whitespace-pre"
+                className="text-xs leading-[1.4] my-[0.125rem] px-md py-xs bg-[rgba(255,255,255,0.04)] rounded-[0.1875rem] overflow-x-auto text-[#a3e635] whitespace-pre"
               >
                 {JSON.stringify(parsed, null, 2)}
               </pre>
@@ -258,7 +259,7 @@ function StdoutGroup({ entries }: { entries: ProcessedEntry[] }) {
 
         return (
           <div key={e.key} className="flex gap-md text-sm leading-[1.5]">
-            <span className="text-text-muted text-xs min-w-[60px] shrink-0 font-mono">
+            <span className="text-text-muted text-xs min-w-[3.75rem] shrink-0 font-mono">
               {fmtTime(e.timestamp)}
             </span>
             <span className="text-text flex-1 break-words">{line}</span>
@@ -286,7 +287,7 @@ function StderrRow({ entry }: { entry: ProcessedEntry }) {
         data-kind="stderr"
       >
         <summary className={`${summaryBase} flex-wrap`}>
-          <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+          <span className="text-text-muted text-[0.8rem] min-w-[3.75rem] shrink-0">
             {fmtTime(entry.timestamp)}
           </span>
           <span className={`font-mono shrink-0 basis-[5%] ${lvlColor}`}>
@@ -301,7 +302,7 @@ function StderrRow({ entry }: { entry: ProcessedEntry }) {
             </span>
           )}
           {pino.name && (
-            <span className="px-xs rounded-[2px] bg-[color-mix(in_srgb,var(--color-text-slate)_12%,transparent)] text-text-slate shrink-0 font-semibold">
+            <span className="px-xs rounded-[0.125rem] bg-[color-mix(in_srgb,var(--color-text-slate)_12%,transparent)] text-text-slate shrink-0 font-semibold">
               {pino.name}
             </span>
           )}
@@ -323,7 +324,7 @@ function StderrRow({ entry }: { entry: ProcessedEntry }) {
       data-kind="stderr"
     >
       <summary className={summaryBase}>
-        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+        <span className="text-text-muted text-[0.8rem] min-w-[3.75rem] shrink-0">
           {fmtTime(entry.timestamp)}
         </span>
         <span className="font-mono shrink-0 basis-[5%] text-danger-light">
@@ -354,14 +355,14 @@ function ToolCard({ entry }: { entry: ProcessedEntry }) {
       data-kind="tool_call"
     >
       <summary className={summaryBase}>
-        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+        <span className="text-text-muted text-[0.8rem] min-w-[3.75rem] shrink-0">
           {fmtTime(entry.timestamp)}
         </span>
         <IssueBadge issueId={entry.issueId} issueName={entry.issueName} />
         <span className="font-mono shrink-0 basis-[5%] text-text-muted">
           [{badgeText}]
         </span>
-        <span className="px-xs rounded-[2px] bg-[color-mix(in_srgb,var(--color-text-slate)_12%,transparent)] text-text-slate shrink-0 font-semibold">
+        <span className="px-xs rounded-[0.125rem] bg-[color-mix(in_srgb,var(--color-text-slate)_12%,transparent)] text-text-slate shrink-0 font-semibold">
           {displayName}
         </span>
         {snippet && <span className="text-text-light">{snippet}</span>}
@@ -407,7 +408,7 @@ function TokenRow({ entry }: { entry: ProcessedEntry }) {
       data-kind="token_update"
     >
       <summary className={`${summaryBase} opacity-55`}>
-        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+        <span className="text-text-muted text-[0.8rem] min-w-[3.75rem] shrink-0">
           {fmtTime(entry.timestamp)}
         </span>
         <IssueBadge issueId={entry.issueId} issueName={entry.issueName} />
@@ -441,7 +442,7 @@ function ResultRow({ entry }: { entry: ProcessedEntry }) {
       data-kind="result"
     >
       <summary className={`${summaryBase} opacity-55`}>
-        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+        <span className="text-text-muted text-[0.8rem] min-w-[3.75rem] shrink-0">
           {fmtTime(entry.timestamp)}
         </span>
         <span className="font-mono shrink-0 basis-[5%] text-success-light">
@@ -465,7 +466,7 @@ function ErrorBanner({ entry }: { entry: ProcessedEntry }) {
   return (
     <details className="m-0 border-l-[3px] border-l-danger" data-kind="error">
       <summary className={summaryBase}>
-        <span className="text-text-muted text-[0.8rem] min-w-[60px] shrink-0">
+        <span className="text-text-muted text-[0.8rem] min-w-[3.75rem] shrink-0">
           {fmtTime(entry.timestamp)}
         </span>
         <span className="font-mono shrink-0 basis-[5%] text-danger-light">
@@ -666,7 +667,7 @@ export function ActivityLog() {
       return (
         <div
           key={e.key}
-          className="bg-[#b45309] text-[#fef3c7] font-bold text-sm px-lg py-[3px] rounded-[3px] my-xs"
+          className="bg-[#b45309] text-[#fef3c7] font-bold text-sm px-lg py-[0.1875rem] rounded-[0.1875rem] my-xs"
           data-kind="stdout"
         >
           {'\u2192'} {state}
@@ -698,7 +699,7 @@ export function ActivityLog() {
       className="border-t border-neutral flex flex-col bg-base-100"
       style={{
         gridArea: 'bottom',
-        maxHeight: isOpen ? '300px' : undefined,
+        maxHeight: isOpen ? '18.75rem' : undefined,
       }}
     >
       {/* Header — always visible, clickable to toggle */}
@@ -726,32 +727,40 @@ export function ActivityLog() {
 
       {/* Log content — only when open */}
       {isOpen && (
-        <>
-          <div
-            ref={logRef}
-            className="flex-1 overflow-y-auto px-xl py-md text-sm leading-[1.6]"
-          >
-            {grouped.map(renderItem)}
+        <div className="flex flex-1 min-h-0">
+          {/* Session list (left panel) — always visible */}
+          <div className="w-[12.5rem] shrink-0 border-r border-neutral overflow-y-auto">
+            <SessionList />
           </div>
 
-          {/* Terminal input row */}
-          <div
-            className={`items-center gap-md px-lg py-[5px] border-t border-neutral shrink-0 ${showInput ? 'flex' : 'hidden'}`}
-          >
-            <span className="text-sm text-info whitespace-nowrap">
-              answer &gt;
-            </span>
-            <input
-              ref={inputRef}
-              className="flex-1 bg-transparent border-none text-text font-inherit text-sm outline-none placeholder:text-text-muted"
-              type="text"
-              autoComplete="off"
-              spellcheck={false}
-              placeholder="type your answer and press Enter"
-              onKeyDown={handleInputKeyDown}
-            />
+          {/* Activity detail (right panel) */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <div
+              ref={logRef}
+              className="flex-1 overflow-y-auto px-xl py-md text-sm leading-[1.6]"
+            >
+              {grouped.map(renderItem)}
+            </div>
+
+            {/* Terminal input row */}
+            <div
+              className={`items-center gap-md px-lg py-[0.3125rem] border-t border-neutral shrink-0 ${showInput ? 'flex' : 'hidden'}`}
+            >
+              <span className="text-sm text-info whitespace-nowrap">
+                answer &gt;
+              </span>
+              <input
+                ref={inputRef}
+                className="flex-1 bg-transparent border-none text-text font-inherit text-sm outline-none placeholder:text-text-muted"
+                type="text"
+                autoComplete="off"
+                spellcheck={false}
+                placeholder="type your answer and press Enter"
+                onKeyDown={handleInputKeyDown}
+              />
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

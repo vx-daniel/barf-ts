@@ -36,6 +36,7 @@ const KEY_MAP: Record<string, keyof Config> = {
   LOG_FILE: 'logFile',
   LOG_LEVEL: 'logLevel',
   LOG_PRETTY: 'logPretty',
+  MAX_CONCURRENCY: 'maxConcurrency',
   SENTRY_DSN: 'sentryDsn',
   SENTRY_ENVIRONMENT: 'sentryEnvironment',
   SENTRY_TRACES_SAMPLE_RATE: 'sentryTracesSampleRate',
@@ -47,6 +48,7 @@ const RawConfigSchema = ConfigSchema.extend({
   maxAutoSplits: z.coerce.number().int().default(3),
   maxIterations: z.coerce.number().int().default(0),
   claudeTimeout: z.coerce.number().int().default(3600),
+  maxConcurrency: z.coerce.number().int().min(1).default(1),
   disableLogStream: z
     .preprocess((v) => v === '1' || v === 'true' || v === true, z.boolean())
     .default(false),

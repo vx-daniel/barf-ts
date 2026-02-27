@@ -11,8 +11,9 @@
  *
  * @module Orchestration
  */
-import type { SessionStats } from '@/types'
+
 import type { IssueProvider } from '@/core/issue/base'
+import type { SessionStats } from '@/types'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
 

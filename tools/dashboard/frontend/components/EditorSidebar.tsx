@@ -9,9 +9,9 @@
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { ActionButton } from '@dashboard/frontend/components/ActionButton'
 import {
   deleteIssue,
-  doTransition,
   navigateToIssue,
   runCommand,
   stopAndReset,
@@ -20,6 +20,8 @@ import * as api from '@dashboard/frontend/lib/api-client'
 import {
   CMD_ACTIONS,
   CMD_CLASS,
+  PIPELINE_STATES,
+  STATE_EMOJI,
   STATE_LABELS,
   stateColor,
 } from '@dashboard/frontend/lib/constants'
@@ -30,7 +32,6 @@ import { basicSetup, EditorView } from 'codemirror'
 import { marked } from 'marked'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { IssueState } from '@/types/schema/issue-schema'
-import { VALID_TRANSITIONS } from '@/types/schema/issue-schema'
 
 type TabId = 'preview' | 'edit' | 'metadata'
 
@@ -95,7 +96,7 @@ function RelChip({
   return (
     <button
       type="button"
-      className="btn btn-xs btn-ghost border border-neutral gap-[5px]"
+      className="btn btn-xs btn-ghost border border-neutral gap-[0.3125rem]"
       onClick={() => onNavigate(id)}
     >
       {issue && (
@@ -113,6 +114,38 @@ function RelChip({
         </span>
       )}
     </button>
+  )
+}
+
+// ── IssueSteps sub-component ─────────────────────────────────────────────────
+
+/**
+ * Horizontal DaisyUI Steps showing issue progress through the linear pipeline.
+ * Side-states (STUCK/SPLIT) show all steps as neutral since they're off the happy path.
+ */
+function IssueSteps({ state }: { state: string }) {
+  const currentIdx = PIPELINE_STATES.indexOf(state as IssueState)
+
+  return (
+    <ul className="steps steps-horizontal w-full p-sm border-b border-neutral shrink-0 text-xs">
+      {PIPELINE_STATES.map((s, i) => {
+        const reached = currentIdx >= 0 && i <= currentIdx
+        return (
+          <li
+            key={s}
+            className={`step${reached ? ' step-secondary' : ''}`}
+            // style={
+            //   reached
+            //     ? ({ '--step-color': stateColor(s) } as React.CSSProperties)
+            //     : undefined
+            // }
+            data-content={STATE_EMOJI[s]}
+          >
+            {STATE_LABELS[s]}
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -155,12 +188,12 @@ export function EditorSidebar() {
     if (!app) return
     if (id === null) {
       app.classList.add('no-sidebar', 'grid-cols-[1fr]')
-      app.classList.remove('grid-cols-[1fr_380px]')
+      app.classList.remove('grid-cols-[1fr_30vw]')
       app.style.gridTemplateColumns = ''
       app.style.gridTemplateAreas = "'header' 'statusbar' 'main' 'bottom'"
     } else {
       app.classList.remove('no-sidebar', 'grid-cols-[1fr]')
-      app.classList.add('grid-cols-[1fr_380px]')
+      app.classList.add('grid-cols-[1fr_30vw]')
       app.style.gridTemplateAreas =
         "'header header' 'statusbar statusbar' 'main sidebar' 'bottom bottom'"
     }
@@ -197,7 +230,7 @@ export function EditorSidebar() {
           }
         }),
         EditorView.theme({
-          '&': { height: '100%', fontSize: '12px' },
+          '&': { height: '100%', fontSize: '0.75rem' },
           '.cm-scroller': { overflow: 'auto' },
           '.cm-content': { fontFamily: "'SF Mono', 'Fira Code', monospace" },
         }),
@@ -249,8 +282,8 @@ export function EditorSidebar() {
 
   if (!id || !issue) return null
 
-  const color = stateColor(issue.state)
-  const transitions = VALID_TRANSITIONS[issue.state as IssueState] ?? []
+  // const color = stateColor(issue.state)
+  // const transitions = VALID_TRANSITIONS[issue.state as IssueState] ?? []
   const hasParent = !!issue.parent?.trim()
   const hasChildren = issue.children && issue.children.length > 0
   const isRunningThis = running === issue.id
@@ -262,12 +295,12 @@ export function EditorSidebar() {
   return (
     <div
       id="sidebar"
-      className="relative flex flex-col h-full overflow-hidden bg-base-200 border-l border-neutral"
+      className="relative flex flex-col h-full bg-base-200 border-l border-neutral min-w-[30vw] overflow-hidden"
       style={{ gridArea: 'sidebar' }}
     >
       {/* Header */}
       <div className="flex items-center gap-md px-2xl py-lg border-b border-neutral shrink-0">
-        <span className="text-sm text-base-content/50">#{issue.id}</span>
+        <span className="text-md text-base-content/50">#{issue.id}</span>
         <span className="text-lg font-bold flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
           {issue.title}
         </span>
@@ -284,12 +317,13 @@ export function EditorSidebar() {
       {/* State row */}
       <div className="px-2xl py-md border-b border-neutral flex items-center gap-md flex-wrap shrink-0">
         <span
-          className="badge badge-outline font-bold tracking-[0.06em]"
-          style={{ color, borderColor: color }}
+          className="badge badge-soft font-bold tracking-[0.06em]"
+          // style={{ color, borderColor: color }}
         >
+          {STATE_EMOJI[issue.state as IssueState]}{' '}
           {STATE_LABELS[issue.state as IssueState] ?? issue.state}
         </span>
-        <span className="flex gap-sm flex-wrap">
+        {/* <span className="flex gap-sm flex-wrap">
           {transitions.map((to) => (
             <button
               type="button"
@@ -300,7 +334,7 @@ export function EditorSidebar() {
               {'\u2192'} {STATE_LABELS[to] ?? to}
             </button>
           ))}
-        </span>
+        </span> */}
       </div>
 
       {/* Relationships */}
@@ -308,7 +342,7 @@ export function EditorSidebar() {
         <div className="px-2xl py-md border-b border-neutral shrink-0 flex flex-col gap-sm">
           {hasParent && (
             <div className="flex items-center gap-sm flex-wrap">
-              <span className="text-xs text-base-content/50 uppercase tracking-[0.06em] whitespace-nowrap min-w-[52px]">
+              <span className="text-xs text-base-content/50 uppercase tracking-[0.06em] whitespace-nowrap min-w-[3.25rem]">
                 parent
               </span>
               <RelChip
@@ -320,7 +354,7 @@ export function EditorSidebar() {
           )}
           {hasChildren && (
             <div className="flex items-center gap-sm flex-wrap">
-              <span className="text-xs text-base-content/50 uppercase tracking-[0.06em] whitespace-nowrap min-w-[52px]">
+              <span className="text-xs text-base-content/50 uppercase tracking-[0.06em] whitespace-nowrap min-w-[3.25rem]">
                 children
               </span>
               {issue.children.map((childId: string) => (
@@ -352,7 +386,7 @@ export function EditorSidebar() {
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-hidden flex flex-col min-w-0">
         <div
           id="editor-preview"
           ref={previewRef}
@@ -372,7 +406,8 @@ export function EditorSidebar() {
           style={{ display: activeTab === 'metadata' ? 'block' : 'none' }}
         />
       </div>
-
+      {/* Progress steps */}
+      <IssueSteps state={issue.state} />
       {/* Actions */}
       <div className="px-2xl py-lg border-t border-neutral flex gap-md flex-wrap shrink-0">
         {dirty && (
@@ -388,36 +423,36 @@ export function EditorSidebar() {
         {isRunningThis ? (
           <button
             type="button"
-            className="abtn abtn-stop"
-            style={{ fontSize: '12px', padding: '5px 14px' }}
+            className="btn btn-error"
+            style={{ fontSize: '0.75rem', padding: '0.3125rem 0.875rem' }}
             onClick={stopAndReset}
           >
             {'\u25A0'} Stop
           </button>
         ) : (
           actions.map((cmd) => (
-            <button
-              type="button"
+            <ActionButton
               key={cmd}
-              className={`abtn ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
-              style={{ fontSize: '12px', padding: '5px 14px' }}
+              label={`Run ${cmd}`}
+              loadingLabel={`Running ${cmd}...`}
+              className={`btn ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
+              style={{ fontSize: '0.75rem', padding: '0.3125rem 0.875rem' }}
+              loading="loading-ring"
               disabled={running !== null}
               onClick={() => runCommand(issue.id, cmd)}
-            >
-              Run {cmd}
-            </button>
+            />
           ))
         )}
 
-        <button
-          type="button"
+        <ActionButton
+          label="Delete"
+          loadingLabel="Deleting..."
           className="btn btn-ghost btn-sm border border-neutral text-base-content/50"
+          loading="loading-dots"
           onClick={() => {
             if (confirm(`Delete issue #${issue.id}?`)) deleteIssue(issue.id)
           }}
-        >
-          Delete
-        </button>
+        />
 
         {saveStatus && (
           <span className="text-sm text-base-content/50 self-center ml-auto">

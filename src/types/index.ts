@@ -8,79 +8,100 @@
  * @module Configuration
  */
 
-// ── Schemas (all Zod schemas and inferred types) ─────────────────────────────
-export {
-  // Issue Model
-  IssueStateSchema,
-  type IssueState,
-  VALID_TRANSITIONS,
-  IssueSchema,
-  type Issue,
-  // Configuration
-  ConfigSchema,
-  type Config,
-  // Locking
-  LockModeSchema,
-  type LockMode,
-  LockInfoSchema,
-  type LockInfo,
-  // Modes
-  BarfModeSchema,
-  type BarfMode,
-  LoopModeSchema,
-  type LoopMode,
-  PromptModeSchema,
-  type PromptMode,
-  AutoSelectModeSchema,
-  type AutoSelectMode,
-  // Claude Stream Events
-  ClaudeEventSchema,
-  type ClaudeEvent,
-  // Display
-  DisplayContextSchema,
-  type DisplayContext,
-  // Claude Iteration
-  IterationOutcomeSchema,
-  type IterationOutcome,
-  IterationResultSchema,
-  type IterationResult,
-  // Batch Orchestration
-  OverflowDecisionSchema,
-  type OverflowDecision,
-  // Subprocess Execution
-  ExecResultSchema,
-  type ExecResult,
-  // Audit
-  AuditCategorySchema,
-  type AuditCategory,
-  AuditSeveritySchema,
-  type AuditSeverity,
-  AuditFindingSchema,
-  type AuditFinding,
-  AuditResponseSchema,
-  type AuditResponse,
-  // Session Stats
-  SessionStatsSchema,
-  type SessionStats,
-  formatSessionStatsBlock,
-  // Stage Log
-  StageLogEntrySchema,
-  type StageLogEntry,
-  type StageLogInput,
-  formatStageLogEntry,
-  // Verification
-  VerifyCheckSchema,
-  type VerifyCheck,
-  VerifyFailureSchema,
-  type VerifyFailure,
-  VerifyResultSchema,
-  type VerifyResult,
-  // Pre-Completion
-  FixStepSchema,
-  type FixStep,
-  PreCompleteResultSchema,
-  type PreCompleteResult,
-} from '@/types/schema'
-
 // ── Error Classes ────────────────────────────────────────────────────────────
 export { InvalidTransitionError, ProviderError } from '@/errors'
+// ── Schemas (all Zod schemas and inferred types) ─────────────────────────────
+export {
+  type AuditCategory,
+  // Audit
+  AuditCategorySchema,
+  type AuditFinding,
+  AuditFindingSchema,
+  type AuditGate,
+  type AuditGateEvent,
+  AuditGateEventSchema,
+  AuditGateSchema,
+  type AuditGateState,
+  // Audit Gate
+  AuditGateStateSchema,
+  type AuditGateTrigger,
+  AuditGateTriggerSchema,
+  type AuditResponse,
+  AuditResponseSchema,
+  type AuditSeverity,
+  AuditSeveritySchema,
+  type AutoEndEvent,
+  AutoEndEventSchema,
+  type AutoSelectMode,
+  AutoSelectModeSchema,
+  type AutoStartEvent,
+  AutoStartEventSchema,
+  type BarfMode,
+  // Modes
+  BarfModeSchema,
+  type ClaudeEvent,
+  // Claude Stream Events
+  ClaudeEventSchema,
+  type Config,
+  // Configuration
+  ConfigSchema,
+  type DisplayContext,
+  // Display
+  DisplayContextSchema,
+  type ExecResult,
+  // Subprocess Execution
+  ExecResultSchema,
+  type FixStep,
+  // Pre-Completion
+  FixStepSchema,
+  formatSessionStatsBlock,
+  formatStageLogEntry,
+  type Issue,
+  IssueSchema,
+  type IssueState,
+  // Issue Model
+  IssueStateSchema,
+  type IterationOutcome,
+  // Claude Iteration
+  IterationOutcomeSchema,
+  type IterationResult,
+  IterationResultSchema,
+  type LockInfo,
+  LockInfoSchema,
+  type LockMode,
+  // Locking
+  LockModeSchema,
+  type LoopMode,
+  LoopModeSchema,
+  type OverflowDecision,
+  // Batch Orchestration
+  OverflowDecisionSchema,
+  type PreCompleteResult,
+  PreCompleteResultSchema,
+  type PromptMode,
+  PromptModeSchema,
+  type Session,
+  type SessionEndEvent,
+  SessionEndEventSchema,
+  type SessionIndexEvent,
+  SessionIndexEventSchema,
+  type SessionStartEvent,
+  // Session Index
+  SessionStartEventSchema,
+  type SessionStats,
+  // Session Stats
+  SessionStatsSchema,
+  type SessionStatus,
+  type StageLogEntry,
+  // Stage Log
+  StageLogEntrySchema,
+  type StageLogInput,
+  VALID_TRANSITIONS,
+  type VerifyCheck,
+  // Verification
+  VerifyCheckSchema,
+  type VerifyFailure,
+  VerifyFailureSchema,
+  type VerifyResult,
+  VerifyResultSchema,
+} from '@/types/schema'

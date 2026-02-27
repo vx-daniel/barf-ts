@@ -37,12 +37,17 @@ import {
   shouldContinue,
 } from './helpers'
 import {
-  type LoopState,
   handleBuildCompletion,
   handleOverflowOutcome,
   handlePlanCompletion,
   handleSplitCompletion,
+  type LoopState,
 } from './outcomes'
+import {
+  makeSessionId,
+  writeSessionEnd,
+  writeSessionStart,
+} from './session-index'
 import { createSessionStats, persistSessionStats } from './stats'
 
 const logger = createLogger('batch')
@@ -77,6 +82,7 @@ async function runLoopImpl(
   config: Config,
   provider: IssueProvider,
   deps: RunLoopDeps,
+  parentSessionId?: string,
 ): Promise<void> {
   const _runClaudeIteration = deps.runClaudeIteration ?? runClaudeIteration
   const _verifyIssue = deps.verifyIssue ?? verifyIssue
@@ -85,6 +91,20 @@ async function runLoopImpl(
   if (lockResult.isErr()) {
     throw lockResult.error
   }
+
+  const sessionId = makeSessionId(issueId)
+  const streamFile = config.disableLogStream
+    ? undefined
+    : `.barf/streams/${issueId}.jsonl`
+  writeSessionStart(
+    config.barfDir,
+    sessionId,
+    issueId,
+    mode,
+    mode === 'plan' ? config.planModel : config.buildModel,
+    streamFile,
+    parentSessionId,
+  )
 
   const state: LoopState = {
     splitPending: false,
@@ -301,6 +321,9 @@ async function runLoopImpl(
       state.iteration++
     }
   } finally {
+    // Stats are persisted BEFORE unlocking — this ensures the read-modify-write
+    // in persistSessionStats is protected by the POSIX lock, preventing races
+    // when multiple processes work on different issues concurrently.
     const stats = createSessionStats(
       state.sessionStartTime,
       state.totalInputTokens,
@@ -312,6 +335,15 @@ async function runLoopImpl(
     if (state.iterationsRan > 0) {
       await persistSessionStats(issueId, stats, provider)
     }
+    writeSessionEnd(
+      config.barfDir,
+      sessionId,
+      streamFile,
+      state.totalInputTokens,
+      state.totalOutputTokens,
+      state.iterationsRan,
+      stats.durationSeconds,
+    )
     await provider.unlockIssue(issueId)
   }
 }
@@ -334,6 +366,7 @@ async function runLoopImpl(
  * @param config - Loaded barf configuration.
  * @param provider - Issue provider used to lock, read, and write the issue.
  * @param deps - Injectable dependencies; pass `{ runClaudeIteration: mockFn }` in tests.
+ * @param parentSessionId - Parent auto session ID, if this loop was spawned by `barf auto`.
  * @returns `ok(void)` when the loop exits cleanly, `err(Error)` if locking or a Claude iteration fails.
  * @category Orchestration
  */
@@ -343,9 +376,10 @@ export function runLoop(
   config: Config,
   provider: IssueProvider,
   deps: RunLoopDeps = {},
+  parentSessionId?: string,
 ): ResultAsync<void, Error> {
   return ResultAsync.fromPromise(
-    runLoopImpl(issueId, mode, config, provider, deps),
+    runLoopImpl(issueId, mode, config, provider, deps, parentSessionId),
     toError,
   )
 }

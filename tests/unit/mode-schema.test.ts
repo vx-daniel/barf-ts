@@ -7,12 +7,8 @@ import {
 } from '@/types/schema/mode-schema'
 
 describe('BarfModeSchema', () => {
-  it.each(['plan', 'build', 'split'])('accepts "%s"', (mode) => {
+  it.each(['plan', 'build', 'split', 'interview'])('accepts "%s"', (mode) => {
     expect(BarfModeSchema.safeParse(mode).success).toBe(true)
-  })
-
-  it('rejects "interview" (removed)', () => {
-    expect(BarfModeSchema.safeParse('interview').success).toBe(false)
   })
 
   it('rejects invalid mode', () => {

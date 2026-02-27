@@ -1,25 +1,26 @@
 /** @module Audit Providers */
+
+import { ok, type Result, ResultAsync } from 'neverthrow'
 import OpenAI from 'openai'
-import { type Result, ok, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
-import { createLogger } from '@/utils/logger'
-import { toError } from '@/utils/toError'
 import {
   inferTier,
-  prettifyModelId,
   OPENAI_TIERS,
+  prettifyModelId,
 } from '@/providers/model-tiers'
 import type { Config } from '@/types'
 import {
-  DEFAULT_TEMPERATURE,
-  toTokenUsage,
-  type ChatResult,
   type ChatOptions,
+  type ChatResult,
+  DEFAULT_TEMPERATURE,
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage,
+  toTokenUsage,
 } from '@/types/schema/provider-schema'
+import { createLogger } from '@/utils/logger'
+import { toError } from '@/utils/toError'
 
 /** Factory that constructs an OpenAI SDK client given an API key. Injectable for tests. */
 export type OpenAIFactory = (apiKey: string) => OpenAI

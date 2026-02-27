@@ -1,6 +1,7 @@
 import { fetchIssues } from '@dashboard/frontend/lib/actions'
 import * as api from '@dashboard/frontend/lib/api-client'
 import { newIssueOpen } from '@dashboard/frontend/lib/state'
+import { createPortal } from 'preact/compat'
 import { useEffect, useRef } from 'preact/hooks'
 
 /**
@@ -41,7 +42,7 @@ export function NewIssueModal(): preact.JSX.Element | null {
     await fetchIssues()
   }
 
-  return (
+  return createPortal(
     <dialog ref={dialogRef} className="modal" onClose={close}>
       <div className="modal-box bg-base-200 border border-neutral max-w-md">
         <h3 className="text-lg font-bold mb-4">New Issue</h3>
@@ -77,6 +78,7 @@ export function NewIssueModal(): preact.JSX.Element | null {
       <form method="dialog" className="modal-backdrop">
         <button type="submit">close</button>
       </form>
-    </dialog>
+    </dialog>,
+    document.body,
   )
 }

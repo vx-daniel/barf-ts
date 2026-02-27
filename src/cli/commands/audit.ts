@@ -125,7 +125,7 @@ function formatFindings(findings: AuditFinding[]): string {
  * @param config - Loaded barf configuration.
  * @param provider - Issue provider for reading/creating issues.
  */
-async function auditIssue(
+export async function auditIssue(
   issueId: string,
   config: Config,
   provider: IssueProvider,

@@ -9,10 +9,10 @@
  * are streamed back to the browser via Server-Sent Events.
  */
 
-import { resolve, join } from 'path'
+import { join, resolve } from 'path'
 import { loadConfig } from '../src/core/config'
-import { LocalIssueProvider } from '../src/core/issue/providers/local'
 import { VALID_TRANSITIONS } from '../src/core/issue'
+import { LocalIssueProvider } from '../src/core/issue/providers/local'
 import { IssueStateSchema } from '../src/types'
 
 // ── CLI arg parsing ────────────────────────────────────────────────────────────

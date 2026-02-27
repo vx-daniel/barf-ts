@@ -37,7 +37,7 @@ describe('autoCommand', () => {
       listIssues: () => errAsync(new Error('gh: not authenticated')),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(1)
   })
@@ -47,7 +47,7 @@ describe('autoCommand', () => {
       listIssues: () => okAsync([]),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(0)
   })
@@ -57,7 +57,7 @@ describe('autoCommand', () => {
       listIssues: () => okAsync([makeIssue({ state: 'COMPLETED' })]),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(0)
   })
@@ -70,7 +70,7 @@ describe('autoCommand', () => {
         ]),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     // No plannable work — exits cleanly (exitCode stays 0)
     expect(process.exitCode).toBe(0)
@@ -101,7 +101,7 @@ describe('autoCommand', () => {
       checkAcceptanceCriteria: () => okAsync(false),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     expect(lockCalls).toBeGreaterThanOrEqual(1)
   })
@@ -114,7 +114,7 @@ describe('autoCommand', () => {
         ]),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     // NEW issues are not plannable — exits cleanly
     expect(process.exitCode).toBe(0)
@@ -142,7 +142,7 @@ describe('autoCommand', () => {
       checkAcceptanceCriteria: () => okAsync(true),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     expect(lockCalls).toBeGreaterThanOrEqual(1)
   })
@@ -165,7 +165,7 @@ describe('autoCommand', () => {
       checkAcceptanceCriteria: () => okAsync(true),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     expect(callCount).toBeGreaterThanOrEqual(1)
   })
@@ -182,7 +182,7 @@ describe('autoCommand', () => {
       },
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), deps)
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
 
     expect(process.exitCode).toBe(1)
   })
@@ -213,7 +213,7 @@ describe('autoCommand', () => {
       },
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), {
       ...deps,
       verifyIssue: mockVerify as never,
     })
@@ -238,7 +238,7 @@ describe('autoCommand', () => {
       listIssues: () => okAsync([exhaustedIssue]),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), {
       ...deps,
       verifyIssue: mockVerify as never,
     })
@@ -263,7 +263,7 @@ describe('autoCommand', () => {
       listIssues: () => okAsync([fixIssue]),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), {
       ...deps,
       verifyIssue: mockVerify as never,
     })
@@ -300,7 +300,7 @@ describe('autoCommand', () => {
       fetchIssue: () => okAsync(fixChild),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), {
       ...deps,
       verifyIssue: mockVerify as never,
     })
@@ -335,7 +335,7 @@ describe('autoCommand', () => {
       fetchIssue: () => okAsync(fixChild),
     })
 
-    await autoCommand(provider, { batch: 1, max: 0 }, defaultConfig(), {
+    await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), {
       ...deps,
       verifyIssue: mockVerify as never,
     })

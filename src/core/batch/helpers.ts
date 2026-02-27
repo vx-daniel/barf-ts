@@ -8,9 +8,9 @@
  */
 import { existsSync } from 'fs'
 import { join } from 'path'
+import type { IssueProvider } from '@/core/issue/base'
 import type { Config } from '@/types'
 import type { OverflowDecision } from '@/types/schema/batch-schema'
-import type { IssueProvider } from '@/core/issue/base'
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('batch')

@@ -9,7 +9,7 @@
  */
 import { ResultAsync } from 'neverthrow'
 import type { VerifyCheck, VerifyFailure, VerifyResult } from '@/types'
-import { execFileNoThrow, type ExecResult } from '@/utils/execFileNoThrow'
+import { type ExecResult, execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 
 export type { VerifyCheck, VerifyFailure, VerifyResult } from '@/types'

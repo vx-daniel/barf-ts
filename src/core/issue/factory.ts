@@ -1,9 +1,9 @@
 /** @module Issue Model */
-import { type Result, ok, err } from 'neverthrow'
-import type { Config } from '@/types'
+import { err, ok, type Result } from 'neverthrow'
 import type { IssueProvider } from '@/core/issue/base'
-import { LocalIssueProvider } from '@/core/issue/providers/local'
 import { GitHubIssueProvider } from '@/core/issue/providers/github'
+import { LocalIssueProvider } from '@/core/issue/providers/local'
+import type { Config } from '@/types'
 
 /**
  * Instantiates the issue provider selected in `config.issueProvider`.

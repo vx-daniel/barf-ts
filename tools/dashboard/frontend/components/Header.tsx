@@ -6,16 +6,33 @@
  * and {@link models} to display the current project working directory.
  */
 
-import { runAuto } from '@dashboard/frontend/lib/actions'
 import {
+  cancelAuditGate,
+  runAuto,
+  stopAllSessions,
+  triggerAuditGate,
+} from '@dashboard/frontend/lib/actions'
+import {
+  auditGate,
   configOpen,
   models,
   newIssueOpen,
   runningId,
 } from '@dashboard/frontend/lib/state'
 
+/** Labels and styles for each audit gate state. */
+const GATE_LABELS = {
+  running: null,
+  draining: 'Draining...',
+  auditing: 'Auditing...',
+  fixing: 'Fixing...',
+} as const
+
 export function Header(): preact.JSX.Element {
   const isRunning = runningId.value !== null
+  const gate = auditGate.value
+  const gateActive = gate.state !== 'running'
+  const gateLabel = GATE_LABELS[gate.state]
 
   return (
     <div
@@ -29,16 +46,32 @@ export function Header(): preact.JSX.Element {
       <span className="text-base-content/50 text-sm flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
         {models.value?.projectCwd ?? ''}
       </span>
+      {gateLabel && (
+        <span className="badge badge-warning badge-lg gap-xs animate-pulse">
+          {'\u{1F6E1}'} {gateLabel}
+        </span>
+      )}
       <button
         type="button"
-        className={`btn btn-outline btn-lg ${isRunning ? 'btn-secondary' : 'btn-primary'}`} // btn-ghost border-neutral
+        className={`btn btn-outline btn-sm ${gateActive ? 'btn-warning' : 'btn-accent'}`}
+        onClick={gateActive ? cancelAuditGate : triggerAuditGate}
+      >
+        {gateActive ? 'Cancel Audit' : '\u{1F50D} Audit'}
+      </button>
+      <button
+        type="button"
+        className={`btn btn-outline btn-lg ${isRunning ? 'btn-secondary' : 'btn-primary'}`}
         id="btn-auto"
         onClick={runAuto}
       >
         {isRunning ? '🛑 Stop' : '🚀 Auto'}
       </button>
-      <button type="button" class="btn btn-lg btn-outline btn-error">
-        🛑 Stop
+      <button
+        type="button"
+        className="btn btn-lg btn-outline btn-error"
+        onClick={stopAllSessions}
+      >
+        🛑 Stop All
       </button>
       <button
         type="button"

@@ -5,7 +5,7 @@ import { IssueProvider } from '@/core/issue/base'
 import type { Issue, IssueState, LockMode } from '@/types'
 import { type ExecResult, execFileNoThrow } from '@/utils/execFileNoThrow'
 import { toError } from '@/utils/toError'
-import { STATE_TO_LABEL, GHIssueSchema, ghToIssue } from './github-labels'
+import { GHIssueSchema, ghToIssue, STATE_TO_LABEL } from './github-labels'
 
 /**
  * Injectable subprocess function matching the {@link execFileNoThrow} signature.

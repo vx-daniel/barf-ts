@@ -94,7 +94,9 @@ if (process.argv.includes('--watch')) {
   watch(FRONTEND, { recursive: true }, (_event, filename) => {
     if (debounce) clearTimeout(debounce)
     debounce = setTimeout(async () => {
-      console.log(`\n[${new Date().toLocaleTimeString()}] Change detected: ${filename}`)
+      console.log(
+        `\n[${new Date().toLocaleTimeString()}] Change detected: ${filename}`,
+      )
       await build()
     }, 150)
   })

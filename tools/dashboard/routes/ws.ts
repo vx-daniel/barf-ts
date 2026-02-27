@@ -2,16 +2,31 @@
  * WebSocket interview handler — spawns `barf interview` subprocess
  * and pipes stdin/stdout/stderr over the WebSocket.
  */
-import { join } from 'path'
+
 import type { IssueService } from '@dashboard/services/issue-service'
+import { join } from 'path'
 
 export const wsProcs = new Map<object, ReturnType<typeof Bun.spawn>>()
 
-export function startInterviewProc(
+export async function startInterviewProc(
   ws: { send(data: string): void },
   svc: IssueService,
   issueId: string,
-): void {
+): Promise<void> {
+  // Acquire issue lock to prevent barf auto/build from picking up this issue
+  const lockResult = await svc.provider.lockIssue(issueId, {
+    mode: 'interview',
+  })
+  if (lockResult.isErr()) {
+    ws.send(
+      JSON.stringify({
+        type: 'error',
+        message: `Could not lock issue ${issueId}: ${lockResult.error.message}`,
+      }),
+    )
+    return
+  }
+
   const srcIndex = join(import.meta.dir, '..', '..', '..', 'src', 'index.ts')
   const configArgs = svc.configPath ? ['--config', svc.configPath] : []
 
@@ -80,10 +95,12 @@ export function startInterviewProc(
   ])
     .then(async () => {
       const exitCode = await proc.exited
+      await svc.provider.unlockIssue(issueId)
       send({ type: 'done', exitCode })
       wsProcs.delete(ws)
     })
-    .catch((e) => {
+    .catch(async (e) => {
+      await svc.provider.unlockIssue(issueId)
       send({ type: 'error', message: String(e) })
       wsProcs.delete(ws)
     })

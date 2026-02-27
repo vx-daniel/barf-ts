@@ -8,6 +8,7 @@
 //   ActivitySource,
 // } from '@/types/schema/activity-schema'
 export type { Issue } from '@/types/schema/issue-schema'
+export type { Session } from '@/types/schema/session-index-schema'
 
 // Import ActivityKind for interface usage
 import type { ActivityKind } from '@/types/schema/activity-schema'

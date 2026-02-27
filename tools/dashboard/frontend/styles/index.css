@@ -1,42 +1,95 @@
 @import "tailwindcss";
+
+/* ── Palette ──────────────────────────────────────────────────── */
+/* Single source of truth for every raw colour value.              */
+/* Both @theme (Tailwind utilities) and DaisyUI reference these.   */
+:root {
+  /* Surfaces */
+  --palette-bg: #0d0d1a;
+  --palette-bg-deep: #0a0a14;
+  --palette-surface: #161625;
+  --palette-surface2: #1e1e32;
+  --palette-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Borders */
+  --palette-border: #2a2a45;
+
+  /* Text */
+  --palette-text: #e2e8f0;
+  --palette-text-muted: #7c8db0;
+  --palette-text-slate: #94a3b8;
+  --palette-text-light: #cbd5e1;
+
+  /* Accent */
+  --palette-accent: #a78bfa;
+  --palette-accent-bold: #7c3aed;
+  --palette-accent-hover: #6d28d9;
+
+  /* Semantic */
+  --palette-danger: #ef4444;
+  --palette-danger-light: #f87171;
+  --palette-warning: #f59e0b;
+  --palette-warning-light: #fbbf24;
+  --palette-success: #22c55e;
+  --palette-success-light: #4ade80;
+  --palette-info: #60a5fa;
+  --palette-info-dark: #0f4ac6;
+
+  /* State colours — issue lifecycle
+     Progression: slate → indigo → violet → amber → emerald → green */
+  --palette-state-new: #64748b;
+  --palette-state-groomed: #6366f1;
+  --palette-state-planned: #8b5cf6;
+  --palette-state-in-progress: #f59e0b;
+  --palette-state-completed: #a3e635;
+  --palette-state-verified: #22c55e;
+  --palette-state-stuck: #f87171;
+  --palette-state-split: #c084fc;
+  --palette-state-in-audit: #38bdf8;
+
+  /* Shared */
+  --palette-white: #ffffff;
+  --palette-black: #000000;
+}
+
 @plugin "daisyui" {
   themes: barf --default;
   logs: true;
 }
 
-/* Custom daisyUI theme mapped to our design tokens */
+/* Custom daisyUI theme mapped to palette tokens */
 @plugin "daisyui/theme" {
   name: "barf";
   default: true;
   color-scheme: dark;
 
-  --color-base-100: #0d0d1a;
-  --color-base-200: #161625;
-  --color-base-300: #1e1e32;
-  --color-base-content: #e2e8f0;
+  --color-base-100: var(--palette-bg);
+  --color-base-200: var(--palette-surface);
+  --color-base-300: var(--palette-surface2);
+  --color-base-content: var(--palette-text);
 
-  --color-primary: #a78bfa;
-  --color-primary-content: #ffffff;
-  --color-secondary: #7c3aed;
-  --color-secondary-content: #ffffff;
-  --color-accent: #a78bfa;
-  --color-accent-content: #ffffff;
+  --color-primary: var(--palette-accent);
+  --color-primary-content: var(--palette-white);
+  --color-secondary: var(--palette-accent-bold);
+  --color-secondary-content: var(--palette-white);
+  --color-accent: var(--palette-accent);
+  --color-accent-content: var(--palette-white);
 
-  --color-neutral: #2a2a45;
-  --color-neutral-content: #e2e8f0;
+  --color-neutral: var(--palette-border);
+  --color-neutral-content: var(--palette-text);
 
-  --color-info: #0f4ac6;
-  --color-info-content: #ffffff;
-  --color-success: #22c55e;
-  --color-success-content: #ffffff;
-  --color-warning: #f59e0b;
-  --color-warning-content: #000000;
-  --color-error: #ef4444;
-  --color-error-content: #ffffff;
+  --color-info: var(--palette-info-dark);
+  --color-info-content: var(--palette-white);
+  --color-success: var(--palette-success);
+  --color-success-content: var(--palette-white);
+  --color-warning: var(--palette-warning);
+  --color-warning-content: var(--palette-black);
+  --color-error: var(--palette-danger);
+  --color-error-content: var(--palette-white);
 
-  --radius-selector: 6px;
-  --radius-field: 6px;
-  --radius-box: 8px;
+  --radius-selector: 0.375rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.5rem;
   --border: 1px;
   --depth: 0;
   --noise: 0;
@@ -61,7 +114,7 @@
     background: var(--color-accent);
   }
   .resize-handle-v {
-    width: 5px;
+    width: 0.3125rem;
     cursor: col-resize;
     position: absolute;
     top: 0;
@@ -72,106 +125,115 @@
   .resize-handle-v::after {
     top: 0;
     bottom: 0;
-    left: 2px;
+    left: 0.125rem;
     width: 1px;
   }
   .resize-handle-h {
-    height: 5px;
+    height: 0.3125rem;
     cursor: row-resize;
     width: 100%;
   }
   .resize-handle-h::after {
     left: 0;
     right: 0;
-    top: 2px;
+    top: 0.125rem;
     height: 1px;
   }
 }
 
 /* ── Design tokens ─────────────────────────────────────────────── */
-/* Single source of truth for the dashboard colour palette.        */
-/* Tailwind generates utilities like bg-surface, text-muted, etc.  */
-/* Custom CSS can use var(--color-*) for the same values.          */
+/* Tailwind utilities (bg-surface, text-muted, etc.) reference the  */
+/* palette vars above so every colour is defined exactly once.      */
 @theme {
   /* Surfaces */
-  --color-bg: #0d0d1a;
-  --color-bg-deep: #0a0a14;
-  --color-surface: #161625;
-  --color-surface2: #1e1e32;
-  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-bg: var(--palette-bg);
+  --color-bg-deep: var(--palette-bg-deep);
+  --color-surface: var(--palette-surface);
+  --color-surface2: var(--palette-surface2);
+  --color-overlay: var(--palette-overlay);
 
   /* Borders */
-  --color-border: #2a2a45;
+  --color-border: var(--palette-border);
 
   /* Text */
-  --color-text: #e2e8f0;
-  --color-text-muted: #7c8db0;
-  --color-text-slate: #94a3b8;
-  --color-text-light: #cbd5e1;
+  --color-text: var(--palette-text);
+  --color-text-muted: var(--palette-text-muted);
+  --color-text-slate: var(--palette-text-slate);
+  --color-text-light: var(--palette-text-light);
 
   /* Accent */
-  --color-accent: #a78bfa;
-  --color-accent-bold: #7c3aed;
-  --color-accent-hover: #6d28d9;
+  --color-accent: var(--palette-accent);
+  --color-accent-bold: var(--palette-accent-bold);
+  --color-accent-hover: var(--palette-accent-hover);
 
   /* State colours — issue lifecycle */
-  --color-state-new: #6b7280;
-  --color-state-groomed: #3b82f6;
-  --color-state-planned: #f59e0b;
-  --color-state-in-progress: #f97316;
-  --color-state-completed: #a6d189;
-  --color-state-verified: #4ab118;
-  --color-state-stuck: #ef4444;
-  --color-state-split: #a855f7;
-  --color-state-in-audit: #0ea5e9;
+  --color-state-new: var(--palette-state-new);
+  --color-state-groomed: var(--palette-state-groomed);
+  --color-state-planned: var(--palette-state-planned);
+  --color-state-in-progress: var(--palette-state-in-progress);
+  --color-state-completed: var(--palette-state-completed);
+  --color-state-verified: var(--palette-state-verified);
+  --color-state-stuck: var(--palette-state-stuck);
+  --color-state-split: var(--palette-state-split);
+  --color-state-in-audit: var(--palette-state-in-audit);
 
   /* Semantic colours */
-  --color-danger: #ef4444;
-  --color-danger-light: #f87171;
-  --color-warning: #f59e0b;
-  --color-warning-light: #fbbf24;
-  --color-success: #22c55e;
-  --color-success-light: #4ade80;
-  --color-info: #60a5fa;
+  --color-danger: var(--palette-danger);
+  --color-danger-light: var(--palette-danger-light);
+  --color-warning: var(--palette-warning);
+  --color-warning-light: var(--palette-warning-light);
+  --color-success: var(--palette-success);
+  --color-success-light: var(--palette-success-light);
+  --color-info: var(--palette-info);
 
   /* Radius */
-  --radius-default: 6px;
+  --radius-default: 0.375rem;
 
   /* Typography — --text-* overrides Tailwind's text-xs/sm/base/etc. */
   --font-mono: "SF Mono", "Fira Code", monospace;
-  --text-xs: 10px;
+  --text-xs: 0.625rem;
   --text-xs--line-height: 1.4;
-  --text-sm: 11px;
+  --text-sm: 0.6875rem;
   --text-sm--line-height: 1.4;
-  --text-base: 12px;
+  --text-base: 0.75rem;
   --text-base--line-height: 1.5;
-  --text-md: 13px;
+  --text-md: 0.8125rem;
   --text-md--line-height: 1.5;
-  --text-lg: 14px;
+  --text-lg: 0.875rem;
   --text-lg--line-height: 1.5;
-  --text-xl: 15px;
+  --text-xl: 0.9375rem;
   --text-xl--line-height: 1.4;
-  --text-2xl: 16px;
+  --text-2xl: 1rem;
   --text-2xl--line-height: 1.4;
 
   /* Spacing — used by p-*, m-*, gap-*, w-*, h-* */
-  --spacing-xs: 4px;
-  --spacing-sm: 6px;
-  --spacing-md: 8px;
-  --spacing-lg: 10px;
-  --spacing-xl: 12px;
-  --spacing-2xl: 14px;
-  --spacing-3xl: 16px;
-  --spacing-4xl: 20px;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.375rem;
+  --spacing-md: 0.5rem;
+  --spacing-lg: 0.625rem;
+  --spacing-xl: 0.75rem;
+  --spacing-2xl: 0.875rem;
+  --spacing-3xl: 1rem;
+  --spacing-4xl: 1.25rem;
 }
+
+/* ── Issue progress steps (custom per-state colours) ─────────────── */
+/* Overrides DaisyUI step circle + connector with a --step-color var */
+/* .step-colored::after {
+  background-color: var(--step-color) !important;
+  border-color: var(--step-color) !important;
+}
+.step-colored::before {
+  background-color: var(--step-color) !important;
+} */
 
 /* ── Metadata / JSON syntax highlighting (innerHTML-injected) ──── */
 .metadata-viewer {
   background: #1e1e1e;
   color: #d4d4d4;
   font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-  font-size: 12px;
-  padding: 16px;
+  font-size: 0.75rem;
+  padding: 1rem;
   overflow: auto;
   height: 100%;
   margin: 0;
@@ -202,32 +264,32 @@
 #editor-preview h2,
 #editor-preview h3 {
   color: var(--color-accent);
-  margin: 12px 0 6px;
+  margin: 0.75rem 0 0.375rem;
 }
 #editor-preview h1 {
-  font-size: 16px;
+  font-size: 1rem;
 }
 #editor-preview h2 {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 #editor-preview h3 {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 #editor-preview p {
-  margin: 4px 0;
+  margin: 0.25rem 0;
 }
 #editor-preview code {
   background: var(--color-surface2);
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-size: 11px;
+  padding: 1px 0.25rem;
+  border-radius: 0.1875rem;
+  font-size: 0.6875rem;
 }
 #editor-preview pre {
   background: var(--color-surface2);
-  padding: 10px;
+  padding: 0.625rem;
   border-radius: var(--radius-default);
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 0.5rem 0;
 }
 #editor-preview pre code {
   background: none;
@@ -235,11 +297,11 @@
 }
 #editor-preview ul,
 #editor-preview ol {
-  padding-left: 20px;
+  padding-left: 1.25rem;
 }
 #editor-preview li {
-  margin: 2px 0;
+  margin: 0.125rem 0;
 }
 #editor-preview input[type="checkbox"] {
-  margin-right: 6px;
+  margin-right: 0.375rem;
 }

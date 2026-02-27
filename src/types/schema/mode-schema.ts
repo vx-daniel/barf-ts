@@ -8,7 +8,7 @@ import { z } from 'zod'
  *
  * @category Modes
  */
-export const BarfModeSchema = z.enum(['plan', 'build', 'split'])
+export const BarfModeSchema = z.enum(['plan', 'build', 'split', 'interview'])
 /** A barf operational mode. Derived from {@link BarfModeSchema}. */
 export type BarfMode = z.infer<typeof BarfModeSchema>
 

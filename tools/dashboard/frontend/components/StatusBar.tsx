@@ -99,7 +99,7 @@ export function StatusBar() {
     <>
       {/* Active command indicator */}
       <div
-        className={`items-center gap-md px-lg py-[3px] rounded-default border ${
+        className={`items-center gap-md px-lg py-[0.1875rem] rounded-default border ${
           active ? 'flex' : 'hidden'
         }`}
         style={{
@@ -137,7 +137,7 @@ export function StatusBar() {
         <span className="text-primary font-semibold">
           {selected ? `#${selected.id}` : ''}
         </span>
-        <span className="text-base-content max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap">
+        <span className="text-base-content max-w-[18.75rem] overflow-hidden text-ellipsis whitespace-nowrap">
           {selected?.title ?? ''}
         </span>
       </div>

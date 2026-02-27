@@ -9,7 +9,30 @@
  * @module Orchestration
  */
 
-export { runLoop, type RunLoopDeps } from './loop'
-export { shouldContinue, handleOverflow, resolveIssueFile } from './helpers'
 export type { OverflowDecision } from '@/types/schema/batch-schema'
 export type { LoopMode } from '@/types/schema/mode-schema'
+export {
+  cancelAuditGate,
+  checkAutoTrigger,
+  incrementCompleted,
+  readAuditGate,
+  resetAuditGate,
+  transitionToAuditing,
+  transitionToFixing,
+  triggerAuditGate,
+  writeAuditGate,
+} from './audit-gate'
+export { handleOverflow, resolveIssueFile, shouldContinue } from './helpers'
+export { createLimiter, type Limiter } from './limiter'
+export { type RunLoopDeps, runLoop } from './loop'
+export {
+  makeAutoSessionId,
+  makeSessionId,
+  writeAuditGateEvent,
+  writeAutoEnd,
+  writeAutoStart,
+  writeSessionArchive,
+  writeSessionDelete,
+  writeSessionEnd,
+  writeSessionStart,
+} from './session-index'

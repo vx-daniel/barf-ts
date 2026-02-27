@@ -1,8 +1,9 @@
 /**
  * Static file server — serves bundled frontend from dist/.
  */
-import { join } from 'path'
+
 import { existsSync, readFileSync } from 'fs'
+import { join } from 'path'
 
 const DIST_DIR = join(import.meta.dir, '..', 'dist')
 

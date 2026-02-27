@@ -3,8 +3,10 @@
  * Driven by the {@link interviewTarget} signal; when non-null the modal is visible.
  */
 
+import { ActionButton } from '@dashboard/frontend/components/ActionButton'
 import * as api from '@dashboard/frontend/lib/api-client'
 import { interviewTarget } from '@dashboard/frontend/lib/state'
+import { createPortal } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
 
 interface Question {
@@ -47,7 +49,7 @@ function parseQuestionsFromBody(body: string): Question[] {
  * Modal component that walks the user through interview questions for an issue.
  * Reads {@link interviewTarget} to determine visibility and target issue.
  */
-export function InterviewModal(): preact.JSX.Element | null {
+export function InterviewModal(): preact.JSX.Element {
   const target = interviewTarget.value
   const [currentIdx, setCurrentIdx] = useState(0)
   const [questions, setQuestions] = useState<Question[]>([])
@@ -60,10 +62,10 @@ export function InterviewModal(): preact.JSX.Element | null {
   const [otherText, setOtherText] = useState('')
   const [textareaVal, setTextareaVal] = useState('')
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const prevTargetRef = useRef(target)
 
-  // Reset state when a new interview opens
-  useEffect(() => {
-    if (!target) return
+  // Reset state when a new interview opens (synchronous via ref comparison)
+  if (target && target !== prevTargetRef.current) {
     const parsed = parseQuestionsFromBody(target.issue.body)
     const qs =
       parsed.length > 0
@@ -77,7 +79,8 @@ export function InterviewModal(): preact.JSX.Element | null {
     setSelectedOpt(null)
     setOtherText('')
     setTextareaVal('')
-  }, [target])
+  }
+  prevTargetRef.current = target
 
   // Reset per-question input state when navigating between questions
   useEffect(() => {
@@ -93,20 +96,18 @@ export function InterviewModal(): preact.JSX.Element | null {
     if (!dlg) return
     if (target && !dlg.open) dlg.showModal()
     if (!target && dlg.open) dlg.close()
-  }, [target])
+  }, [target, questions])
 
-  if (!target) return null
-
-  const { issue, done } = target
+  const issue = target?.issue
+  const done = target?.done
   const q = questions[currentIdx]
-  if (!q) return null
 
   const isLast = currentIdx === questions.length - 1
-  let nextLabel = isLast ? 'Submit' : 'Next'
-  if (submitting) nextLabel = 'Evaluating...'
+  let _nextLabel = isLast ? 'Submit' : 'Next'
+  if (submitting) _nextLabel = 'Evaluating...'
 
   function getAnswer(): string {
-    if (q.options && q.options.length > 0) {
+    if (q?.options && q.options.length > 0) {
       if (selectedOpt === 'Other') return otherText.trim() || 'Other'
       return selectedOpt ?? ''
     }
@@ -122,6 +123,7 @@ export function InterviewModal(): preact.JSX.Element | null {
   }
 
   async function handleNext(): Promise<void> {
+    if (!q || !issue || !done) return
     const answer = getAnswer()
     if (!answer) return
 
@@ -155,91 +157,94 @@ export function InterviewModal(): preact.JSX.Element | null {
     }
   }
 
-  return (
+  return createPortal(
     <dialog ref={dialogRef} className="modal" onClose={handleCancel}>
-      <div className="modal-box bg-base-200 border border-neutral max-w-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold m-0">Interview: #{issue.id}</h2>
-          <span className="text-sm text-base-content/60">
-            Question {currentIdx + 1} of {questions.length}
-          </span>
-        </div>
+      {issue && q && (
+        <div className="modal-box bg-base-200 border border-neutral w-[min(32rem,90vw)]">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold m-0">Interview: #{issue.id}</h2>
+            <span className="text-sm text-base-content/60">
+              Question {currentIdx + 1} of {questions.length}
+            </span>
+          </div>
 
-        <p className="text-md mb-4 leading-relaxed">{q.question}</p>
+          <p className="text-md mb-4 leading-relaxed">{q.question}</p>
 
-        {q.options && q.options.length > 0 ? (
-          <div className="flex flex-col gap-sm mb-4">
-            {[...q.options, 'Other'].map((opt) => (
-              <label
-                key={opt}
-                className="flex items-center gap-md text-base cursor-pointer px-md py-sm rounded-default hover:bg-base-300"
-              >
-                <input
-                  type="radio"
-                  name="interview-answer"
-                  className="radio radio-primary radio-sm"
-                  value={opt}
-                  checked={selectedOpt === opt}
-                  onChange={() => setSelectedOpt(opt)}
-                />
-                <span>{opt}</span>
-              </label>
-            ))}
-            <input
-              type="text"
-              className="input input-bordered w-full mt-sm bg-base-100"
+          {q.options && q.options.length > 0 ? (
+            <div className="flex flex-col gap-sm mb-4">
+              {[...q.options, 'Other'].map((opt) => (
+                <label
+                  key={opt}
+                  className="flex items-center gap-md text-base cursor-pointer px-md py-sm rounded-default hover:bg-base-300"
+                >
+                  <input
+                    type="radio"
+                    name="interview-answer"
+                    className="radio radio-primary radio-sm"
+                    value={opt}
+                    checked={selectedOpt === opt}
+                    onChange={() => setSelectedOpt(opt)}
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+              <input
+                type="text"
+                className="input input-bordered w-full mt-sm bg-base-100"
+                placeholder="Type your answer..."
+                style={{ display: selectedOpt === 'Other' ? 'block' : 'none' }}
+                value={otherText}
+                onInput={(e) =>
+                  setOtherText((e.target as HTMLInputElement).value)
+                }
+              />
+            </div>
+          ) : (
+            <textarea
+              className="textarea textarea-bordered w-full mb-4 bg-base-100"
+              rows={4}
               placeholder="Type your answer..."
-              style={{ display: selectedOpt === 'Other' ? 'block' : 'none' }}
-              value={otherText}
+              value={textareaVal}
               onInput={(e) =>
-                setOtherText((e.target as HTMLInputElement).value)
+                setTextareaVal((e.target as HTMLTextAreaElement).value)
               }
             />
-          </div>
-        ) : (
-          <textarea
-            className="textarea textarea-bordered w-full mb-4 bg-base-100"
-            rows={4}
-            placeholder="Type your answer..."
-            value={textareaVal}
-            onInput={(e) =>
-              setTextareaVal((e.target as HTMLTextAreaElement).value)
-            }
-          />
-        )}
+          )}
 
-        <div className="modal-action">
-          {currentIdx > 0 && (
+          <div className="modal-action">
+            {currentIdx > 0 && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={handleBack}
+              >
+                Back
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={handleBack}
+              onClick={handleCancel}
             >
-              Back
+              Cancel
             </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={handleCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={submitting}
-            onClick={handleNext}
-          >
-            {nextLabel}
-          </button>
-        </div>
+            <ActionButton
+              className="btn btn-primary"
+              label={isLast ? 'Submit' : 'Next'}
+              loadingLabel="Evaluating..."
+              loading="loading-spinner"
+              disabled={submitting}
+              onClick={handleNext}
+            />
+          </div>
 
-        {error && <div className="text-error text-sm mt-md">{error}</div>}
-      </div>
+          {error && <div className="text-error text-sm mt-md">{error}</div>}
+        </div>
+      )}
       <form method="dialog" className="modal-backdrop">
         <button type="submit">close</button>
       </form>
-    </dialog>
+    </dialog>,
+    document.body,
   )
 }

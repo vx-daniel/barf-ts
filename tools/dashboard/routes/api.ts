@@ -5,6 +5,12 @@
 import type { IssueService } from '@dashboard/services/issue-service'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import {
+  cancelAuditGate,
+  readAuditGate,
+  triggerAuditGate,
+  writeAuditGateEvent,
+} from '@/core/batch'
 import { injectTemplateVars } from '@/core/context'
 import { VALID_TRANSITIONS } from '@/core/issue'
 import { resolvePromptTemplate } from '@/core/prompts'
@@ -153,6 +159,7 @@ const REVERSE_KEY_MAP: Record<string, string> = {
   logFile: 'LOG_FILE',
   logLevel: 'LOG_LEVEL',
   logPretty: 'LOG_PRETTY',
+  auditAfterNCompleted: 'AUDIT_AFTER_N_COMPLETED',
 }
 
 const MASKED = '••••••••'
@@ -318,4 +325,40 @@ export async function handleSaveConfig(
       500,
     )
   }
+}
+
+// ── Audit Gate ──────────────────────────────────────────────────────────────
+
+/**
+ * Returns the current audit gate state from `.barf/audit-gate.json`.
+ */
+export function handleGetAuditGate(svc: IssueService): Response {
+  const gate = readAuditGate(svc.config.barfDir)
+  return json(gate)
+}
+
+/**
+ * Triggers the audit gate by transitioning to `draining` state.
+ */
+export function handleTriggerAuditGate(svc: IssueService): Response {
+  const triggered = triggerAuditGate(svc.config.barfDir, 'dashboard')
+  if (!triggered) {
+    return jsonError('Audit gate is already active', 409)
+  }
+  writeAuditGateEvent(svc.config.barfDir, 'draining', {
+    triggeredBy: 'dashboard',
+  })
+  return json({ ok: true, state: 'draining' })
+}
+
+/**
+ * Cancels the audit gate, returning to `running` state.
+ */
+export function handleCancelAuditGate(svc: IssueService): Response {
+  const cancelled = cancelAuditGate(svc.config.barfDir)
+  if (!cancelled) {
+    return jsonError('Audit gate is not active', 409)
+  }
+  writeAuditGateEvent(svc.config.barfDir, 'cancelled')
+  return json({ ok: true, state: 'running' })
 }

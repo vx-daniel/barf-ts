@@ -5,12 +5,12 @@
  */
 
 export {
-  type ExecFn,
   DEFAULT_VERIFY_CHECKS,
+  type ExecFn,
   runVerification,
   type VerifyCheck,
   type VerifyFailure,
   type VerifyResult,
 } from './checks'
-export { verifyIssue } from './orchestration'
 export { buildFixBody } from './format'
+export { verifyIssue } from './orchestration'

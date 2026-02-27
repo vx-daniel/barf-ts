@@ -8,12 +8,12 @@
  * @module Verification
  */
 import { ResultAsync } from 'neverthrow'
-import type { Config } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
+import type { Config } from '@/types'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
-import { type ExecFn, DEFAULT_VERIFY_CHECKS, runVerification } from './checks'
+import { DEFAULT_VERIFY_CHECKS, type ExecFn, runVerification } from './checks'
 import { buildFixBody } from './format'
 
 const logger = createLogger('verification')
@@ -70,19 +70,15 @@ export function verifyIssue(
         { issueId },
         'verification passed — transitioning to VERIFIED',
       )
-      const transitionResult = await provider.transition(
-        issueId,
-        'VERIFIED',
-        {
-          durationInStageSeconds: 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          finalContextSize: 0,
-          iterations: 0,
-          model: '',
-          trigger: 'auto/verify',
-        },
-      )
+      const transitionResult = await provider.transition(issueId, 'VERIFIED', {
+        durationInStageSeconds: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        finalContextSize: 0,
+        iterations: 0,
+        model: '',
+        trigger: 'auto/verify',
+      })
       if (transitionResult.isErr()) {
         throw transitionResult.error
       }

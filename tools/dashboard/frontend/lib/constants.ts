@@ -23,7 +23,6 @@ export const STATE_ORDER: readonly IssueState[] = [
   'COMPLETED',
   'VERIFIED',
   'STUCK',
-  'SPLIT',
 ]
 
 /**
@@ -42,6 +41,19 @@ export const STATE_COLORS: Record<IssueState, string> = {
   SPLIT: 'var(--color-state-split)',
 }
 
+/**
+ * Linear issue lifecycle for progress display.
+ * Excludes side-states STUCK and SPLIT which are not part of the happy path.
+ */
+export const PIPELINE_STATES: readonly IssueState[] = [
+  'NEW',
+  'GROOMED',
+  'PLANNED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'VERIFIED',
+]
+
 /** Human-readable label for each {@link IssueState} value. */
 export const STATE_LABELS: Record<IssueState, string> = {
   NEW: 'NEW',
@@ -53,6 +65,65 @@ export const STATE_LABELS: Record<IssueState, string> = {
   STUCK: 'STUCK',
   SPLIT: 'SPLIT',
 }
+
+/** Emoji glyph for each {@link IssueState}, usable in badges, tooltips, and log output. */
+export const STATE_EMOJI: Record<IssueState, string> = {
+  NEW: '🆕',
+  GROOMED: '💇',
+  PLANNED: '📋',
+  IN_PROGRESS: '🔨',
+  COMPLETED: '✅',
+  VERIFIED: '🏆',
+  STUCK: '🚧',
+  SPLIT: '🪓',
+}
+
+/** General-purpose icon glyphs for UI actions, labels, and decorators. */
+export const ICON = {
+  ai: '🤖',
+  ai2: '👾',
+  archive: '📦',
+  arr: '🏴‍☠️',
+  bug: '🐛',
+  chat: '💬',
+  clock: '⏱️',
+  clown: '🤡',
+  curse: '🤬',
+  delete: '🗑️',
+  devil: '👹',
+  doctor: '🩺',
+  edit: '✏️',
+  error: '❌',
+  eye: '👁️',
+  file: '📄',
+  fin: '🏁',
+  fire: '🔥',
+  folder: '📁',
+  go: '🚀',
+  info: 'ℹ️',
+  link: '🔗',
+  lock: '🔒',
+  luck: '🥠',
+  no: '🚫',
+  party: '🎉',
+  poop: '💩',
+  refresh: '🔄',
+  run: '⚡',
+  search: '🔍',
+  skull: '💀',
+  spark: '✨',
+  star: '⭐',
+  stop: '🛑',
+  success: '✅',
+  terminal: '💻',
+  tool: '🔧',
+  unlock: '🔓',
+  warning: '⚠️',
+  yolo: '🎰',
+} as const satisfies Record<string, string>
+
+/** Type-safe icon key. */
+export type IconKey = keyof typeof ICON
 
 /** CLI commands available to run for issues in each state. */
 export const CMD_ACTIONS: Record<IssueState, string[]> = {
@@ -81,6 +152,17 @@ export function stateColor(state: IssueState | string): string {
 }
 
 /**
+ * Returns the emoji for a given issue state, falling back to a generic circle
+ * when the state is unrecognised.
+ *
+ * @param state - An {@link IssueState} string value
+ * @returns An emoji string
+ */
+export function stateEmoji(state: IssueState | string): string {
+  return STATE_EMOJI[state as IssueState] ?? '⚪'
+}
+
+/**
  * Returns a red/orange/green colour based on context usage percentage.
  * Used for progress bar fills on kanban cards.
  *
@@ -91,6 +173,17 @@ export function contextBarColor(pct: number): string {
   if (pct > 80) return 'var(--color-danger)'
   if (pct > 60) return 'var(--color-state-in-progress)'
   return 'var(--color-success)'
+}
+
+/**
+ * Returns the icon glyph for a given {@link IconKey}, falling back to an
+ * empty string when the key is unrecognised.
+ *
+ * @param key - An {@link IconKey} string value
+ * @returns An emoji string or empty string
+ */
+export function icon(key: IconKey | string): string {
+  return ICON[key as IconKey] ?? ''
 }
 
 /** CSS class applied to action buttons, keyed by command name. */

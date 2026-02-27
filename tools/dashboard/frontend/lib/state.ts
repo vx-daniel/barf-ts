@@ -7,7 +7,11 @@
  * {@link module:lib/actions}.
  */
 
-import type { Issue, ProcessedEntry } from '@dashboard/frontend/lib/types'
+import type {
+  Issue,
+  ProcessedEntry,
+  Session,
+} from '@dashboard/frontend/lib/types'
 import { signal } from '@preact/signals'
 
 /** Full issue list, refreshed every 5 s and after each command. */
@@ -57,3 +61,25 @@ export const termInputVisible = signal(false)
 
 /** Ordered list of activity log entries for the current session. */
 export const activityEntries = signal<ProcessedEntry[]>([])
+
+/** Session list from the session index, refreshed periodically. */
+export const sessions = signal<Session[]>([])
+
+/** ID of the session selected in the session browser, or `null` for live view. */
+export const selectedSessionId = signal<string | null>(null)
+
+/** Whether to show archived sessions in the session browser. */
+export const showArchived = signal(false)
+
+/** Current audit gate state, refreshed periodically. */
+export const auditGate = signal<{
+  state: 'running' | 'draining' | 'auditing' | 'fixing'
+  triggeredBy?: string
+  triggeredAt?: string
+  completedSinceLastAudit: number
+  auditFixIssueIds: string[]
+}>({
+  state: 'running',
+  completedSinceLastAudit: 0,
+  auditFixIssueIds: [],
+})

@@ -1,17 +1,17 @@
 /** @module Audit Providers */
-import { type Result, ResultAsync, errAsync } from 'neverthrow'
+import { errAsync, type Result, ResultAsync } from 'neverthrow'
 import type { ZodType } from 'zod'
-import { toError } from '@/utils/toError'
-import { createLogger } from '@/utils/logger'
 import type { Config } from '@/types'
 import type {
-  ChatResult,
   ChatOptions,
+  ChatResult,
+  ModelInfo,
   PingResult,
   ProviderInfo,
   TokenUsage,
-  ModelInfo,
 } from '@/types/schema/provider-schema'
+import { createLogger } from '@/utils/logger'
+import { toError } from '@/utils/toError'
 
 export type {
   ChatResult,

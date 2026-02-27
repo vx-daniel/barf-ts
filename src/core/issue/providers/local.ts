@@ -1,30 +1,31 @@
 /** @module Issue Providers */
-import type { ResultAsync } from 'neverthrow'
-import { IssueProvider } from '@/core/issue/base'
+
 import {
-  type LockInfo,
-  LockInfoSchema,
-  IssueStateSchema,
-  type LockMode,
-  type Issue,
-  type IssueState,
-} from '@/types'
-import { parseIssue, serializeIssue } from '@/core/issue'
-import { syncToResultAsync } from '@/utils/syncToResultAsync'
-import {
-  readFileSync,
-  writeFileSync,
-  readdirSync,
-  renameSync,
-  mkdirSync,
-  existsSync,
-  rmSync,
-  openSync,
-  writeSync,
   closeSync,
   constants,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+  writeSync,
 } from 'fs'
+import type { ResultAsync } from 'neverthrow'
 import { join } from 'path'
+import { parseIssue, serializeIssue } from '@/core/issue'
+import { IssueProvider } from '@/core/issue/base'
+import {
+  type Issue,
+  type IssueState,
+  IssueStateSchema,
+  type LockInfo,
+  LockInfoSchema,
+  type LockMode,
+} from '@/types'
+import { syncToResultAsync } from '@/utils/syncToResultAsync'
 
 /**
  * File-system issue provider. Stores issues as frontmatter markdown files under `issuesDir`.

@@ -267,7 +267,7 @@ export function ConfigPanel() {
     <dialog ref={dialogRef} className="modal" onClose={close}>
       <div className="modal-box bg-base-200 border border-neutral max-w-xl max-h-[85vh] flex flex-col p-0">
         {/* Header */}
-        <div className="flex items-center gap-lg px-[18px] py-2xl border-b border-neutral shrink-0">
+        <div className="flex items-center gap-lg px-[1.125rem] py-2xl border-b border-neutral shrink-0">
           <span className="text-lg font-semibold whitespace-nowrap">
             Configuration
           </span>
@@ -284,7 +284,7 @@ export function ConfigPanel() {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-[18px] py-xl">
+        <div className="flex-1 overflow-y-auto px-[1.125rem] py-xl">
           {FIELDS.map((field) => {
             const nodes: preact.JSX.Element[] = []
             if (field.group !== currentGroup) {
@@ -367,7 +367,7 @@ export function ConfigPanel() {
             nodes.push(
               <div key={field.key} className="flex items-center gap-lg mb-sm">
                 <label
-                  className="text-sm text-base-content/60 min-w-[180px] shrink-0"
+                  className="text-sm text-base-content/60 min-w-[11.25rem] shrink-0"
                   htmlFor={`cfg-${field.key}`}
                 >
                   {field.label}
@@ -381,7 +381,7 @@ export function ConfigPanel() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-md px-[18px] py-xl border-t border-neutral shrink-0">
+        <div className="flex items-center gap-md px-[1.125rem] py-xl border-t border-neutral shrink-0">
           <span
             className="text-sm text-base-content/50 flex-1"
             style={{ color: statusColor || undefined }}

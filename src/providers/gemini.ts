@@ -1,21 +1,21 @@
 /** @module Audit Providers */
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { type Result, ok, ResultAsync } from 'neverthrow'
+import { ok, type Result, ResultAsync } from 'neverthrow'
 import { AuditProvider } from '@/providers/base'
-import { createLogger } from '@/utils/logger'
-import { toError } from '@/utils/toError'
-import { inferTier, GEMINI_TIERS } from '@/providers/model-tiers'
+import { GEMINI_TIERS, inferTier } from '@/providers/model-tiers'
 import type { Config } from '@/types'
 import {
-  DEFAULT_TEMPERATURE,
-  toTokenUsage,
-  type ChatResult,
   type ChatOptions,
+  type ChatResult,
+  DEFAULT_TEMPERATURE,
   type ModelInfo,
   type PingResult,
   type ProviderInfo,
   type TokenUsage,
+  toTokenUsage,
 } from '@/types/schema/provider-schema'
+import { createLogger } from '@/utils/logger'
+import { toError } from '@/utils/toError'
 
 const GEMINI_LIST_MODELS_URL =
   'https://generativelanguage.googleapis.com/v1beta/models'
