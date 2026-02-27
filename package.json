@@ -2,6 +2,9 @@
   "name": "barf",
   "version": "2.0.0",
   "type": "module",
+  "bin": {
+    "barf": "./dist/barf"
+  },
   "scripts": {
     "dev": "bun run src/index.ts",
     "dev:sample": "bun run src/index.ts --cwd tests/sample-project",
@@ -12,6 +15,7 @@
     "reset:gh": " cd tests/sample-project && npm run reset-gh",
     "test": "bun test",
     "build": "bun build --compile --outfile=dist/barf src/index.ts",
+    "build:release": "bun build --compile --outfile=dist/barf src/index.ts",
     "docs": "typedoc",
     "format": "npx @biomejs/biome format",
     "format:fix": "npx @biomejs/biome format --write",

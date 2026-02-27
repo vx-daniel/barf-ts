@@ -33,7 +33,28 @@ When Claude's context fills up, barf either splits the issue into sub-issues or 
 
 ## Installation
 
-Requires [Bun](https://bun.sh) and the [Claude CLI](https://claude.ai/download) (used by triage).
+### Prerequisites
+
+- [Claude CLI](https://claude.ai/download) — **required** (used by triage, plan, and build)
+- [gh CLI](https://cli.github.com) — optional, needed for GitHub Issues provider and `barf update-check`
+
+### Install from release (recommended)
+
+Download the latest binary for your platform from [GitHub Releases](../../releases/latest), or use the install script:
+
+```bash
+# macOS / Linux (requires gh CLI authenticated with repo access)
+bash install.sh
+
+# Windows (PowerShell)
+.\install.ps1
+```
+
+The install script detects your OS and architecture, downloads the correct binary, and places it in `~/.local/bin/barf` (or `%LOCALAPPDATA%\barf\bin` on Windows).
+
+### Build from source
+
+Requires [Bun](https://bun.sh).
 
 ```bash
 git clone <repo>
@@ -43,10 +64,16 @@ bun run build            # compiles to dist/barf
 cp dist/barf /usr/local/bin/barf
 ```
 
-Or run from source:
+Or run from source without compiling:
 
 ```bash
 bun run dev <command>
+```
+
+### Check for updates
+
+```bash
+barf update-check
 ```
 
 ## Setup

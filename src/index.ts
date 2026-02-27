@@ -13,6 +13,7 @@ import {
   planCommand,
   statusCommand,
   triageCommand,
+  updateCheckCommand,
 } from '@/cli/commands'
 
 /**
@@ -154,6 +155,18 @@ program
     const config = loadConfig(program.opts().config)
     const provider = getProvider(config)
     await auditCommand(provider, { issue: opts.issue, all: opts.all }, config)
+  })
+
+program
+  .command('update-check')
+  .description('Check if a newer version of barf is available')
+  .option(
+    '--repo <owner/repo>',
+    'GitHub repo to check',
+    'danielstedman/barf-ts',
+  )
+  .action(async (opts) => {
+    await updateCheckCommand(opts.repo)
   })
 
 program.parseAsync(process.argv).catch(async (error: unknown) => {

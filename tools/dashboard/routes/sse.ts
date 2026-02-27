@@ -9,7 +9,6 @@ import { parseLogMessage } from '@dashboard/services/activity-aggregator'
 const ALLOWED_COMMANDS = ['plan', 'build', 'audit', 'triage'] as const
 type AllowedCommand = (typeof ALLOWED_COMMANDS)[number]
 
-
 /** Tracks the currently running process so it can be killed via /api/auto/stop. */
 let activeProc: { proc: ReturnType<typeof Bun.spawn>; label: string } | null =
   null

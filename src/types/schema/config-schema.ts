@@ -32,7 +32,12 @@ import { z } from 'zod'
  * @group Configuration
  */
 /** Available audit provider backends. */
-export const AuditProviderSchema = z.enum(['openai', 'gemini', 'claude', 'codex'])
+export const AuditProviderSchema = z.enum([
+  'openai',
+  'gemini',
+  'claude',
+  'codex',
+])
 /** @category Configuration */
 export type AuditProvider = z.infer<typeof AuditProviderSchema>
 
