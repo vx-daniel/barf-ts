@@ -1,8 +1,8 @@
 # Issue State Machine
 
-**Source:** `src/core/issue/index.ts`
+**Source:** `src/types/schema/issue-schema.ts` (VALID_TRANSITIONS), `src/core/issue/index.ts` (parser, serializer, validator)
 
-Issues are markdown files with YAML frontmatter. State is a field in frontmatter. All transitions are validated — never mutate `issue.state` directly; always use `validateTransition()`.
+Issues are markdown files with `KEY=VALUE` frontmatter. State is a field in frontmatter. All transitions are validated — never mutate `issue.state` directly; always use `validateTransition()`.
 
 ## States
 
@@ -22,64 +22,103 @@ SPLIT        Was too large; split into child issues (terminal)
 ```mermaid
 stateDiagram-v2
     [*] --> NEW
-    NEW --> GROOMED : triage (needs_interview resolved)
+    NEW --> GROOMED : triage (needs_interview=false)
     NEW --> STUCK
 
-    GROOMED --> PLANNED : plan loop
+    GROOMED --> PLANNED : plan loop writes plan file
     GROOMED --> STUCK
+    GROOMED --> SPLIT
 
     PLANNED --> IN_PROGRESS : build loop start
     PLANNED --> STUCK
+    PLANNED --> SPLIT
 
-    IN_PROGRESS --> COMPLETED : acceptance criteria passed
+    IN_PROGRESS --> COMPLETED : acceptance criteria met
     IN_PROGRESS --> STUCK
     IN_PROGRESS --> SPLIT : context overflow → split
 
-    COMPLETED --> VERIFIED : build/check/test passed
-    COMPLETED --> IN_PROGRESS : verify failed → re-open
+    COMPLETED --> VERIFIED : build/check/test pass
 
     STUCK --> NEW : reset
+    STUCK --> GROOMED
     STUCK --> PLANNED
-    STUCK --> IN_PROGRESS
+    STUCK --> SPLIT
 
     VERIFIED --> [*]
     SPLIT --> [*]
 ```
 
+## Valid Transitions Map
+
+```typescript
+const VALID_TRANSITIONS = {
+  NEW:         ['GROOMED', 'STUCK'],
+  GROOMED:     ['PLANNED', 'STUCK', 'SPLIT'],
+  PLANNED:     ['IN_PROGRESS', 'STUCK', 'SPLIT'],
+  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
+  STUCK:       ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
+  SPLIT:       [],          // terminal
+  COMPLETED:   ['VERIFIED'],
+  VERIFIED:    [],          // terminal
+}
+```
+
 ## Frontmatter Fields
 
-```yaml
+```markdown
 ---
-id: ISS-001
-title: Add user authentication
-state: IN_PROGRESS
-parent: ~                         # parent issue id (if child of split)
-children: []                      # child issue ids (if split)
-split_count: 0                    # how many times this issue has been split
-force_split: false                # override to force split on next overflow
-needs_interview: false            # set by triage; true = append questions first
-verify_count: 0                   # how many verification attempts
-context_usage_percent: ~          # per-issue override (null = use config default)
-total_input_tokens: 1240
-total_output_tokens: 890
-total_duration_seconds: 45.2
-total_iterations: 3
-run_count: 1
+id=001
+title=Add user authentication
+state=IN_PROGRESS
+parent=
+children=
+split_count=0
+force_split=false
+context_usage_percent=75
+needs_interview=false
+verify_count=0
+is_verify_fix=false
+verify_exhausted=false
+total_input_tokens=125000
+total_output_tokens=8500
+total_duration_seconds=42
+total_iterations=3
+run_count=1
 ---
 ```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `id` | string | — | Unique issue identifier |
+| `title` | string | — | Issue title/summary |
+| `state` | IssueState | `NEW` | Current state in state machine |
+| `parent` | string | `""` | Parent issue ID (for split children) |
+| `children` | string[] | `[]` | Comma-separated child issue IDs |
+| `split_count` | number | `0` | How many times this issue has been split |
+| `force_split` | boolean | `false` | Skip build, enter split flow directly |
+| `context_usage_percent` | number? | — | Per-issue override for context threshold (1–100) |
+| `needs_interview` | boolean? | — | `undefined`=untriaged, `false`=ready, `true`=needs Q&A |
+| `verify_count` | number | `0` | Number of verification attempts |
+| `is_verify_fix` | boolean? | — | This issue was created to fix a verification failure |
+| `verify_exhausted` | boolean? | — | `verify_count` exceeded `MAX_VERIFY_RETRIES` |
+| `total_input_tokens` | number | `0` | Cumulative input tokens across all runs |
+| `total_output_tokens` | number | `0` | Cumulative output tokens across all runs |
+| `total_duration_seconds` | number | `0` | Cumulative wall-clock seconds |
+| `total_iterations` | number | `0` | Total SDK iterations across all runs |
+| `run_count` | number | `0` | Number of barf sessions for this issue |
 
 ## Key Functions
 
 | Function | Purpose | Location |
-|----------|---------|---------|
+|----------|---------|----------|
 | `parseIssue(content)` | Frontmatter markdown → Issue | `core/issue/index.ts` |
 | `serializeIssue(issue)` | Issue → frontmatter markdown | `core/issue/index.ts` |
 | `validateTransition(from, to)` | Check transition is legal | `core/issue/index.ts` |
-| `parseAcceptanceCriteria(body)` | Check all `- [x]` ticked | `core/issue/index.ts` |
+| `parseAcceptanceCriteria(body)` | Count `- [ ]` / `- [x]` checkboxes | `core/issue/index.ts` |
 
 ## Provider Operations
 
-The `IssueProvider` base class (`core/issue/base.ts`) provides these shared methods:
+The `IssueProvider` base class (`core/issue/base.ts`) provides shared methods:
 
 - `transition(issue, nextState)` — validate + write
 - `autoSelect(mode)` — pick next actionable issue by state priority
@@ -88,14 +127,14 @@ The `IssueProvider` base class (`core/issue/base.ts`) provides these shared meth
 Abstract I/O methods (implemented by local/github providers):
 
 ```
-readIssue(id)   writeIssue(issue)   deleteIssue(id)
-listIssues()    lockIssue(id)       unlockIssue(id)
-isLocked(id)    initProject()
+readIssue(id)   writeIssue(issue)   deleteIssue(id)   createIssue(opts)
+listIssues()    lockIssue(id)       unlockIssue(id)    isLocked(id)
+initProject()
 ```
 
 ## Acceptance Criteria
 
-Issues use GitHub-flavored checkbox syntax in their body:
+Issues use GitHub-flavored checkbox syntax:
 
 ```markdown
 ## Acceptance Criteria

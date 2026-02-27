@@ -12,6 +12,7 @@ abstract class IssueProvider {
   abstract readIssue(id: string): ResultAsync<Issue, Error>
   abstract writeIssue(issue: Issue): ResultAsync<Issue, Error>
   abstract deleteIssue(id: string): ResultAsync<void, Error>
+  abstract createIssue(opts: { title: string; body: string }): ResultAsync<Issue, Error>
   abstract listIssues(): ResultAsync<Issue[], Error>
   abstract lockIssue(id: string, info: LockInfo): ResultAsync<void, Error>
   abstract unlockIssue(id: string): ResultAsync<void, Error>
@@ -19,8 +20,8 @@ abstract class IssueProvider {
   abstract initProject(): ResultAsync<void, Error>
 
   // Provided (shared logic):
-  transition(issue, nextState): ResultAsync<Issue, Error>
-  autoSelect(mode): ResultAsync<Issue | null, Error>
+  transition(issue, nextState): ResultAsync<Issue, Error>   // validate + write
+  autoSelect(mode): ResultAsync<Issue | null, Error>        // pick next actionable issue
   checkAcceptanceCriteria(issue): Result<CriteriaResult, Error>
 }
 ```
@@ -34,14 +35,14 @@ createIssueProvider(config: Config): IssueProvider
 
 ## Local Provider (`providers/local.ts`)
 
-Issues stored as `.md` files in `issuesDir`.
+Issues stored as `.md` files in `issuesDir` (default: `issues/`).
 
-**Locking:** POSIX atomic file creation
+### Locking: POSIX Atomic File Creation
 
 ```mermaid
 flowchart LR
-    A[lockIssue] --> B["open(.barf/id.lock, O_CREAT|O_EXCL)\natomic — fails if already exists"]
-    B --> C[write LockInfo JSON\npid + timestamp + state + mode]
+    A[lockIssue] --> B["open(.barf/{id}.lock,\nO_CREAT|O_EXCL)\natomic — fails if exists"]
+    B --> C["write LockInfo JSON:\npid, acquiredAt, state, mode"]
 
     D[isLocked] --> E[read lock file]
     E --> F{PID alive?}
@@ -51,32 +52,34 @@ flowchart LR
 
 Stale lock cleanup runs on every `isLocked` and `lockIssue` call — dead PIDs are automatically removed, preventing orphaned locks from crashes.
 
-**Writes:** Atomic via temp file + rename
+### Writes: Atomic via Temp File + Rename
 
 ```mermaid
 flowchart LR
-    A[writeIssue] --> B["write to .barf/id.tmp"]
-    B --> C["rename to issuesDir/id.md\nPOSIX atomic"]
+    A[writeIssue] --> B["write to .barf/{id}.tmp"]
+    B --> C["rename to issuesDir/{id}.md\nPOSIX atomic"]
 ```
 
 ## GitHub Provider (`providers/github.ts`)
 
 Issues mapped to GitHub Issues via the `gh` CLI.
 
-**State → Label mapping:**
+### State → Label Mapping
 
 ```
 NEW          → barf:new
 GROOMED      → barf:groomed
 PLANNED      → barf:planned
-IN_PROGRESS  → barf:in_progress
+IN_PROGRESS  → barf:in-progress
 COMPLETED    → barf:completed
 VERIFIED     → barf:verified
 STUCK        → barf:stuck
 SPLIT        → barf:split
 ```
 
-**Locking:** Label-based (not atomic — single-agent design)
+Labels defined in `providers/github-labels.ts`.
+
+### Locking: Label-Based
 
 ```
 lockIssue:    add label "barf:locked" via gh CLI
@@ -84,21 +87,25 @@ unlockIssue:  remove label "barf:locked"
 isLocked:     check for "barf:locked" label
 ```
 
-**Constraints vs Local:**
+**Not atomic** — designed for single-agent use only.
+
+### Constraints vs Local
+
 - Cannot `deleteIssue` — transitions to COMPLETED instead
 - Locking is not atomic; designed for single-agent use
 - Issue body = markdown content; frontmatter stored in issue body header
-- `initProject` creates barf labels in the GitHub repo
+- `initProject()` creates barf labels in the GitHub repo (idempotent)
+- Requires `gh auth login`
 
 ## LockInfo Schema
 
 ```typescript
-type LockInfo = {
-  pid: number           // process ID that holds the lock
-  timestamp: string     // ISO 8601 when lock was acquired
-  state: IssueState     // issue state at lock time
-  mode: LockMode        // 'plan' | 'build' | 'triage' | 'verify'
-}
+const LockInfoSchema = z.object({
+  pid: z.number().int().positive(),        // process ID that holds the lock
+  acquiredAt: z.string().datetime(),       // ISO 8601 when lock was acquired
+  state: IssueStateSchema,                 // issue state at lock time
+  mode: LockModeSchema,                   // 'plan' | 'build' | 'split'
+})
 ```
 
 ## autoSelect Logic
@@ -106,9 +113,13 @@ type LockInfo = {
 Picks the next issue to work on based on priority ordering:
 
 ```
-build mode:  IN_PROGRESS → PLANNED → (nothing)
-plan mode:   GROOMED → NEW (needs_interview=false) → (nothing)
-triage mode: NEW (needs_interview=undefined) → (nothing)
+build mode:   IN_PROGRESS → PLANNED → (nothing)
+plan mode:    GROOMED → (nothing)
+triage mode:  NEW (needs_interview=undefined) → (nothing)
 ```
 
 Skips locked issues. Returns `null` if nothing actionable.
+
+## Audit Providers (separate system)
+
+Not to be confused with issue providers — audit providers are in `src/providers/` and handle AI-based code review. See the [config reference](./config.md) for audit provider settings.

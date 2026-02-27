@@ -8,6 +8,12 @@
   padding: 0;
 }
 
+/* Restore native <dialog> centering stripped by the universal reset.
+   showModal() relies on margin:auto from the UA stylesheet. */
+dialog {
+  margin: auto;
+}
+
 html,
 body {
   height: 100%;
@@ -46,7 +52,7 @@ body {
 /* ── Shared button styles ───────────────────────────────────────── */
 @layer components {
   .abtn {
-    font-size: 10px;
+    /* font-size: 10px;
     padding: 2px 7px;
     border-radius: 3px;
     border: 1px solid;
@@ -55,7 +61,7 @@ body {
     font-family: inherit;
     font-weight: 600;
     letter-spacing: 0.03em;
-    transition: background 0.15s;
+    transition: background 0.15s; */
   }
   .abtn:hover {
     filter: brightness(1.2);
@@ -89,7 +95,6 @@ body {
     color: var(--color-danger);
     background: color-mix(in srgb, var(--color-danger) 10%, transparent);
   }
-
 }
 
 /* ── Resize handles ────────────────────────────────────────────── */

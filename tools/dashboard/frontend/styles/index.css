@@ -123,6 +123,7 @@
   --color-state-verified: #10b981;
   --color-state-stuck: #ef4444;
   --color-state-split: #a855f7;
+  --color-state-in-audit: #0ea5e9;
 
   /* Semantic colours */
   --color-danger: #ef4444;

@@ -95,9 +95,9 @@ export function contextBarColor(pct: number): string {
 
 /** CSS class applied to action buttons, keyed by command name. */
 export const CMD_CLASS = {
-  plan: 'abtn-plan',
-  build: 'abtn-build',
-  audit: 'abtn-audit',
-  triage: 'abtn-triage',
-  interview: 'abtn-interview',
+  plan: 'var(--color-state-in-plan)',
+  build: 'var(--color-state-in-build)',
+  audit: 'var(--color-state-in-audit)',
+  triage: 'var(--color-state-in-triage)',
+  interview: 'var(--color-state-in-interview)',
 } satisfies Record<string, string>
