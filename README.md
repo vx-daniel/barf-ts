@@ -1,10 +1,14 @@
 # BARF - Build And Run Framework
 
-![woof](barf.png)
+![woof](assets/barf.png)
 
 **Issue-Driven Autonomous Development based on the Ralph Playbook**
 
 BARF is a bash tool that implements the [Ralph playbook](https://github.com/ClaytonFarr/ralph-playbook) methodology with a focus on **issue-driven development**. Point it at an issue (local file, GitHub, GitLab), and it autonomously clarifies, plans, and implements.
+
+barf dashboard
+![barf dashboard](barf_preview.png)
+
 
 AI issue orchestration CLI. Feeds issues to Claude one at a time, tracks state, and handles context overflow automatically.
 
