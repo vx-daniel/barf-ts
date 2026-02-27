@@ -1,6 +1,6 @@
 # BARF - Build And Run Framework
 
-![woof](assets/barf.png)
+![woof](barf.png)
 
 **Issue-Driven Autonomous Development based on the Ralph Playbook**
 
