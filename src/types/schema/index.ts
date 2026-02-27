@@ -84,6 +84,10 @@ export {
   SessionStatsSchema,
   type SessionStats,
   formatSessionStatsBlock,
+  StageLogEntrySchema,
+  type StageLogEntry,
+  type StageLogInput,
+  formatStageLogEntry,
 } from './session-stats-schema'
 
 // ── Verification ─────────────────────────────────────────────────────────────

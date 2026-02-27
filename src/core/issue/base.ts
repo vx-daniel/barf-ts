@@ -1,6 +1,7 @@
 /** @module Issue Model */
 import { ResultAsync, errAsync } from 'neverthrow'
-import type { Issue, IssueState, LockMode } from '@/types'
+import type { Issue, IssueState, LockMode, StageLogInput } from '@/types'
+import { formatStageLogEntry } from '@/types'
 import type { AutoSelectMode } from '@/types/schema/mode-schema'
 import { validateTransition, parseAcceptanceCriteria } from '@/core/issue'
 
@@ -142,24 +143,47 @@ export abstract class IssueProvider {
   // ── Shared logic — one implementation for all providers ───────────────────
 
   /**
-   * Validates and applies a state transition.
+   * Validates and applies a state transition, optionally appending a stage log entry.
    *
    * Delegates validation to {@link validateTransition}; writes the new state via
-   * {@link writeIssue}. Call this instead of patching `state` directly to preserve invariants.
+   * {@link writeIssue}. When `stageLog` is provided, a formatted entry is appended
+   * to the `## Stage Log` section of the issue body (created if absent).
+   *
+   * Call this instead of patching `state` directly to preserve invariants.
    *
    * @param id - Issue whose state will change.
    * @param to - Target state; must be reachable from the current state per `VALID_TRANSITIONS`.
+   * @param stageLog - Optional metrics captured during the departing state. When omitted,
+   *   no stage log entry is written (backward-compatible for manual/lightweight transitions).
    * @returns `ok(Issue)` with the updated issue, `err(InvalidTransitionError)` if the move is illegal,
    *   or `err(Error)` on I/O failure.
    * @group Derived
    */
-  transition(id: string, to: IssueState): ResultAsync<Issue, Error> {
+  transition(
+    id: string,
+    to: IssueState,
+    stageLog?: StageLogInput,
+  ): ResultAsync<Issue, Error> {
     return this.fetchIssue(id).andThen((issue) => {
       const validation = validateTransition(issue.state, to)
       if (validation.isErr()) {
         return errAsync(validation.error)
       }
-      return this.writeIssue(id, { state: to })
+
+      const fields: Partial<Omit<Issue, 'id'>> = { state: to }
+
+      if (stageLog) {
+        const entry = {
+          ...stageLog,
+          fromState: issue.state,
+          toState: to,
+          timestamp: new Date().toISOString(),
+        }
+        const block = formatStageLogEntry(entry)
+        fields.body = appendStageLog(issue.body, block)
+      }
+
+      return this.writeIssue(id, fields)
     })
   }
 
@@ -209,4 +233,21 @@ export abstract class IssueProvider {
       parseAcceptanceCriteria(issue.body),
     )
   }
+}
+
+const STAGE_LOG_HEADING = '## Stage Log'
+
+/**
+ * Appends a formatted stage log block to the issue body.
+ * Creates the `## Stage Log` section if it doesn't exist yet.
+ *
+ * @param body - Current issue body markdown
+ * @param block - Formatted stage log entry markdown (from {@link formatStageLogEntry})
+ * @returns Updated body with the entry appended under `## Stage Log`
+ */
+function appendStageLog(body: string, block: string): string {
+  if (body.includes(STAGE_LOG_HEADING)) {
+    return `${body}\n\n${block}`
+  }
+  return `${body}\n\n${STAGE_LOG_HEADING}\n\n${block}`
 }

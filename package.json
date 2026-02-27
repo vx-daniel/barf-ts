@@ -24,7 +24,8 @@
     "check": "bun run format && bun run lint",
     "playground": "bun tools/playground-server.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project ",
     "dashboard:build": "bun tools/dashboard/build.ts",
-    "dashboard": "bun tools/dashboard/build.ts && bun tools/dashboard/server.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project"
+    "dashboard": "bun tools/dashboard/build.ts && bun tools/dashboard/server.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project",
+    "dashboard:dev": "bun tools/dashboard/build.ts --watch & bun --watch tools/dashboard/server.ts --config tests/sample-project/.barfrc.local --cwd tests/sample-project"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.50",

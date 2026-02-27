@@ -63,6 +63,11 @@ export {
   SessionStatsSchema,
   type SessionStats,
   formatSessionStatsBlock,
+  // Stage Log
+  StageLogEntrySchema,
+  type StageLogEntry,
+  type StageLogInput,
+  formatStageLogEntry,
   // Verification
   VerifyCheckSchema,
   type VerifyCheck,

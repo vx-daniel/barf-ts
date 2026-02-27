@@ -70,7 +70,19 @@ export function verifyIssue(
         { issueId },
         'verification passed — transitioning to VERIFIED',
       )
-      const transitionResult = await provider.transition(issueId, 'VERIFIED')
+      const transitionResult = await provider.transition(
+        issueId,
+        'VERIFIED',
+        {
+          durationInStageSeconds: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          finalContextSize: 0,
+          iterations: 0,
+          model: '',
+          trigger: 'auto/verify',
+        },
+      )
       if (transitionResult.isErr()) {
         throw transitionResult.error
       }

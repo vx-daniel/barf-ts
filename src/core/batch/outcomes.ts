@@ -10,10 +10,10 @@
  */
 import { existsSync } from 'fs'
 import { join } from 'path'
-import type { Config } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { type runPreComplete, toFixSteps } from '@/core/pre-complete'
 import type { verifyIssue } from '@/core/verification'
+import type { Config, StageLogInput } from '@/types'
 import { createLogger } from '@/utils/logger'
 import { handleOverflow } from './helpers'
 import { createSessionStats, persistSessionStats } from './stats'
@@ -96,7 +96,18 @@ export async function handleSplitCompletion(
   state.splitPending = false
   const reloaded = await provider.fetchIssue(issueId)
   if (reloaded.isOk() && reloaded.value.state !== 'SPLIT') {
-    await provider.transition(issueId, 'SPLIT')
+    const stageLog: StageLogInput = {
+      durationInStageSeconds: Math.floor(
+        (Date.now() - state.sessionStartTime) / 1000,
+      ),
+      inputTokens: state.totalInputTokens,
+      outputTokens: state.totalOutputTokens,
+      finalContextSize: state.lastContextSize,
+      iterations: state.iterationsRan,
+      model: state.model,
+      trigger: 'auto/split',
+    }
+    await provider.transition(issueId, 'SPLIT', stageLog)
   }
   const fresh = await provider.fetchIssue(issueId)
   if (fresh.isOk() && fresh.value.children.length > 0) {
@@ -168,23 +179,36 @@ export async function handleOverflowOutcome(
  *
  * In plan mode, Claude runs exactly one iteration. If a plan file exists
  * at `{planDir}/{issueId}.md` after the iteration, the issue is transitioned
- * to PLANNED state.
+ * to PLANNED state with a stage log entry.
  *
  * @param issueId - ID of the issue being planned.
  * @param config - Barf configuration containing `planDir`.
  * @param provider - Issue provider for state transitions.
+ * @param state - Loop state for building stage log metrics.
  * @category Orchestration
  */
 export async function handlePlanCompletion(
   issueId: string,
   config: Config,
   provider: IssueProvider,
+  state: LoopState,
 ): Promise<void> {
   const planFile = join(config.planDir, `${issueId}.md`)
   if (existsSync(planFile)) {
     const fresh = await provider.fetchIssue(issueId)
     if (fresh.isOk() && fresh.value.state !== 'PLANNED') {
-      await provider.transition(issueId, 'PLANNED')
+      const stageLog: StageLogInput = {
+        durationInStageSeconds: Math.floor(
+          (Date.now() - state.sessionStartTime) / 1000,
+        ),
+        inputTokens: state.totalInputTokens,
+        outputTokens: state.totalOutputTokens,
+        finalContextSize: state.lastContextSize,
+        iterations: state.iterationsRan,
+        model: state.model,
+        trigger: 'auto/plan',
+      }
+      await provider.transition(issueId, 'PLANNED', stageLog)
     }
   }
 }
@@ -193,13 +217,14 @@ export async function handlePlanCompletion(
  * Handles build mode completion when acceptance criteria are met.
  *
  * This handler runs the pre-completion gate (fix commands + test gate),
- * and if it passes, transitions the issue to COMPLETED and immediately
- * triggers verification.
+ * and if it passes, transitions the issue to COMPLETED (with stage log)
+ * and immediately triggers verification.
  *
  * @param issueId - ID of the issue being built.
  * @param config - Barf configuration.
  * @param provider - Issue provider for state transitions.
  * @param deps - Injectable dependencies (verifyIssue, runPreComplete).
+ * @param state - Loop state for building stage log metrics.
  * @returns `'break'` if the issue was completed (caller should exit loop),
  *   `'continue'` if pre-complete failed and the loop should continue.
  * @category Orchestration
@@ -209,7 +234,7 @@ export async function handleBuildCompletion(
   config: Config,
   provider: IssueProvider,
   deps: OutcomeDeps,
-  iteration: number,
+  state: LoopState,
 ): Promise<'break' | 'continue'> {
   const criteriaResult = await provider.checkAcceptanceCriteria(issueId)
   const criteriaMet = criteriaResult.isOk() && criteriaResult.value
@@ -228,7 +253,18 @@ export async function handleBuildCompletion(
   if (preOutcome.passed) {
     const fresh = await provider.fetchIssue(issueId)
     if (fresh.isOk() && fresh.value.state !== 'COMPLETED') {
-      await provider.transition(issueId, 'COMPLETED')
+      const stageLog: StageLogInput = {
+        durationInStageSeconds: Math.floor(
+          (Date.now() - state.sessionStartTime) / 1000,
+        ),
+        inputTokens: state.totalInputTokens,
+        outputTokens: state.totalOutputTokens,
+        finalContextSize: state.lastContextSize,
+        iterations: state.iterationsRan,
+        model: state.model,
+        trigger: 'auto/build',
+      }
+      await provider.transition(issueId, 'COMPLETED', stageLog)
     }
     // Run verification immediately after COMPLETED
     const verifyResult = await deps.verifyIssue(issueId, config, provider)
@@ -241,6 +277,11 @@ export async function handleBuildCompletion(
     return 'break'
   }
 
-  logger.warn({ issueId, iteration }, 'pre-complete failed — continuing')
+  logger.warn(
+    { issueId, iteration: state.iteration },
+    'pre-complete failed — continuing',
+  )
+  return 'continue'
+}
   return 'continue'
 }

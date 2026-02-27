@@ -109,6 +109,15 @@ async function runLoopImpl(
           const transitionResult = await provider.transition(
             issueId,
             'IN_PROGRESS',
+            {
+              durationInStageSeconds: 0,
+              inputTokens: 0,
+              outputTokens: 0,
+              finalContextSize: 0,
+              iterations: 0,
+              model: state.model,
+              trigger: 'auto/build',
+            },
           )
           if (transitionResult.isErr()) {
             logger.warn(
@@ -274,7 +283,7 @@ async function runLoopImpl(
 
       // ── Normal success — check completion ────────────────────────────
       if (mode === 'plan') {
-        await handlePlanCompletion(issueId, config, provider)
+        await handlePlanCompletion(issueId, config, provider, state)
         break // plan mode is always single iteration
       }
 
@@ -284,7 +293,7 @@ async function runLoopImpl(
           config,
           provider,
           { verifyIssue: _verifyIssue, runPreComplete: _runPreComplete },
-          state.iteration,
+          state,
         )
         if (buildAction === 'break') break
       }

@@ -2,9 +2,9 @@
  * Session stats persistence — tracks and writes token usage per run.
  *
  * After each orchestration loop run, barf persists session statistics
- * (token counts, duration, iterations) to the issue. Stats are accumulated
- * in the issue's frontmatter fields and a human-readable block is appended
- * to the issue body.
+ * (token counts, duration, iterations) to the issue frontmatter.
+ * The human-readable stage log is now appended by {@link IssueProvider.transition}
+ * when a `stageLog` argument is passed.
  *
  * Stats persistence is best-effort: failures are logged but never propagate,
  * because losing stats should not crash a successful build.
@@ -12,7 +12,6 @@
  * @module Orchestration
  */
 import type { SessionStats } from '@/types'
-import { formatSessionStatsBlock } from '@/types'
 import type { IssueProvider } from '@/core/issue/base'
 import { createLogger } from '@/utils/logger'
 import { toError } from '@/utils/toError'
@@ -55,11 +54,14 @@ export function createSessionStats(
 }
 
 /**
- * Persists session stats to the issue: updates cumulative frontmatter totals
- * and appends a per-run stats block to the body.
+ * Persists session stats to the issue frontmatter (cumulative totals only).
  *
  * This function is best-effort — failures are logged but never propagate.
  * Stats are important for observability but should not crash a successful build.
+ *
+ * The human-readable stage log is now written by {@link IssueProvider.transition}
+ * when a `stageLog` argument is provided — this function only updates the
+ * frontmatter accumulation fields.
  *
  * The frontmatter fields updated are:
  * - `total_input_tokens` — cumulative input tokens across all runs
@@ -88,7 +90,6 @@ export async function persistSessionStats(
       return
     }
     const issue = current.value
-    const updatedBody = `${issue.body}\n\n${formatSessionStatsBlock(stats)}`
     await provider.writeIssue(issueId, {
       total_input_tokens: issue.total_input_tokens + stats.inputTokens,
       total_output_tokens: issue.total_output_tokens + stats.outputTokens,
@@ -96,7 +97,6 @@ export async function persistSessionStats(
         issue.total_duration_seconds + stats.durationSeconds,
       total_iterations: issue.total_iterations + stats.iterations,
       run_count: issue.run_count + 1,
-      body: updatedBody,
     })
     logger.info(
       {

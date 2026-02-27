@@ -25,7 +25,7 @@
   --color-neutral: #2a2a45;
   --color-neutral-content: #e2e8f0;
 
-  --color-info: #60a5fa;
+  --color-info: #0f4ac6;
   --color-info-content: #ffffff;
   --color-success: #22c55e;
   --color-success-content: #ffffff;
@@ -119,8 +119,8 @@
   --color-state-groomed: #3b82f6;
   --color-state-planned: #f59e0b;
   --color-state-in-progress: #f97316;
-  --color-state-completed: #22c55e;
-  --color-state-verified: #10b981;
+  --color-state-completed: #a6d189;
+  --color-state-verified: #4ab118;
   --color-state-stuck: #ef4444;
   --color-state-split: #a855f7;
   --color-state-in-audit: #0ea5e9;
@@ -163,4 +163,83 @@
   --spacing-2xl: 14px;
   --spacing-3xl: 16px;
   --spacing-4xl: 20px;
+}
+
+/* ── Metadata / JSON syntax highlighting (innerHTML-injected) ──── */
+.metadata-viewer {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  font-size: 12px;
+  padding: 16px;
+  overflow: auto;
+  height: 100%;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.json-key {
+  color: #9cdcfe;
+}
+.json-string {
+  color: #ce9178;
+}
+.json-number {
+  color: #b5cea8;
+}
+.json-boolean {
+  color: #569cd6;
+}
+.json-null {
+  color: #808080;
+}
+
+/* ── Editor preview (innerHTML-injected markdown) ───────────────── */
+#editor-preview {
+  background-color: var(--color-surface2);
+}
+#editor-preview h1,
+#editor-preview h2,
+#editor-preview h3 {
+  color: var(--color-accent);
+  margin: 12px 0 6px;
+}
+#editor-preview h1 {
+  font-size: 16px;
+}
+#editor-preview h2 {
+  font-size: 14px;
+}
+#editor-preview h3 {
+  font-size: 13px;
+}
+#editor-preview p {
+  margin: 4px 0;
+}
+#editor-preview code {
+  background: var(--color-surface2);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+#editor-preview pre {
+  background: var(--color-surface2);
+  padding: 10px;
+  border-radius: var(--radius-default);
+  overflow-x: auto;
+  margin: 8px 0;
+}
+#editor-preview pre code {
+  background: none;
+  padding: 0;
+}
+#editor-preview ul,
+#editor-preview ol {
+  padding-left: 20px;
+}
+#editor-preview li {
+  margin: 2px 0;
+}
+#editor-preview input[type="checkbox"] {
+  margin-right: 6px;
 }

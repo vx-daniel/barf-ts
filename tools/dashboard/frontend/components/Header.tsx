@@ -31,11 +31,14 @@ export function Header(): preact.JSX.Element {
       </span>
       <button
         type="button"
-        className={`btn btn-sm ${isRunning ? 'btn-primary' : 'btn-ghost border-neutral'}`}
+        className={`btn btn-outline btn-lg ${isRunning ? 'btn-secondary' : 'btn-primary'}`} // btn-ghost border-neutral
         id="btn-auto"
         onClick={runAuto}
       >
-        {isRunning ? '\u25A0 Stop' : '\u25B6 Auto'}
+        {isRunning ? '🛑 Stop' : '🚀 Auto'}
+      </button>
+      <button type="button" class="btn btn-lg btn-outline btn-error">
+        🛑 Stop
       </button>
       <button
         type="button"
