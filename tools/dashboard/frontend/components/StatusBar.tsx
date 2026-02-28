@@ -40,7 +40,7 @@ export function StatusBar() {
       1000,
     )
     return () => clearInterval(id)
-  }, [active])
+  }, [])
 
   const allIssues = issues.value
   const selected = allIssues.find((i) => i.id === selectedId.value) ?? null

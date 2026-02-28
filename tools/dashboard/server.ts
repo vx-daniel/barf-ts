@@ -21,6 +21,9 @@ import {
   handleTransition,
   handleTriggerAuditGate,
   handleUpdateIssue,
+  handleListPrompts,
+  handleGetPrompt,
+  handleSavePrompt,
   jsonError,
 } from '@dashboard/routes/api'
 import {
@@ -118,6 +121,16 @@ async function router(req: Request): Promise<Response> {
   const sessionArchiveMatch = path.match(/^\/api\/sessions\/([^/]+)\/archive$/)
   if (sessionArchiveMatch && method === 'POST')
     return handleArchiveSession(svc, decodeURIComponent(sessionArchiveMatch[1]))
+
+  // Prompt template routes
+  if (method === 'GET' && path === '/api/prompts') return handleListPrompts(svc)
+
+  const promptMatch = path.match(/^\/api\/prompts\/([^/]+)$/)
+  if (promptMatch) {
+    const name = decodeURIComponent(promptMatch[1])
+    if (method === 'GET') return handleGetPrompt(svc, name)
+    if (method === 'PUT') return handleSavePrompt(svc, name, req)
+  }
 
   const issueMatch = path.match(/^\/api\/issues\/([^/]+)$/)
   if (issueMatch) {

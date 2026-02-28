@@ -3,8 +3,8 @@
  */
 
 import type { IssueService } from '@dashboard/services/issue-service'
-import { readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { readdirSync, readFileSync, writeFileSync } from 'fs'
+import { join, resolve } from 'path'
 import {
   cancelAuditGate,
   readAuditGate,
@@ -384,4 +384,76 @@ export function handleCancelAuditGate(svc: IssueService): Response {
   }
   writeAuditGateEvent(svc.config.barfDir, 'cancelled')
   return json({ ok: true, state: 'running' })
+}
+
+// ── Prompt Templates ──────────────────────────────────────────────────────
+
+/**
+ * Resolves the prompt directory: uses `promptDir` from config if set,
+ * otherwise falls back to `src/prompts/` relative to project root.
+ */
+function resolvePromptDir(svc: IssueService): string {
+  if (svc.config.promptDir) {
+    return resolve(svc.projectCwd, svc.config.promptDir)
+  }
+  return resolve(svc.projectCwd, 'src/prompts')
+}
+
+/**
+ * Lists all prompt template files (PROMPT_*.md) in the prompt directory.
+ */
+export function handleListPrompts(svc: IssueService): Response {
+  const dir = resolvePromptDir(svc)
+  try {
+    const files = readdirSync(dir)
+      .filter((f) => f.startsWith('PROMPT_') && f.endsWith('.md'))
+      .sort()
+    return json(files)
+  } catch {
+    return json([])
+  }
+}
+
+/**
+ * Reads the content of a single prompt template file.
+ */
+export function handleGetPrompt(svc: IssueService, name: string): Response {
+  const dir = resolvePromptDir(svc)
+  const filePath = join(dir, name)
+  try {
+    const content = readFileSync(filePath, 'utf8')
+    return json({ name, content })
+  } catch {
+    return jsonError(`Prompt not found: ${name}`, 404)
+  }
+}
+
+/**
+ * Saves (overwrites) the content of a prompt template file.
+ */
+export async function handleSavePrompt(
+  svc: IssueService,
+  name: string,
+  req: Request,
+): Promise<Response> {
+  let body: { content?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+  if (typeof body.content !== 'string') {
+    return jsonError('Missing "content" field')
+  }
+  const dir = resolvePromptDir(svc)
+  const filePath = join(dir, name)
+  try {
+    writeFileSync(filePath, body.content)
+    return json({ ok: true })
+  } catch (e) {
+    return jsonError(
+      `Failed to save prompt: ${e instanceof Error ? e.message : String(e)}`,
+      500,
+    )
+  }
 }

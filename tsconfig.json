@@ -5,7 +5,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "preact",
+    "jsxImportSource": "react",
     "types": ["bun-types"],
     "paths": {
       "@/*": ["./src/*"],

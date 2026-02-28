@@ -171,7 +171,8 @@ function extractTodoFromToolCall(entry: ActivityEntry): void {
         id,
         subject,
         status: 'pending',
-        activeForm: typeof args.activeForm === 'string' ? args.activeForm : undefined,
+        activeForm:
+          typeof args.activeForm === 'string' ? args.activeForm : undefined,
       },
     ]
   } else if (tool === 'TaskUpdate') {
@@ -180,9 +181,7 @@ function extractTodoFromToolCall(entry: ActivityEntry): void {
     if (!taskId || !status) return
     if (!VALID_TODO_STATUSES.has(status as TodoItem['status'])) return
     todoItems.value = todoItems.value.map((t) =>
-      t.id === taskId
-        ? { ...t, status: status as TodoItem['status'] }
-        : t,
+      t.id === taskId ? { ...t, status: status as TodoItem['status'] } : t,
     )
   } else if (tool === 'TodoWrite') {
     // TodoWrite sends an array of tasks — replace the full list

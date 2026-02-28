@@ -579,7 +579,7 @@ export function ActivityLog() {
       }
     }
     return map
-  }, [entries])
+  }, [])
 
   // Cumulative tokens
   const cumulativeTokens = useMemo(() => {
@@ -592,7 +592,7 @@ export function ActivityLog() {
       }
     }
     return { input, output }
-  }, [entries])
+  }, [])
 
   // Group consecutive stdout entries
   const grouped = useMemo<GroupedItem[]>(() => {
@@ -634,13 +634,13 @@ export function ActivityLog() {
     }
     flushStdout()
     return result
-  }, [entries])
+  }, [])
 
   // Scroll to bottom when entries change
   useEffect(() => {
     const el = logRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [entries])
+  }, [])
 
   // Focus input when it becomes visible
   useEffect(() => {
@@ -648,7 +648,7 @@ export function ActivityLog() {
       inputRef.current.value = ''
       inputRef.current.focus()
     }
-  }, [showInput])
+  }, [])
 
   const handleFilterToggle = (kind: string) => {
     setActiveFilters((prev) => {

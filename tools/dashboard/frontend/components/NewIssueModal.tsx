@@ -26,7 +26,7 @@ export function NewIssueModal(): preact.JSX.Element | null {
     if (!isOpen && dlg.open) {
       dlg.close()
     }
-  }, [isOpen])
+  }, [])
 
   const close = (): void => {
     newIssueOpen.value = false

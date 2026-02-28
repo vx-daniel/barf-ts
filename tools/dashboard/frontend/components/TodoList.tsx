@@ -45,9 +45,7 @@ export function TodoList() {
         className="flex items-center gap-md px-lg py-xs w-full bg-transparent text-inherit cursor-pointer select-none hover:bg-base-200 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="text-xs text-text-muted">
-          {expanded ? '▼' : '▶'}
-        </span>
+        <span className="text-xs text-text-muted">{expanded ? '▼' : '▶'}</span>
         <span className="text-xs text-text-muted font-medium">Tasks:</span>
 
         {/* Progress bar */}

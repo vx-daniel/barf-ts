@@ -5,6 +5,7 @@
 
 import * as api from '@dashboard/frontend/lib/api-client'
 import { configOpen } from '@dashboard/frontend/lib/state'
+import { TOKENS } from '@dashboard/frontend/tokens'
 import { useEffect, useRef, useState } from 'preact/hooks'
 
 interface FieldDef {
@@ -170,7 +171,7 @@ export function ConfigPanel() {
     if (!dlg) return
     if (isOpen && !dlg.open) dlg.showModal()
     if (!isOpen && dlg.open) dlg.close()
-  }, [isOpen])
+  }, [])
 
   useEffect(() => {
     if (!isOpen) return
@@ -197,9 +198,9 @@ export function ConfigPanel() {
         setStatus(
           `Failed to load config: ${e instanceof Error ? e.message : String(e)}`,
         )
-        setStatusColor('#ef4444')
+        setStatusColor(TOKENS.statusCrashed)
       })
-  }, [isOpen])
+  }, [])
 
   function updateField(key: string, value: unknown) {
     setFormValues((prev) => ({ ...prev, [key]: value }))
@@ -242,7 +243,7 @@ export function ConfigPanel() {
       setStatusColor('')
       await api.saveConfig(result)
       setStatus('Saved! Restart server to apply.')
-      setStatusColor('#22c55e')
+      setStatusColor(TOKENS.statusSaved)
       setTimeout(() => {
         close()
         setStatus('')
@@ -250,7 +251,7 @@ export function ConfigPanel() {
       }, 1500)
     } catch (e: unknown) {
       setStatus(`Save failed: ${e instanceof Error ? e.message : String(e)}`)
-      setStatusColor('#ef4444')
+      setStatusColor(TOKENS.statusCrashed)
     }
   }
 

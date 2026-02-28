@@ -123,7 +123,7 @@ export function InterviewModal(): preact.JSX.Element {
     setOtherText('')
     setTextareaVal('')
     setError(null)
-  }, [currentIdx])
+  }, [])
 
   // Sync dialog open state with signal
   useEffect(() => {
@@ -131,7 +131,7 @@ export function InterviewModal(): preact.JSX.Element {
     if (!dlg) return
     if (target && !dlg.open) dlg.showModal()
     if (!target && dlg.open) dlg.close()
-  }, [target, questions])
+  }, [])
 
   const issue = target?.issue
   const done = target?.done

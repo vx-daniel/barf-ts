@@ -180,7 +180,7 @@ export function EditorSidebar() {
       editorViewRef.current.destroy()
       editorViewRef.current = null
     }
-  }, [id])
+  }, [issue?.body])
 
   // Toggle sidebar grid layout on #app
   useEffect(() => {
@@ -197,7 +197,7 @@ export function EditorSidebar() {
       app.style.gridTemplateAreas =
         "'header header' 'statusbar statusbar' 'main sidebar' 'bottom bottom'"
     }
-  }, [id])
+  }, [])
 
   // Render preview HTML
   useEffect(() => {
@@ -207,7 +207,7 @@ export function EditorSidebar() {
       : bodyRef.current
     const htmlString = marked.parse(content) as string
     safeRenderHTML(previewRef.current, htmlString)
-  }, [activeTab, id])
+  }, [activeTab])
 
   // Mount CodeMirror lazily when Edit tab is selected
   useEffect(() => {
@@ -245,14 +245,14 @@ export function EditorSidebar() {
         editorViewRef.current = null
       }
     }
-  }, [activeTab, id])
+  }, [activeTab])
 
   // Render metadata HTML
   useEffect(() => {
     if (activeTab !== 'metadata' || !metadataRef.current || !issue) return
     const htmlString = renderMetadataJSON(issue)
     safeRenderHTML(metadataRef.current, htmlString)
-  }, [activeTab, id, issue])
+  }, [activeTab, issue])
 
   // Save handler
   const handleSave = useCallback(async () => {
@@ -273,7 +273,7 @@ export function EditorSidebar() {
         `save failed: ${e instanceof Error ? e.message : String(e)}`,
       )
     }
-  }, [id])
+  }, [])
 
   // Close handler
   const handleClose = useCallback(() => {

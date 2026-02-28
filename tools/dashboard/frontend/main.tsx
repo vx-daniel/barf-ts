@@ -1,48 +1,35 @@
-/**
- * Dashboard main entry — mounts the root Preact {@link App} component and
- * kicks off the initial data fetch + polling loop.
- *
- * All UI lives in components; this file is intentionally minimal.
- */
+import { createRoot } from 'react-dom/client'
+import { ThemeProvider } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+import { theme } from '@dashboard/frontend/theme'
+import { App } from '@dashboard/frontend/App'
+import { useIssueStore } from '@dashboard/frontend/store/useIssueStore'
+import { useSessionStore } from '@dashboard/frontend/store/useSessionStore'
+import { useConfigStore } from '@dashboard/frontend/store/useConfigStore'
 
-import { App } from '@dashboard/frontend/components/App'
-import {
-  fetchAuditGate,
-  fetchConfig,
-  fetchIssues,
-  fetchSessions,
-} from '@dashboard/frontend/lib/actions'
-import {
-  mountBottomResizer,
-  mountSidebarResizer,
-} from '@dashboard/frontend/lib/resizer'
-import { pauseRefresh } from '@dashboard/frontend/lib/state'
-import { render } from 'preact'
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- root element guaranteed by index.html
+const rootEl = document.getElementById('root')
+if (!rootEl) throw new Error('Root element #root not found')
+const root = createRoot(rootEl)
+root.render(
+  <ThemeProvider theme={theme}>
+    <CssBaseline />
+    <App />
+  </ThemeProvider>,
+)
 
-// ── Mount ────────────────────────────────────────────────────────────────────
+// Initial data fetch
+void useIssueStore.getState().fetchIssues()
+void useSessionStore.getState().fetchSessions()
+void useConfigStore.getState().fetchConfig()
+void useConfigStore.getState().fetchAuditGate()
 
-const root = document.getElementById('app')
-if (root) render(<App />, root)
-
-// ── Resizers (imperative — drag handles on sidebar/bottom borders) ────────────
-
-mountSidebarResizer()
-mountBottomResizer()
-
-// ── Polling ──────────────────────────────────────────────────────────────────
-
+// Polling: 5s interval
 setInterval(() => {
-  // Sessions always poll — needed for Active section updates during runs
-  void fetchSessions()
-  if (!pauseRefresh.value) {
-    void fetchIssues()
-    void fetchAuditGate()
+  void useSessionStore.getState().fetchSessions()
+  const { pauseRefresh } = useIssueStore.getState()
+  if (!pauseRefresh) {
+    void useIssueStore.getState().fetchIssues()
+    void useConfigStore.getState().fetchAuditGate()
   }
 }, 5000)
-
-// ── Start ────────────────────────────────────────────────────────────────────
-
-void fetchConfig()
-void fetchIssues()
-void fetchSessions()
-void fetchAuditGate()
