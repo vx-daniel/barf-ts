@@ -23,8 +23,9 @@ import {
   selectedSessionId,
   sessions,
   termInputVisible,
+  todoItems,
 } from '@dashboard/frontend/lib/state'
-import type { ProcessedEntry } from '@dashboard/frontend/lib/types'
+import type { ProcessedEntry, TodoItem } from '@dashboard/frontend/lib/types'
 import { WSClient } from '@dashboard/frontend/lib/ws-client'
 import type { Issue } from '@/types/index'
 import type { ActivityEntry } from '@/types/schema/activity-schema'
@@ -133,8 +134,71 @@ function pushActivity(entry: ActivityEntry): void {
     if (toolUseId) toolCallIndex.set(toolUseId, liveEntries.length - 1)
   }
 
+  extractTodoFromToolCall(entry)
   trimIfNeeded()
   syncSignal()
+}
+
+// ── Todo extraction ────────────────────────────────────────────────────────
+
+const TASK_TOOLS = new Set(['TaskCreate', 'TaskUpdate', 'TodoWrite'])
+
+const VALID_TODO_STATUSES = new Set<TodoItem['status']>([
+  'pending',
+  'in_progress',
+  'completed',
+])
+
+/**
+ * Intercepts TaskCreate/TaskUpdate/TodoWrite tool calls from the SDK stream
+ * and maintains the {@link todoItems} signal for the progress bar.
+ */
+function extractTodoFromToolCall(entry: ActivityEntry): void {
+  if (entry.kind !== 'tool_call') return
+  const tool = entry.data.tool as string
+  if (!TASK_TOOLS.has(tool)) return
+  const args = entry.data.args as Record<string, unknown> | undefined
+  if (!args) return
+
+  if (tool === 'TaskCreate') {
+    const subject = String(args.subject ?? '')
+    if (!subject) return
+    const id = (entry.data.toolUseId as string) ?? `tmp-${Date.now()}`
+    if (todoItems.value.some((t) => t.subject === subject)) return
+    todoItems.value = [
+      ...todoItems.value,
+      {
+        id,
+        subject,
+        status: 'pending',
+        activeForm: typeof args.activeForm === 'string' ? args.activeForm : undefined,
+      },
+    ]
+  } else if (tool === 'TaskUpdate') {
+    const taskId = String(args.taskId ?? '')
+    const status = args.status as string | undefined
+    if (!taskId || !status) return
+    if (!VALID_TODO_STATUSES.has(status as TodoItem['status'])) return
+    todoItems.value = todoItems.value.map((t) =>
+      t.id === taskId
+        ? { ...t, status: status as TodoItem['status'] }
+        : t,
+    )
+  } else if (tool === 'TodoWrite') {
+    // TodoWrite sends an array of tasks — replace the full list
+    const tasks = args.tasks as Array<Record<string, unknown>> | undefined
+    if (!Array.isArray(tasks)) return
+    todoItems.value = tasks
+      .filter((t) => typeof t.subject === 'string')
+      .map((t, i) => ({
+        id: String(t.id ?? i),
+        subject: String(t.subject),
+        status: VALID_TODO_STATUSES.has(t.status as TodoItem['status'])
+          ? (t.status as TodoItem['status'])
+          : 'pending',
+        activeForm: typeof t.activeForm === 'string' ? t.activeForm : undefined,
+      }))
+  }
 }
 
 /**
@@ -161,6 +225,7 @@ function logTerm(type: string, text: string): void {
 function clearActivityLog(): void {
   liveEntries = []
   activityEntries.value = []
+  todoItems.value = []
   entryCounter = 0
   toolCallIndex.clear()
   issueCtxCache = null

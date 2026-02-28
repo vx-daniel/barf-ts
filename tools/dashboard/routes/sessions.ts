@@ -9,7 +9,10 @@ import {
   stopSession,
 } from '@dashboard/services/session-service'
 
-const JSON_HEADERS = { 'Content-Type': 'application/json' } as const
+const JSON_HEADERS = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+} as const
 
 /**
  * `GET /api/sessions` — returns merged session list.

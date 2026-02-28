@@ -12,11 +12,13 @@ import {
   stopAllSessions,
   triggerAuditGate,
 } from '@dashboard/frontend/lib/actions'
+import { toggleProfiling } from '@dashboard/frontend/lib/perf'
 import {
   auditGate,
   configOpen,
   models,
   newIssueOpen,
+  profiling,
   runningId,
 } from '@dashboard/frontend/lib/state'
 
@@ -82,6 +84,14 @@ export function Header(): preact.JSX.Element {
         }}
       >
         + New Issue
+      </button>
+      <button
+        type="button"
+        className={`btn btn-sm btn-ghost border-neutral ${profiling.value ? 'btn-active btn-warning' : ''}`}
+        onClick={toggleProfiling}
+        title="Toggle render profiling (visible in DevTools Performance tab)"
+      >
+        {profiling.value ? '\u{1F534} Profiling' : '\u23F1 Profile'}
       </button>
       <button
         type="button"

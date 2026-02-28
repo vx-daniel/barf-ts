@@ -5,7 +5,6 @@
  * All UI lives in components; this file is intentionally minimal.
  */
 
-import '@dashboard/frontend/lib/perf'
 import { App } from '@dashboard/frontend/components/App'
 import {
   fetchAuditGate,

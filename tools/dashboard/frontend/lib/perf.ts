@@ -1,10 +1,10 @@
 /**
- * Registers dashboard components with `preact-perf-profiler` so render timings
- * appear as User Timing marks in the browser DevTools Performance tab.
+ * On-demand performance profiling for dashboard components via `preact-perf-profiler`.
  *
- * Import this module for side effects only — no exports.
+ * Call {@link enableProfiling} to start tracking render timings (visible in
+ * Chrome DevTools Performance tab) and {@link disableProfiling} to stop.
  */
-import { track } from 'preact-perf-profiler'
+import { track, untrack } from 'preact-perf-profiler'
 
 import { ActivityLog } from '@dashboard/frontend/components/ActivityLog'
 import { App } from '@dashboard/frontend/components/App'
@@ -16,14 +16,35 @@ import { KanbanBoard } from '@dashboard/frontend/components/KanbanBoard'
 import { NewIssueModal } from '@dashboard/frontend/components/NewIssueModal'
 import { SessionList } from '@dashboard/frontend/components/SessionList'
 import { StatusBar } from '@dashboard/frontend/components/StatusBar'
+import { profiling } from '@dashboard/frontend/lib/state'
 
-track(ActivityLog)
-track(App)
-track(ConfigPanel)
-track(EditorSidebar)
-track(Header)
-track(InterviewModal)
-track(KanbanBoard)
-track(NewIssueModal)
-track(SessionList)
-track(StatusBar)
+const COMPONENTS = [
+  ActivityLog,
+  App,
+  ConfigPanel,
+  EditorSidebar,
+  Header,
+  InterviewModal,
+  KanbanBoard,
+  NewIssueModal,
+  SessionList,
+  StatusBar,
+] as const
+
+/** Registers all dashboard components for render timing measurement. */
+export function enableProfiling(): void {
+  for (const c of COMPONENTS) track(c)
+  profiling.value = true
+}
+
+/** Unregisters all dashboard components from render timing measurement. */
+export function disableProfiling(): void {
+  for (const c of COMPONENTS) untrack(c)
+  profiling.value = false
+}
+
+/** Toggles profiling on/off. */
+export function toggleProfiling(): void {
+  if (profiling.value) disableProfiling()
+  else enableProfiling()
+}

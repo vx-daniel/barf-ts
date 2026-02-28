@@ -32,3 +32,11 @@ export interface ProcessedEntry {
   /** For synthetic termLog entries: the display text. */
   termText?: string
 }
+
+/** A task item extracted from Claude's TaskCreate/TaskUpdate tool calls. */
+export interface TodoItem {
+  id: string
+  subject: string
+  status: 'pending' | 'in_progress' | 'completed'
+  activeForm?: string
+}

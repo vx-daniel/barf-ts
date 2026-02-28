@@ -185,10 +185,21 @@ Bun.serve<{ issueId: string }>({
       const upgraded = server.upgrade(req, { data: { issueId: wsMatch[1] } })
       if (upgraded) return undefined
     }
-    return router(req).catch((error: unknown) => {
-      Sentry.captureException(error)
-      return new Response('Internal server error', { status: 500 })
-    })
+    return router(req)
+      .then((res) => {
+        // Prevent browser from caching API responses — ensures polling returns fresh data
+        if (
+          !res.headers.has('Cache-Control') &&
+          res.headers.get('Content-Type')?.includes('application/json')
+        ) {
+          res.headers.set('Cache-Control', 'no-store')
+        }
+        return res
+      })
+      .catch((error: unknown) => {
+        Sentry.captureException(error)
+        return new Response('Internal server error', { status: 500 })
+      })
   },
   websocket: {
     open(ws) {

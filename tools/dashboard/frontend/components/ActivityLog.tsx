@@ -9,6 +9,7 @@
  */
 
 import { SessionList } from '@dashboard/frontend/components/SessionList'
+import { TodoList } from '@dashboard/frontend/components/TodoList'
 import { wsClient } from '@dashboard/frontend/lib/actions'
 import {
   activityEntries,
@@ -766,6 +767,7 @@ export function ActivityLog() {
 
           {/* Activity detail (right panel) */}
           <div className="flex-1 flex flex-col min-w-0">
+            <TodoList />
             <div
               ref={logRef}
               className="flex-1 overflow-y-auto px-xl py-md text-sm leading-[1.6]"

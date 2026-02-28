@@ -11,6 +11,7 @@ import type {
   Issue,
   ProcessedEntry,
   Session,
+  TodoItem,
 } from '@dashboard/frontend/lib/types'
 import { signal } from '@preact/signals'
 
@@ -62,6 +63,9 @@ export const termInputVisible = signal(false)
 /** Ordered list of activity log entries for the current session. */
 export const activityEntries = signal<ProcessedEntry[]>([])
 
+/** Task items extracted from Claude's TaskCreate/TaskUpdate tool calls. */
+export const todoItems = signal<TodoItem[]>([])
+
 /** Session list from the session index, refreshed periodically. */
 export const sessions = signal<Session[]>([])
 
@@ -70,6 +74,9 @@ export const selectedSessionId = signal<string | null>(null)
 
 /** Whether to show archived sessions in the session browser. */
 export const showArchived = signal(false)
+
+/** Whether render profiling is active. */
+export const profiling = signal(false)
 
 /** Current audit gate state, refreshed periodically. */
 export const auditGate = signal<{
