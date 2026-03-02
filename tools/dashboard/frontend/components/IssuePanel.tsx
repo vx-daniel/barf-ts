@@ -30,13 +30,15 @@ import type { Issue } from '@dashboard/frontend/lib/types'
 import { basicSetup, EditorView } from 'codemirror'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { IssueState } from '@/types/schema/issue-schema'
+import { StatsPanel } from '@dashboard/frontend/components/StatsPanel'
 
-type SectionId = 'issue' | 'plan'
+type SectionId = 'issue' | 'plan' | 'stats'
 type SubTabId = 'preview' | 'edit' | 'metadata'
 
 const SECTION_TABS: Record<SectionId, readonly SubTabId[]> = {
   issue: ['preview', 'edit', 'metadata'],
   plan: ['preview', 'edit'],
+  stats: [],
 } as const
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -173,10 +175,13 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
     }
 
     if (id) {
-      api.fetchPlan(id).then((content) => {
-        setPlanContent(content)
-        planBodyRef.current = content ?? ''
-      }).catch(() => setPlanContent(null))
+      api
+        .fetchPlan(id)
+        .then((content) => {
+          setPlanContent(content)
+          planBodyRef.current = content ?? ''
+        })
+        .catch(() => setPlanContent(null))
     }
   }, [id])
 
@@ -190,7 +195,8 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
 
   // Mount issue CodeMirror lazily when Issue > Edit is selected
   useEffect(() => {
-    if (section !== 'issue' || subTab !== 'edit' || !cmContainerRef.current) return
+    if (section !== 'issue' || subTab !== 'edit' || !cmContainerRef.current)
+      return
     if (editorViewRef.current) return
 
     const parent = cmContainerRef.current
@@ -228,7 +234,8 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
 
   // Mount plan CodeMirror lazily when Plan > Edit is selected
   useEffect(() => {
-    if (section !== 'plan' || subTab !== 'edit' || !planCmContainerRef.current) return
+    if (section !== 'plan' || subTab !== 'edit' || !planCmContainerRef.current)
+      return
     if (planEditorViewRef.current) return
 
     const parent = planCmContainerRef.current
@@ -266,7 +273,13 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
 
   // Render metadata HTML
   useEffect(() => {
-    if (section !== 'issue' || subTab !== 'metadata' || !metadataRef.current || !issue) return
+    if (
+      section !== 'issue' ||
+      subTab !== 'metadata' ||
+      !metadataRef.current ||
+      !issue
+    )
+      return
     const htmlString = renderMetadataJSON(issue)
     safeRenderHTML(metadataRef.current, htmlString)
   }, [section, subTab, id, issue])
@@ -321,17 +334,19 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
   const isRunningThis = running === issue.id
   const EXPECTS_PLAN: Set<string> = new Set(['PLANNED', 'BUILT'])
   const missingPlan = planContent === null && EXPECTS_PLAN.has(issue.state)
-  const actions =
-    missingPlan
-      ? ['plan']
-      : issue.state === 'NEW'
-        ? getNewIssueActions(issue)
-        : (CMD_ACTIONS[issue.state as IssueState] ?? [])
+  const actions = missingPlan
+    ? ['plan']
+    : issue.state === 'NEW'
+      ? getNewIssueActions(issue)
+      : (CMD_ACTIONS[issue.state as IssueState] ?? [])
 
   return (
     <>
       {/* Header */}
-      <div className="flex items-center gap-md px-2xl py-lg border-b border-neutral shrink-0">
+      <div
+        className="flex items-center gap-md px-2xl py-lg border-b border-neutral shrink-0 border-l-4"
+        style={{ borderLeftColor: stateColor(issue.state) }}
+      >
         <span className="text-md text-base-content/50">#{issue.id}</span>
         <span className="text-lg font-bold flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
           {issue.title}
@@ -344,14 +359,6 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
         >
           &times;
         </button>
-      </div>
-
-      {/* State row */}
-      <div className="px-2xl py-md border-b border-neutral flex items-center gap-md flex-wrap shrink-0">
-        <span className="badge badge-soft font-bold tracking-[0.06em]">
-          {STATE_EMOJI[issue.state as IssueState]}{' '}
-          {STATE_LABELS[issue.state as IssueState] ?? issue.state}
-        </span>
       </div>
 
       {/* Relationships */}
@@ -387,16 +394,12 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      {/* Missing plan warning */}
-      {missingPlan && (
-        <div className="px-2xl py-md border-b border-neutral bg-warning/10 text-warning text-xs font-medium shrink-0">
-          No plan found — run plan before other actions
-        </div>
-      )}
-
       {/* Section selector (Issue / Plan) */}
       <div className="flex border-b border-neutral shrink-0">
-        {(planContent !== null ? ['issue', 'plan'] as const : ['issue'] as const).map((s) => (
+        {(planContent !== null
+          ? (['issue', 'plan', 'stats'] as const)
+          : (['issue', 'stats'] as const)
+        ).map((s) => (
           <button
             type="button"
             key={s}
@@ -415,8 +418,8 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
         ))}
       </div>
 
-      {/* Sub-tabs */}
-      <div className="tabs tabs-border shrink-0">
+      {/* Sub-tabs (hidden for stats which has none) */}
+      {SECTION_TABS[section].length > 0 && <div className="tabs tabs-border shrink-0">
         {SECTION_TABS[section].map((tab) => (
           <button
             type="button"
@@ -428,7 +431,7 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* Content area */}
       <div className="flex-1 overflow-hidden flex flex-col min-w-0">
@@ -440,13 +443,18 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
           id="editor-cm"
           ref={cmContainerRef}
           className="flex-1 overflow-auto"
-          style={{ display: section === 'issue' && subTab === 'edit' ? '' : 'none' }}
+          style={{
+            display: section === 'issue' && subTab === 'edit' ? '' : 'none',
+          }}
         />
         <div
           id="editor-metadata"
           ref={metadataRef}
           className="h-full overflow-auto"
-          style={{ display: section === 'issue' && subTab === 'metadata' ? 'block' : 'none' }}
+          style={{
+            display:
+              section === 'issue' && subTab === 'metadata' ? 'block' : 'none',
+          }}
         />
         <MarkdownPreview
           content={planPreviewContent}
@@ -456,12 +464,22 @@ export function IssuePanel({ onClose }: { onClose: () => void }) {
           id="plan-cm"
           ref={planCmContainerRef}
           className="flex-1 overflow-auto"
-          style={{ display: section === 'plan' && subTab === 'edit' ? '' : 'none' }}
+          style={{
+            display: section === 'plan' && subTab === 'edit' ? '' : 'none',
+          }}
         />
+        {section === 'stats' && <StatsPanel issue={issue} />}
       </div>
       {/* Progress steps */}
       <IssueSteps state={issue.state} />
       {/* Actions */}
+      {/* Missing plan warning */}
+      {missingPlan && (
+        <div className="px-2xl py-md border-b border-neutral bg-warning/10 text-warning text-xs font-medium shrink-0">
+          No plan found — run plan before other actions
+        </div>
+      )}
+
       <div className="px-2xl py-lg border-t border-neutral flex gap-md flex-wrap shrink-0">
         {dirty && section === 'issue' && (
           <button

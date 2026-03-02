@@ -127,7 +127,7 @@ export const CMD_ACTIONS: Record<IssueState, string[]> = {
   NEW: [],
   GROOMED: ['plan'],
   PLANNED: ['plan', 'build'],
-  BUILT: ['audit'],
+  BUILT: ['verify', 'audit'],
   COMPLETE: [],
   STUCK: ['plan'],
   SPLIT: [],
