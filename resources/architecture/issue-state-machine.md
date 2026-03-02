@@ -9,10 +9,9 @@ Issues are markdown files with `KEY=VALUE` frontmatter. State is a field in fron
 ```
 NEW          Fresh issue, not yet triaged
 GROOMED      Triaged, needs_interview resolved (ready to plan)
-PLANNED      Plan file exists in planDir
-IN_PROGRESS  Build loop is actively running
-COMPLETED    Acceptance criteria passed, pre-complete gate passed
-VERIFIED     Build/check/test passed post-completion (true terminal)
+PLANNED      Plan file exists in planDir (stays PLANNED while building)
+BUILT        Acceptance criteria passed, pre-complete gate passed
+COMPLETE     Build/check/test passed post-build (true terminal)
 STUCK        Blocked — needs human intervention
 SPLIT        Was too large; split into child issues (terminal)
 ```
@@ -29,22 +28,18 @@ stateDiagram-v2
     GROOMED --> STUCK
     GROOMED --> SPLIT
 
-    PLANNED --> IN_PROGRESS : build loop start
+    PLANNED --> BUILT : acceptance criteria met
     PLANNED --> STUCK
-    PLANNED --> SPLIT
+    PLANNED --> SPLIT : context overflow → split
 
-    IN_PROGRESS --> COMPLETED : acceptance criteria met
-    IN_PROGRESS --> STUCK
-    IN_PROGRESS --> SPLIT : context overflow → split
-
-    COMPLETED --> VERIFIED : build/check/test pass
+    BUILT --> COMPLETE : build/check/test pass
 
     STUCK --> NEW : reset
     STUCK --> GROOMED
     STUCK --> PLANNED
     STUCK --> SPLIT
 
-    VERIFIED --> [*]
+    COMPLETE --> [*]
     SPLIT --> [*]
 ```
 
@@ -54,12 +49,11 @@ stateDiagram-v2
 const VALID_TRANSITIONS = {
   NEW:         ['GROOMED', 'STUCK'],
   GROOMED:     ['PLANNED', 'STUCK', 'SPLIT'],
-  PLANNED:     ['IN_PROGRESS', 'STUCK', 'SPLIT'],
-  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
+  PLANNED:     ['BUILT', 'STUCK', 'SPLIT'],
+  BUILT:       ['COMPLETE'],
   STUCK:       ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
   SPLIT:       [],          // terminal
-  COMPLETED:   ['VERIFIED'],
-  VERIFIED:    [],          // terminal
+  COMPLETE:    [],          // terminal
 }
 ```
 
@@ -69,7 +63,7 @@ const VALID_TRANSITIONS = {
 ---
 id=001
 title=Add user authentication
-state=IN_PROGRESS
+state=PLANNED
 parent=
 children=
 split_count=0
@@ -143,4 +137,4 @@ Issues use GitHub-flavored checkbox syntax:
 - [ ] Password reset email works   ← not ticked = not complete
 ```
 
-`parseAcceptanceCriteria` returns `{ total, checked, allChecked }`. The build loop only transitions to COMPLETED when `allChecked === true`.
+`parseAcceptanceCriteria` returns `{ total, checked, allChecked }`. The build loop only transitions to BUILT when `allChecked === true`.

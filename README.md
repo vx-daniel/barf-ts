@@ -35,11 +35,11 @@ Each issue is a markdown file with frontmatter. The full lifecycle:
 
 1. **Triage** — A fast one-shot Claude call evaluates each `NEW` issue. If the requirements are clear, the issue moves to `GROOMED`. If not, `needs_interview=true` is set and questions are appended to the issue body for the `/barf-interview` Claude Code slash command.
 2. **Plan** — Claude reads the issue, explores the codebase, writes a plan file (`GROOMED → PLANNED`)
-3. **Build** — Claude implements the plan, checking acceptance criteria between iterations (`PLANNED → IN_PROGRESS → COMPLETED`)
-4. **Verify** — After `COMPLETED`, barf runs `bun run build`, `bun run check`, and `bun test`. If all pass, the issue transitions to `VERIFIED`. If they fail, a fix sub-issue is created and the loop iterates until all checks pass or `MAX_VERIFY_RETRIES` is exhausted.
+3. **Build** — Claude implements the plan, checking acceptance criteria between iterations (`PLANNED → BUILT`)
+4. **Verify** — After `BUILT`, barf runs `bun run build`, `bun run check`, and `bun test`. If all pass, the issue transitions to `COMPLETE`. If they fail, a fix sub-issue is created and the loop iterates until all checks pass or `MAX_VERIFY_RETRIES` is exhausted.
 5. **Audit** — An external AI provider reviews the completed work for quality and rule compliance
 
-`barf auto` runs all stages in sequence — triage `NEW` issues, plan `GROOMED` issues, build `PLANNED` issues, verify `COMPLETED` issues.
+`barf auto` runs all stages in sequence — triage `NEW` issues, plan `GROOMED` issues, build `PLANNED` issues, verify `BUILT` issues.
 
 When Claude's context fills up, barf either splits the issue into sub-issues or escalates to a larger model automatically.
 
@@ -163,18 +163,15 @@ stateDiagram-v2
     GROOMED --> PLANNED : plan
     GROOMED --> STUCK
     GROOMED --> SPLIT
-    PLANNED --> IN_PROGRESS : build starts
+    PLANNED --> BUILT : acceptance criteria met
     PLANNED --> STUCK
     PLANNED --> SPLIT
-    IN_PROGRESS --> COMPLETED : acceptance criteria met
-    IN_PROGRESS --> STUCK
-    IN_PROGRESS --> SPLIT
     STUCK --> PLANNED
     STUCK --> NEW
     STUCK --> GROOMED
     STUCK --> SPLIT
-    COMPLETED --> VERIFIED : verification passes
-    VERIFIED --> [*]
+    BUILT --> COMPLETE : verification passes
+    COMPLETE --> [*]
     SPLIT --> [*]
 ```
 
@@ -182,12 +179,11 @@ stateDiagram-v2
 |-------|---------|
 | `NEW` | Created, awaiting triage |
 | `GROOMED` | Triaged, requirements clear, ready for planning |
-| `PLANNED` | Plan file exists, ready to build |
-| `IN_PROGRESS` | Claude is actively working on it |
+| `PLANNED` | Plan file exists, ready to build (stays PLANNED while building) |
+| `BUILT` | Claude finished building; awaiting automated verification |
+| `COMPLETE` | Build, lint, and tests pass — truly done (terminal) |
 | `STUCK` | Blocked, needs human intervention or re-planning |
 | `SPLIT` | Split into sub-issues (terminal) |
-| `COMPLETED` | All acceptance criteria met; awaiting automated verification |
-| `VERIFIED` | Build, lint, and tests pass — truly done (terminal) |
 
 The `needs_interview` field on an issue (`true`/`false`/unset) is separate from state. When `barf auto` triages a `NEW` issue and finds it under-specified, it sets `needs_interview=true` and appends clarifying questions to the issue body. Run `/barf-interview` as a Claude Code slash command to answer them before planning.
 
@@ -233,7 +229,7 @@ Runs Claude to plan an issue (`GROOMED → PLANNED`). Auto-selects the first pla
 barf build [--issue <id>] [--batch <n>] [--max <n>]
 ```
 
-Runs Claude to implement an issue (`PLANNED → IN_PROGRESS → COMPLETED`). Auto-selects the highest-priority buildable issue if `--issue` is omitted.
+Runs Claude to implement an issue (`PLANNED → BUILT`). Auto-selects the highest-priority buildable issue if `--issue` is omitted.
 
 - `--batch <n>` — build up to `n` issues concurrently (default: 1)
 - `--max <n>` — override max iterations for this run (0 = unlimited)
@@ -244,7 +240,7 @@ Runs Claude to implement an issue (`PLANNED → IN_PROGRESS → COMPLETED`). Aut
 barf auto [--batch <n>] [--max <n>]
 ```
 
-Auto-orchestrate all stages: triage `NEW` issues, plan `GROOMED` issues, build `PLANNED`/`IN_PROGRESS` issues, verify `COMPLETED` issues. Issues with `needs_interview=true` are skipped for planning — run `/barf-interview` first.
+Auto-orchestrate all stages: triage `NEW` issues, plan `GROOMED` issues, build `PLANNED` issues, verify `BUILT` issues. Issues with `needs_interview=true` are skipped for planning — run `/barf-interview` first.
 
 - `--batch <n>` — max concurrent builds (default: 1)
 - `--max <n>` — max iterations per issue (0 = unlimited)
@@ -255,7 +251,7 @@ Auto-orchestrate all stages: triage `NEW` issues, plan `GROOMED` issues, build `
 barf audit [--issue <id>] [--all]
 ```
 
-Audits completed issues for quality and rule compliance using a configured AI provider (OpenAI, Gemini, Claude, or Codex). Defaults to auditing all `COMPLETED` issues.
+Audits completed issues for quality and rule compliance using a configured AI provider (OpenAI, Gemini, Claude, or Codex). Defaults to auditing all `BUILT` issues.
 
 ## Configuration
 

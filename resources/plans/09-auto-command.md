@@ -6,7 +6,7 @@
 
 The user wants a default mode that automatically:
 1. Plans all NEW issues (sequential, one at a time)
-2. Builds all PLANNED/IN_PROGRESS issues (concurrent batch)
+2. Builds all PLANNED/PLANNED issues (concurrent batch)
 3. Repeats until no actionable issues remain
 
 ## Root Cause
@@ -27,7 +27,7 @@ import type { IssueProvider } from '@/core/issue-providers/base'
 import { runLoop } from '@/core/batch'
 
 const PLAN_STATES = new Set(['NEW'])
-const BUILD_STATES = new Set(['PLANNED', 'IN_PROGRESS'])
+const BUILD_STATES = new Set(['PLANNED', 'PLANNED'])
 
 export async function autoCommand(
   provider: IssueProvider,
@@ -49,7 +49,7 @@ export async function autoCommand(
       await runLoop(issue.id, 'plan', config, provider)
     }
 
-    // Phase 2: build PLANNED/IN_PROGRESS concurrently (up to batch limit)
+    // Phase 2: build PLANNED/PLANNED concurrently (up to batch limit)
     if (toBuild.length > 0) {
       await Promise.allSettled(toBuild.map(i => runLoop(i.id, 'build', config, provider)))
     }
@@ -68,7 +68,7 @@ Add command before `program.parseAsync(...)`:
 ```typescript
 program
   .command('auto')
-  .description('Auto-orchestrate: plan all NEW then build all PLANNED/IN_PROGRESS')
+  .description('Auto-orchestrate: plan all NEW then build all PLANNED/PLANNED')
   .option('--batch <n>', 'Max concurrent builds', parseInt)
   .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)
   .action(async opts => {

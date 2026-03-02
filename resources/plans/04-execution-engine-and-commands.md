@@ -103,7 +103,7 @@ You are implementing issue **$BARF_ISSUE_ID**.
 
 When all acceptance criteria are met and tests pass:
 
-1. Update the issue file: change `state=IN_PROGRESS` to `state=COMPLETED` in the frontmatter
+1. Update the issue file: change `state=PLANNED` to `state=BUILT` in the frontmatter
 2. Commit your work with a clear message
 ```
 
@@ -812,13 +812,13 @@ export function runLoop(
         let iteration = 0;
         let splitPending = false;
 
-        // Build mode: transition to IN_PROGRESS on first iteration
+        // Build mode: transition to PLANNED on first iteration
         if (mode === 'build') {
           const issueResult = await provider.fetchIssue(issueId);
           if (issueResult.isOk()) {
             const s = issueResult.value.state;
             if (s === 'NEW' || s === 'PLANNED') {
-              const t = await provider.transition(issueId, 'IN_PROGRESS');
+              const t = await provider.transition(issueId, 'PLANNED');
               if (t.isErr()) logger.warn({ error: t.error.message }, 'transition failed');
             }
           }
@@ -827,7 +827,7 @@ export function runLoop(
         iterationLoop: while (shouldContinue(iteration, config)) {
           const issueResult = await provider.fetchIssue(issueId);
           if (issueResult.isErr()) throw issueResult.error;
-          if (issueResult.value.state === 'COMPLETED') break;
+          if (issueResult.value.state === 'BUILT') break;
 
           const currentMode: LoopMode = splitPending ? 'split' : mode;
           logger.info({ issueId, mode: currentMode, model, iteration }, 'starting iteration');
@@ -925,8 +925,8 @@ export function runLoop(
               }
               if (testsPassed) {
                 const fresh = await provider.fetchIssue(issueId);
-                if (fresh.isOk() && fresh.value.state !== 'COMPLETED') {
-                  await provider.transition(issueId, 'COMPLETED');
+                if (fresh.isOk() && fresh.value.state !== 'BUILT') {
+                  await provider.transition(issueId, 'BUILT');
                 }
                 break iterationLoop;
               }
@@ -1056,7 +1056,7 @@ export async function buildCommand(
     process.exit(1);
   }
 
-  const BUILDABLE = new Set<string>(['IN_PROGRESS', 'PLANNED', 'NEW']);
+  const BUILDABLE = new Set<string>(['PLANNED', 'PLANNED', 'NEW']);
   const candidates = listResult.value
     .filter((i) => BUILDABLE.has(i.state))
     .slice(0, opts.batch);
@@ -1130,7 +1130,7 @@ program
 
 program
   .command('build')
-  .description('Build an issue with Claude AI (PLANNED → COMPLETED)')
+  .description('Build an issue with Claude AI (PLANNED → BUILT)')
   .option('--issue <id>', 'Issue ID to build (auto-selects if omitted)')
   .option('--batch <n>', 'Number of issues to build concurrently', parseInt)
   .option('--max <n>', 'Max iterations per issue (0 = unlimited)', parseInt)

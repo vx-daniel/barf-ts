@@ -59,15 +59,15 @@ PreToolUse hooks intercept `git commit` calls and enforce test passage. Stop hoo
 ## State Machine
 
 ```typescript
-type IssueState = 'NEW' | 'INTERVIEWED' | 'PLANNED' | 'IN_PROGRESS' | 'STUCK' | 'SPLIT' | 'COMPLETED';
+type IssueState = 'NEW' | 'INTERVIEWED' | 'PLANNED' | 'BUILT' | 'STUCK' | 'SPLIT' | 'COMPLETE';
 
 const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
   NEW: ['PLANNED'],
-  PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
-  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
+  PLANNED: ['BUILT', 'STUCK', 'SPLIT'],
+  BUILT: ['COMPLETE', 'STUCK', 'SPLIT'],
   SPLIT: [],
   STUCK: ['PLANNED', 'SPLIT'],
-  COMPLETED: [],
+  COMPLETE: [],
 };
 
 function transition(issue: Issue, to: IssueState): Issue {

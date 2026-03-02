@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add a pre-completion phase that runs configurable fix commands (best-effort) and a test gate (hard requirement) before transitioning issues to COMPLETED.
+**Goal:** Add a pre-completion phase that runs configurable fix commands (best-effort) and a test gate (hard requirement) before transitioning issues to BUILT.
 
 **Architecture:** New `src/core/pre-complete.ts` module mirrors `verification.ts` structure. Batch.ts delegates to it instead of inline testCommand logic. New `fixCommands` config field parsed from `.barfrc`.
 
@@ -307,7 +307,7 @@ const deps = {
 Add new test cases:
 
 ```typescript
-it('runs pre-complete before COMPLETED transition', async () => {
+it('runs pre-complete before BUILT transition', async () => {
   let preCompleteRan = false
   const customDeps = {
     ...deps,
@@ -319,10 +319,10 @@ it('runs pre-complete before COMPLETED transition', async () => {
   const provider = makeProvider({
     lockIssue: () => okAsync(undefined),
     unlockIssue: () => okAsync(undefined),
-    fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-    transition: () => okAsync(makeIssue({ state: 'COMPLETED' })),
+    fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+    transition: () => okAsync(makeIssue({ state: 'BUILT' })),
     checkAcceptanceCriteria: () => okAsync(true),
-    writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+    writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
   })
 
   await runLoop('001', 'build', defaultConfig(), provider, customDeps)
@@ -345,17 +345,17 @@ it('continues loop when pre-complete test gate fails', async () => {
   const provider = makeProvider({
     lockIssue: () => okAsync(undefined),
     unlockIssue: () => okAsync(undefined),
-    fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+    fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
     transition: (_id, to) => {
       transitionTargets.push(to)
       return okAsync(makeIssue({ state: to }))
     },
     checkAcceptanceCriteria: () => okAsync(true),
-    writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+    writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
   })
 
   await runLoop('001', 'build', config, provider, customDeps)
-  expect(transitionTargets).not.toContain('COMPLETED')
+  expect(transitionTargets).not.toContain('BUILT')
 })
 ```
 
@@ -404,15 +404,15 @@ if (mode === 'build') {
 
     if (preOutcome.passed) {
       const fresh = await provider.fetchIssue(issueId)
-      if (fresh.isOk() && fresh.value.state !== 'COMPLETED') {
-        await provider.transition(issueId, 'COMPLETED')
+      if (fresh.isOk() && fresh.value.state !== 'BUILT') {
+        await provider.transition(issueId, 'BUILT')
       }
-      // Run verification immediately after COMPLETED
+      // Run verification immediately after BUILT
       const verifyResult = await _verifyIssue(issueId, config, provider)
       if (verifyResult.isErr()) {
         logger.warn(
           { issueId, err: verifyResult.error.message },
-          'verification failed after COMPLETED',
+          'verification failed after BUILT',
         )
       }
       break

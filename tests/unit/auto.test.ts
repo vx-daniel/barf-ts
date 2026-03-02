@@ -54,7 +54,7 @@ describe('autoCommand', () => {
 
   it('does not set exitCode when all issues are in non-actionable states', async () => {
     const provider = makeProvider({
-      listIssues: () => okAsync([makeIssue({ state: 'COMPLETED' })]),
+      listIssues: () => okAsync([makeIssue({ state: 'BUILT' })]),
     })
 
     await autoCommand(provider, { batch: 1, max: 0, auditGate: false }, defaultConfig(), deps)
@@ -136,9 +136,9 @@ describe('autoCommand', () => {
         return okAsync(undefined)
       },
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'BUILT' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
       checkAcceptanceCriteria: () => okAsync(true),
     })
 
@@ -147,21 +147,21 @@ describe('autoCommand', () => {
     expect(lockCalls).toBeGreaterThanOrEqual(1)
   })
 
-  it('builds IN_PROGRESS issues', async () => {
+  it('builds PLANNED issues', async () => {
     let callCount = 0
     const provider = makeProvider({
       listIssues: () => {
         callCount++
         if (callCount <= 2) {
-          return okAsync([makeIssue({ id: '006', state: 'IN_PROGRESS' })])
+          return okAsync([makeIssue({ id: '006', state: 'PLANNED' })])
         }
         return okAsync([])
       },
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'BUILT' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
       checkAcceptanceCriteria: () => okAsync(true),
     })
 
@@ -189,17 +189,17 @@ describe('autoCommand', () => {
 
   // ── Verify phase ────────────────────────────────────────────────────────
 
-  it('includes COMPLETED issues with verify_count>0 in toVerify', async () => {
+  it('includes BUILT issues with verify_count>0 in toVerify', async () => {
     let verifyCalledFor: string[] = []
     const mockVerify = (id: string) => {
       verifyCalledFor.push(id)
       return okAsync(undefined)
     }
     let callCount = 0
-    // Issue is COMPLETED with verify_count=1 (has been attempted before) — needs re-verify
+    // Issue is BUILT with verify_count=1 (has been attempted before) — needs re-verify
     const completedIssue = makeIssue({
       id: '007',
-      state: 'COMPLETED',
+      state: 'BUILT',
       verify_count: 1,
       children: [],
     })
@@ -221,7 +221,7 @@ describe('autoCommand', () => {
     expect(verifyCalledFor).toContain('007')
   })
 
-  it('excludes COMPLETED issues with verify_exhausted=true from toVerify', async () => {
+  it('excludes BUILT issues with verify_exhausted=true from toVerify', async () => {
     let verifyCalled = false
     const mockVerify = () => {
       verifyCalled = true
@@ -229,7 +229,7 @@ describe('autoCommand', () => {
     }
     const exhaustedIssue = makeIssue({
       id: '008',
-      state: 'COMPLETED',
+      state: 'BUILT',
       verify_count: 3,
       verify_exhausted: true,
       children: [],
@@ -254,7 +254,7 @@ describe('autoCommand', () => {
     }
     const fixIssue = makeIssue({
       id: '009',
-      state: 'COMPLETED',
+      state: 'BUILT',
       verify_count: 1,
       is_verify_fix: true,
       children: [],
@@ -277,15 +277,15 @@ describe('autoCommand', () => {
       verifyCalled = true
       return okAsync(undefined)
     }
-    // Parent has a fix child that is still IN_PROGRESS
+    // Parent has a fix child that is still PLANNED
     const fixChild = makeIssue({
       id: '010-1',
-      state: 'IN_PROGRESS',
+      state: 'PLANNED',
       is_verify_fix: true,
     })
     const parentIssue = makeIssue({
       id: '010',
-      state: 'COMPLETED',
+      state: 'BUILT',
       verify_count: 1,
       children: ['010-1'],
     })
@@ -317,12 +317,12 @@ describe('autoCommand', () => {
     let callCount = 0
     const fixChild = makeIssue({
       id: '011-1',
-      state: 'COMPLETED',
+      state: 'BUILT',
       is_verify_fix: true,
     })
     const parentIssue = makeIssue({
       id: '011',
-      state: 'COMPLETED',
+      state: 'BUILT',
       verify_count: 1,
       children: ['011-1'],
     })

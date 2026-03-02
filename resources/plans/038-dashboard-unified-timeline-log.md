@@ -124,7 +124,7 @@ New CSS additions:
 ## State Transition Detection
 
 The stdout stream already filters `__BARF_STATS__:` lines (in `main.ts`). Add a parallel
-check for `__BARF_STATE__:NEW`, `__BARF_STATE__:IN_PROGRESS`, etc. to emit state banners.
+check for `__BARF_STATE__:NEW`, `__BARF_STATE__:PLANNED`, etc. to emit state banners.
 
 ---
 

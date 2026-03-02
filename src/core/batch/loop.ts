@@ -2,7 +2,7 @@
  * Main orchestration loop — the heart of barf's issue processing.
  *
  * The loop runs Claude iterations on an issue until it reaches a terminal
- * state (COMPLETED/VERIFIED) or the iteration limit is exhausted. Each
+ * state (BUILT/COMPLETE) or the iteration limit is exhausted. Each
  * iteration's outcome is dispatched to a specific handler in `outcomes.ts`.
  *
  * The loop manages:
@@ -120,35 +120,6 @@ async function runLoopImpl(
   setIssueContext(issueId, mode, 'locked')
 
   try {
-    // Build mode: transition to IN_PROGRESS on first iteration
-    if (mode === 'build') {
-      const issueResult = await provider.fetchIssue(issueId)
-      if (issueResult.isOk()) {
-        const currentState = issueResult.value.state
-        if (currentState === 'PLANNED') {
-          const transitionResult = await provider.transition(
-            issueId,
-            'IN_PROGRESS',
-            {
-              durationInStageSeconds: 0,
-              inputTokens: 0,
-              outputTokens: 0,
-              finalContextSize: 0,
-              iterations: 0,
-              model: state.model,
-              trigger: 'auto/build',
-            },
-          )
-          if (transitionResult.isErr()) {
-            logger.warn(
-              { error: transitionResult.error.message },
-              'transition failed',
-            )
-          }
-        }
-      }
-    }
-
     // force_split: skip build, enter split flow directly
     if (mode === 'build') {
       const fsIssue = await provider.fetchIssue(issueId)
@@ -173,7 +144,7 @@ async function runLoopImpl(
       if (issueResult.isErr()) {
         throw issueResult.error
       }
-      if (issueResult.value.state === 'COMPLETED') {
+      if (issueResult.value.state === 'BUILT') {
         break
       }
 
@@ -353,16 +324,16 @@ async function runLoopImpl(
  * terminal state or `config.maxIterations` is exhausted.
  *
  * No globals — all state passed as arguments. The loop handles:
- * - State transitions (IN_PROGRESS on start, PLANNED/COMPLETED/SPLIT on exit)
+ * - State transitions (PLANNED/BUILT/SPLIT on exit)
  * - Context overflow decisions (split vs escalate to larger model)
  * - Plan file detection (plan mode exits after one iteration)
  * - Acceptance criteria checking and pre-completion gate (build mode)
- * - Post-COMPLETED verification
+ * - Post-BUILT verification
  * - Session stats persistence (best-effort)
  * - Issue locking/unlocking (POSIX file locks)
  *
  * @param issueId - ID of the issue to process.
- * @param mode - `'plan'` runs one iteration then checks for a plan file; `'build'` loops until COMPLETED.
+ * @param mode - `'plan'` runs one iteration then checks for a plan file; `'build'` loops until BUILT.
  * @param config - Loaded barf configuration.
  * @param provider - Issue provider used to lock, read, and write the issue.
  * @param deps - Injectable dependencies; pass `{ runClaudeIteration: mockFn }` in tests.

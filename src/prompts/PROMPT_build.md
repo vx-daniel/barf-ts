@@ -19,5 +19,5 @@ You are implementing issue **$BARF_ISSUE_ID**.
 
 When all acceptance criteria are met and tests pass:
 
-1. Update the issue file: change `state=IN_PROGRESS` to `state=COMPLETED` in the frontmatter
+1. Update the issue file: change `state=PLANNED` to `state=BUILT` in the frontmatter
 2. Commit your work with a clear message

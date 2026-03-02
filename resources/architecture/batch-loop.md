@@ -19,10 +19,9 @@ flowchart TD
     A([runLoop]) --> B[Lock issue]
     B --> C[Fetch issue]
     C --> D{mode?}
-    D -- build + PLANNED --> E[Transition PLANNED → IN_PROGRESS]
     D -- build + force_split --> FS[Skip to split flow]
     D -- plan --> F
-    E --> F[Resolve prompt + inject vars]
+    D -- build + PLANNED --> F[Resolve prompt + inject vars]
     F --> G[runClaudeIteration]
     G --> H{outcome?}
     H -- overflow --> I[handleOverflow]
@@ -37,7 +36,7 @@ flowchart TD
     H -- success + build --> R[runPreComplete]
     R --> S{Acceptance criteria\n+ test gate?}
     S -- not done --> F
-    S -- done --> T[Transition to COMPLETED]
+    S -- done --> T[Transition to BUILT]
     K --> ZZ([finally: persist stats + unlock])
     T --> ZZ
     N --> ZZ
@@ -50,7 +49,7 @@ flowchart TD
 Each iteration:
 
 1. Fetch current issue state (fresh read each time)
-2. Break if issue is already `COMPLETED`
+2. Break if issue is already `BUILT`
 3. Resolve prompt template (`PROMPT_plan.md`, `PROMPT_build.md`, or `PROMPT_split.md`)
 4. Apply per-issue `context_usage_percent` override if set
 5. Inject template variables:
@@ -97,11 +96,11 @@ Runs before checking acceptance criteria in build mode:
    e.g. "bun test"
 ```
 
-If test fails → continue building (don't transition to COMPLETED).
+If test fails → continue building (don't transition to BUILT).
 
 ## Verification Gate (`src/core/verification/`)
 
-Runs after `COMPLETED` transition (called by `barf auto`):
+Runs after `BUILT` transition (called by `barf auto`):
 
 ```
 verifyIssue(issueId, config, provider)
@@ -111,12 +110,12 @@ verifyIssue(issueId, config, provider)
 │   ├── bun run check
 │   └── bun test
 └── all passed?
-    ├── YES → transition COMPLETED → VERIFIED (terminal)
+    ├── YES → transition BUILT → COMPLETE (terminal)
     └── NO  → create fix sub-issue (is_verify_fix=true)
               increment verify_count
               if verify_count >= maxVerifyRetries:
                 set verify_exhausted=true
-                leave as COMPLETED
+                leave as BUILT
 ```
 
 ## Session Stats
@@ -142,6 +141,6 @@ A formatted stats block is also appended to the issue body after each session.
 | `batch/helpers.ts` | `shouldContinue`, `handleOverflow`, `resolveIssueFile`, `planSplitChildren` |
 | `batch/stats.ts` | SessionStats creation + persistence |
 | `pre-complete.ts` | Fix commands + test gate |
-| `verification/orchestration.ts` | Post-COMPLETED verify + fix loop |
+| `verification/orchestration.ts` | Post-BUILT verify + fix loop |
 | `verification/checks.ts` | `DEFAULT_VERIFY_CHECKS`, `runVerification()` |
 | `verification/format.ts` | `buildFixBody()` — formats failure output for fix issues |

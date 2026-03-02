@@ -38,7 +38,7 @@ export type AutoDeps = {
 /** Issue states queued for planning on each {@link autoCommand} loop iteration. */
 const PLAN_STATES = new Set<IssueState>(['GROOMED'])
 /** Issue states queued for building on each {@link autoCommand} loop iteration. */
-const BUILD_STATES = new Set<IssueState>(['PLANNED', 'IN_PROGRESS'])
+const BUILD_STATES = new Set<IssueState>(['PLANNED'])
 
 /**
  * Continuously orchestrates triage → plan → build → verify → audit until no actionable issues remain.
@@ -48,7 +48,7 @@ const BUILD_STATES = new Set<IssueState>(['PLANNED', 'IN_PROGRESS'])
  * 2. Triages all `NEW` issues where `needs_interview` is undefined.
  * 3. Plans all `GROOMED` issues (skipped if gate is draining/auditing/fixing).
  * 4. Builds up to `opts.batch` `BUILD_STATES` issues concurrently (skipped/filtered by gate).
- * 5. Verifies COMPLETED issues.
+ * 5. Verifies BUILT issues.
  * 6. Checks audit gate auto-trigger and handles auditing/fixing phases.
  *
  * The loop exits when all queues are empty or the provider returns an error.
@@ -115,8 +115,8 @@ export async function autoCommand(
 
       // Handle auditing phase
       if (currentGate.state === 'auditing') {
-        logger.info('audit gate: running audit on COMPLETED issues')
-        const completed = issues.filter((i) => i.state === 'COMPLETED')
+        logger.info('audit gate: running audit on BUILT issues')
+        const completed = issues.filter((i) => i.state === 'BUILT')
 
         const fixIssueIds: string[] = []
         for (const issue of completed) {
@@ -218,8 +218,8 @@ export async function autoCommand(
             const issue = refreshResult.value.find((i) => i.id === id)
             return (
               issue &&
-              (issue.state === 'COMPLETED' ||
-                issue.state === 'VERIFIED' ||
+              (issue.state === 'BUILT' ||
+                issue.state === 'COMPLETE' ||
                 issue.state === 'SPLIT')
             )
           })
@@ -324,10 +324,10 @@ export async function autoCommand(
       const toPlan = refreshed.filter((i) => PLAN_STATES.has(i.state))
       const toBuild = refreshed.filter((i) => BUILD_STATES.has(i.state))
 
-      // COMPLETED issues that still need verification (not fix-children, not exhausted)
+      // BUILT issues that still need verification (not fix-children, not exhausted)
       const toVerify = refreshed.filter(
         (i) =>
-          i.state === 'COMPLETED' &&
+          i.state === 'BUILT' &&
           !i.is_verify_fix &&
           i.verify_count > 0 &&
           !i.verify_exhausted,
@@ -414,7 +414,7 @@ export async function autoCommand(
           .map((r) => (r as { isOk: () => true; value: Issue }).value)
           .filter((c) => c.is_verify_fix === true)
         const allDone = fixChildren.every(
-          (c) => c.state === 'COMPLETED' || c.state === 'VERIFIED',
+          (c) => c.state === 'BUILT' || c.state === 'COMPLETE',
         )
         if (!allDone) {
           logger.debug(

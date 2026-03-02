@@ -29,10 +29,10 @@ import type { IssueProvider } from '@/core/issue-providers/base'
 
 **Rule:** code-patterns.md — no `any`/widened types; typescript-advanced.md — literal types.
 
-`build.ts:48`: `new Set<string>(['IN_PROGRESS', 'PLANNED', 'NEW'])` — widened to `string` while
+`build.ts:48`: `new Set<string>(['PLANNED', 'PLANNED', 'NEW'])` — widened to `string` while
 `i.state` is `IssueState`. Fix: `Set<IssueState>`.
 
-`auto.ts:9-11`: Same — `new Set(['NEW'])` and `new Set(['PLANNED', 'IN_PROGRESS'])` are
+`auto.ts:9-11`: Same — `new Set(['NEW'])` and `new Set(['PLANNED', 'PLANNED'])` are
 implicitly `Set<string>`. Fix: explicit `Set<IssueState>` type.
 
 Both files need `import type { IssueState } from '@/types/index'` (or `'@/types'`).

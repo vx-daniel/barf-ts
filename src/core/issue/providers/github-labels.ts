@@ -23,11 +23,10 @@ export const STATE_TO_LABEL: Record<IssueState, string> = {
   NEW: 'barf:new',
   GROOMED: 'barf:groomed',
   PLANNED: 'barf:planned',
-  IN_PROGRESS: 'barf:in-progress',
   STUCK: 'barf:stuck',
   SPLIT: 'barf:split',
-  COMPLETED: 'barf:completed',
-  VERIFIED: 'barf:verified',
+  BUILT: 'barf:built',
+  COMPLETE: 'barf:complete',
 }
 
 /**
@@ -77,7 +76,7 @@ export type GHIssue = z.infer<typeof GHIssueSchema>
  * Converts a GitHub issue API response into a barf {@link Issue}.
  *
  * Determines the barf state by checking:
- * 1. If the issue is closed → `COMPLETED`
+ * 1. If the issue is closed → `BUILT`
  * 2. If a `barf:*` state label exists → corresponding state
  * 3. Otherwise → `NEW`
  *
@@ -92,7 +91,7 @@ export function ghToIssue(gh: GHIssue): Issue {
   const stateLabel = gh.labels.find((l) => LABEL_TO_STATE[l.name])
   let state: IssueState
   if (gh.state === 'closed') {
-    state = 'COMPLETED'
+    state = 'BUILT'
   } else if (stateLabel) {
     state = LABEL_TO_STATE[stateLabel.name]
   } else {

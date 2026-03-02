@@ -4,7 +4,7 @@
 
 barf currently jumps directly from `NEW → PLANNED` without any requirements clarification. Complex or ambiguous issues often get planned incorrectly because the agent lacks context the user holds implicitly. The **interview workflow** inserts a human-in-the-loop clarification step before planning.
 
-Similarly, once issues are `COMPLETED` there is no quality gate — no check that acceptance criteria are actually met, that code follows project rules, or that tests/lint/format pass. The **audit mode** adds an on-demand post-completion quality gate that creates new follow-up issues when problems are found.
+Similarly, once issues are `BUILT` there is no quality gate — no check that acceptance criteria are actually met, that code follows project rules, or that tests/lint/format pass. The **audit mode** adds an on-demand post-completion quality gate that creates new follow-up issues when problems are found.
 
 ---
 
@@ -17,7 +17,7 @@ Similarly, once issues are `COMPLETED` there is no quality gate — no check tha
 Add state:
 ```typescript
 // IssueStateSchema
-z.enum(['NEW', 'INTERVIEWING', 'PLANNED', 'IN_PROGRESS', 'STUCK', 'SPLIT', 'COMPLETED'])
+z.enum(['NEW', 'INTERVIEWING', 'PLANNED', 'PLANNED', 'STUCK', 'SPLIT', 'BUILT'])
 ```
 
 Update `VALID_TRANSITIONS` in `src/core/issue/index.ts`:
@@ -78,7 +78,7 @@ Claude writes questions or completion signal as JSON to `$BARF_QUESTIONS_FILE`.
 Add interview phase before plan phase:
 1. List `NEW` issues → transition to INTERVIEWING, run `interviewLoop`, transition to PLANNED
 2. List `INTERVIEWING` issues — warn/skip (means a previous interview was interrupted)
-3. Continue with existing plan/build loop (PLAN_STATES now = `['INTERVIEWING']`, BUILD_STATES = `['PLANNED', 'IN_PROGRESS']`)
+3. Continue with existing plan/build loop (PLAN_STATES now = `['INTERVIEWING']`, BUILD_STATES = `['PLANNED', 'PLANNED']`)
 
 ### Q&A Written Back to Issue
 
@@ -101,7 +101,7 @@ A: Yes, per-organization isolation
 
 `barf audit [--issue <id>] [--all]`
 
-- Default: `--all` (audit all COMPLETED issues)
+- Default: `--all` (audit all BUILT issues)
 - `--issue <id>`: single issue
 
 ### Execution Flow
@@ -128,7 +128,7 @@ Claude either creates a new issue file (findings) or signals `AUDIT_PASS`.
 
 **If clean**: print `✓ Issue #<id> passes audit`
 
-No state change to the original COMPLETED issue.
+No state change to the original BUILT issue.
 
 ### New Prompt: `src/prompts/PROMPT_audit.md`
 

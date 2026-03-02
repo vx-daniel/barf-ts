@@ -51,15 +51,15 @@ describe('GitHubIssueProvider', () => {
     expect(result._unsafeUnwrap().state).toBe('NEW')
   })
 
-  it('maps closed issue to COMPLETED', async () => {
+  it('maps closed issue to BUILT', async () => {
     const closed = {
       ...GH_ISSUE_NEW,
       state: 'closed',
-      labels: [{ name: 'barf:completed' }],
+      labels: [{ name: 'barf:built' }],
     }
     authThen(closed)
     const result = await provider.fetchIssue('1')
-    expect(result._unsafeUnwrap().state).toBe('COMPLETED')
+    expect(result._unsafeUnwrap().state).toBe('BUILT')
   })
 
   it('defaults open issue with no barf label to NEW', async () => {
@@ -242,7 +242,7 @@ describe('GitHubIssueProvider', () => {
     expect(result.isOk()).toBe(true)
   })
 
-  it('closes issue when state set to COMPLETED', async () => {
+  it('closes issue when state set to BUILT', async () => {
     mockSpawn
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
       .mockResolvedValueOnce({
@@ -257,7 +257,7 @@ describe('GitHubIssueProvider', () => {
         stderr: '',
         status: 0,
       })
-    const result = await provider.writeIssue('1', { state: 'COMPLETED' })
+    const result = await provider.writeIssue('1', { state: 'BUILT' })
     expect(result.isOk()).toBe(true)
   })
 
@@ -309,10 +309,10 @@ describe('GitHubIssueProvider', () => {
     expect(result._unsafeUnwrap().state).toBe('NEW')
   })
 
-  it('maps barf:in-progress label to IN_PROGRESS state', async () => {
-    authThen({ ...GH_ISSUE_NEW, labels: [{ name: 'barf:in-progress' }] })
+  it('maps barf:built label to BUILT state', async () => {
+    authThen({ ...GH_ISSUE_NEW, labels: [{ name: 'barf:built' }] })
     const result = await provider.fetchIssue('1')
-    expect(result._unsafeUnwrap().state).toBe('IN_PROGRESS')
+    expect(result._unsafeUnwrap().state).toBe('BUILT')
   })
 
   it('maps barf:stuck label to STUCK state', async () => {

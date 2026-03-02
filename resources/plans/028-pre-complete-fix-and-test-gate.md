@@ -3,13 +3,13 @@
 ## Problem
 
 When the Claude agent finishes work and acceptance criteria are met, barf transitions
-to COMPLETED then runs verification (build/check/test). Lint and format issues that
+to BUILT then runs verification (build/check/test). Lint and format issues that
 the agent could have auto-fixed instead become verification failures that spawn fix
 sub-issues — wasting tokens and iterations.
 
 ## Design
 
-Add a **pre-completion phase** between "acceptance criteria met" and COMPLETED
+Add a **pre-completion phase** between "acceptance criteria met" and BUILT
 transition. This phase runs configurable fix commands (best-effort) then a test
 gate (hard requirement).
 
@@ -53,7 +53,7 @@ export function runPreComplete(
 Replace inline `testCommand` check with `runPreComplete()` call:
 
 ```
-criteria met? → runPreComplete(fixCommands, testCommand) → passed? → COMPLETED → verifyIssue()
+criteria met? → runPreComplete(fixCommands, testCommand) → passed? → BUILT → verifyIssue()
 ```
 
 - `runPreComplete` added to `RunLoopDeps` for testability
@@ -62,9 +62,9 @@ criteria met? → runPreComplete(fixCommands, testCommand) → passed? → COMPL
 
 ### What stays the same
 
-- `verification.ts` — untouched, remains post-COMPLETED read-only gate
+- `verification.ts` — untouched, remains post-BUILT read-only gate
 - State machine — no transition changes
-- `COMPLETED → VERIFIED` flow — unchanged
+- `BUILT → COMPLETE` flow — unchanged
 
 ## Testing
 
@@ -76,6 +76,6 @@ criteria met? → runPreComplete(fixCommands, testCommand) → passed? → COMPL
 | Concern | Behavior |
 |---------|----------|
 | Fix commands fail | Log warning, continue to tests |
-| Test command fails | Block COMPLETED, continue build loop |
+| Test command fails | Block BUILT, continue build loop |
 | No fix commands configured | Skip fix phase |
 | No test command configured | Skip test gate (current behavior) |

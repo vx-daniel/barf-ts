@@ -217,7 +217,7 @@ export async function handlePlanCompletion(
  * Handles build mode completion when acceptance criteria are met.
  *
  * This handler runs the pre-completion gate (fix commands + test gate),
- * and if it passes, transitions the issue to COMPLETED (with stage log)
+ * and if it passes, transitions the issue to BUILT (with stage log)
  * and immediately triggers verification.
  *
  * @param issueId - ID of the issue being built.
@@ -252,7 +252,7 @@ export async function handleBuildCompletion(
 
   if (preOutcome.passed) {
     const fresh = await provider.fetchIssue(issueId)
-    if (fresh.isOk() && fresh.value.state !== 'COMPLETED') {
+    if (fresh.isOk() && fresh.value.state !== 'BUILT') {
       const stageLog: StageLogInput = {
         durationInStageSeconds: Math.floor(
           (Date.now() - state.sessionStartTime) / 1000,
@@ -264,14 +264,14 @@ export async function handleBuildCompletion(
         model: state.model,
         trigger: 'auto/build',
       }
-      await provider.transition(issueId, 'COMPLETED', stageLog)
+      await provider.transition(issueId, 'BUILT', stageLog)
     }
     // Run verification immediately after COMPLETED
     const verifyResult = await deps.verifyIssue(issueId, config, provider)
     if (verifyResult.isErr()) {
       logger.warn(
         { issueId, err: verifyResult.error.message },
-        'verification failed after COMPLETED',
+        'verification failed after BUILT',
       )
     }
     return 'break'

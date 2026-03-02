@@ -8,7 +8,7 @@ import { createLogger } from '@/utils/logger'
 const logger = createLogger('build')
 
 /**
- * Builds one or more issues (PLANNED/IN_PROGRESS → COMPLETED) using Claude AI.
+ * Builds one or more issues (PLANNED → BUILT) using Claude AI.
  *
  * **Single-issue mode (`opts.issue` set):** Builds the named issue and returns.
  *
@@ -74,7 +74,7 @@ export async function buildCommand(
   }
 
   /** Issue states eligible for the build loop. */
-  const BUILDABLE = new Set<IssueState>(['IN_PROGRESS', 'PLANNED', 'NEW'])
+  const BUILDABLE = new Set<IssueState>(['PLANNED', 'NEW'])
   let candidates = listResult.value.filter((i) => BUILDABLE.has(i.state))
 
   // In fixing mode, filter to only audit fix issues

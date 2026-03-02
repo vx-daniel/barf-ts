@@ -20,6 +20,7 @@ import {
   newIssueOpen,
   profiling,
   runningId,
+  sidebarMode,
 } from '@dashboard/frontend/lib/state'
 
 /** Labels and styles for each audit gate state. */
@@ -92,6 +93,16 @@ export function Header(): preact.JSX.Element {
         title="Toggle render profiling (visible in DevTools Performance tab)"
       >
         {profiling.value ? '\u{1F534} Profiling' : '\u23F1 Profile'}
+      </button>
+      <button
+        type="button"
+        className={`btn btn-sm btn-ghost border-neutral ${sidebarMode.value === 'prompts' ? 'btn-active btn-accent' : ''}`}
+        onClick={() => {
+          sidebarMode.value = sidebarMode.value === 'prompts' ? 'issue' : 'prompts'
+        }}
+        title="Toggle prompt template editor"
+      >
+        {'\u{1F4DD}'} Prompts
       </button>
       <button
         type="button"

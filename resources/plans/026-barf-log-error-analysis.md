@@ -4,7 +4,7 @@
 
 ## Context
 
-Analysis of 24 JSONL stream logs from barf's first full run on `tests/sample-project/`. Despite 199 tool errors across 3,684 events, **95.8% of issues reached COMPLETED/VERIFIED**. Barf is remarkably robust — errors are recoverable, not fatal.
+Analysis of 24 JSONL stream logs from barf's first full run on `tests/sample-project/`. Despite 199 tool errors across 3,684 events, **95.8% of issues reached BUILT/COMPLETE**. Barf is remarkably robust — errors are recoverable, not fatal.
 
 **The question isn't "why does barf fail?" — it's "why does barf stumble so much before succeeding?"**
 
@@ -269,32 +269,32 @@ From comparing successful vs failed issues:
 
 | Issue | Errors | Final State | Notes |
 |-------|--------|-------------|-------|
-| 003 | 6 | VERIFIED | Simple function |
-| 004 | 4 | VERIFIED | Simple function |
-| 005 | 9 | VERIFIED | TDD pattern, export issues |
-| 009-1 | 3 | VERIFIED | **Cleanest run** |
-| 009-2 | 8 | VERIFIED | Medium complexity |
+| 003 | 6 | COMPLETE | Simple function |
+| 004 | 4 | COMPLETE | Simple function |
+| 005 | 9 | COMPLETE | TDD pattern, export issues |
+| 009-1 | 3 | COMPLETE | **Cleanest run** |
+| 009-2 | 8 | COMPLETE | Medium complexity |
 | 010 | 6 | SPLIT | Parent split into 4 children |
-| 010-1 | 10 | VERIFIED | Split child |
-| 010-2 | 14 | VERIFIED | Split child, most errors |
-| 010-3 | 6 | VERIFIED | Split child |
-| 010-4 | 10 | VERIFIED | Split child |
-| 011 | 6 | VERIFIED | Medium complexity |
-| 012 | 10 | VERIFIED | Medium complexity |
-| 013 | 12 | COMPLETED | Verification fix |
-| 014 | 14 | COMPLETED | Verification fix, **token leak** |
-| 015 | 6 | VERIFIED | Medium complexity |
-| 017 | 9 | VERIFIED | Medium complexity |
-| 018 | 9 | VERIFIED | Medium complexity |
-| 019 | 8 | VERIFIED | Medium complexity |
-| 020 | 6 | VERIFIED | Medium complexity |
-| 021 | 6 | VERIFIED | Medium complexity |
-| 022 | 10 | VERIFIED | Higher complexity |
-| 023 | 6 | VERIFIED | Medium complexity |
-| 024 | 12 | COMPLETED | Complex issue |
-| 025 | 9 | VERIFIED | Medium complexity |
+| 010-1 | 10 | COMPLETE | Split child |
+| 010-2 | 14 | COMPLETE | Split child, most errors |
+| 010-3 | 6 | COMPLETE | Split child |
+| 010-4 | 10 | COMPLETE | Split child |
+| 011 | 6 | COMPLETE | Medium complexity |
+| 012 | 10 | COMPLETE | Medium complexity |
+| 013 | 12 | BUILT | Verification fix |
+| 014 | 14 | BUILT | Verification fix, **token leak** |
+| 015 | 6 | COMPLETE | Medium complexity |
+| 017 | 9 | COMPLETE | Medium complexity |
+| 018 | 9 | COMPLETE | Medium complexity |
+| 019 | 8 | COMPLETE | Medium complexity |
+| 020 | 6 | COMPLETE | Medium complexity |
+| 021 | 6 | COMPLETE | Medium complexity |
+| 022 | 10 | COMPLETE | Higher complexity |
+| 023 | 6 | COMPLETE | Medium complexity |
+| 024 | 12 | BUILT | Complex issue |
+| 025 | 9 | COMPLETE | Medium complexity |
 
-**Success rate: 23/24 (95.8%) reached COMPLETED or VERIFIED**
+**Success rate: 23/24 (95.8%) reached BUILT or COMPLETE**
 
 ---
 

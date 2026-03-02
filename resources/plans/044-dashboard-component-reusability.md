@@ -229,12 +229,11 @@ The editor currently redeclares `VALID_TRANSITIONS` locally (`editor.ts:31-40`).
 export const VALID_TRANSITIONS: Record<string, string[]> = {
   NEW: ['GROOMED', 'STUCK'],
   GROOMED: ['PLANNED', 'STUCK', 'SPLIT'],
-  PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
-  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
+  PLANNED: ['BUILT', 'STUCK', 'SPLIT'],
+  BUILT: ['COMPLETE'],
   STUCK: ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
   SPLIT: [],
-  COMPLETED: ['VERIFIED'],
-  VERIFIED: [],
+  COMPLETE: [],
 }
 ```
 

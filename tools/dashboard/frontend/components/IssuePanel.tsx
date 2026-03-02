@@ -1,15 +1,14 @@
 /**
- * Editor sidebar — Preact JSX replacement for the imperative `panels/editor.ts`.
- *
- * Reads reactive signals for selected issue, issue list, and running state.
- * Renders header, state row, relationships, tabbed content (preview / edit /
- * metadata), and action buttons.
+ * IssuePanel — extracted from Sidebar. Renders issue detail: header, state,
+ * relationships, tabbed content (preview / edit / metadata), plan tabs, and
+ * action buttons.
  */
 
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { ActionButton } from '@dashboard/frontend/components/ActionButton'
+import { MarkdownPreview } from '@dashboard/frontend/components/MarkdownPreview'
 import {
   deleteIssue,
   navigateToIssue,
@@ -29,19 +28,22 @@ import { getNewIssueActions } from '@dashboard/frontend/lib/issue-helpers'
 import { issues, runningId, selectedId } from '@dashboard/frontend/lib/state'
 import type { Issue } from '@dashboard/frontend/lib/types'
 import { basicSetup, EditorView } from 'codemirror'
-import { marked } from 'marked'
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { IssueState } from '@/types/schema/issue-schema'
 
-type TabId = 'preview' | 'edit' | 'metadata'
+type SectionId = 'issue' | 'plan'
+type SubTabId = 'preview' | 'edit' | 'metadata'
+
+const SECTION_TABS: Record<SectionId, readonly SubTabId[]> = {
+  issue: ['preview', 'edit', 'metadata'],
+  plan: ['preview', 'edit'],
+} as const
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 
-/**
- * Strips inline event handlers and script elements from a parsed document
- * before any nodes are appended to the live DOM.
- */
-function sanitizeDoc(doc: Document): void {
+function safeRenderHTML(container: HTMLElement, htmlString: string): void {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(htmlString, 'text/html')
   for (const el of Array.from(doc.body.querySelectorAll('*'))) {
     for (const attr of Array.from(el.attributes)) {
       if (attr.name.startsWith('on')) el.removeAttribute(attr.name)
@@ -50,26 +52,12 @@ function sanitizeDoc(doc: Document): void {
   for (const script of Array.from(doc.body.querySelectorAll('script'))) {
     script.remove()
   }
-}
-
-/**
- * Safely renders an HTML string into a container by parsing it into a
- * disconnected document, stripping event handlers and scripts, then
- * appending the sanitized nodes.
- */
-function safeRenderHTML(container: HTMLElement, htmlString: string): void {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(htmlString, 'text/html')
-  sanitizeDoc(doc)
   container.textContent = ''
   while (doc.body.firstChild) {
     container.appendChild(doc.body.firstChild)
   }
 }
 
-/**
- * Renders issue frontmatter (excluding body) as syntax-highlighted JSON.
- */
 function renderMetadataJSON(issue: Issue): string {
   const { body, ...frontmatter } = issue
   const json = JSON.stringify(frontmatter, null, 2)
@@ -119,10 +107,6 @@ function RelChip({
 
 // ── IssueSteps sub-component ─────────────────────────────────────────────────
 
-/**
- * Horizontal DaisyUI Steps showing issue progress through the linear pipeline.
- * Side-states (STUCK/SPLIT) show all steps as neutral since they're off the happy path.
- */
 function IssueSteps({ state }: { state: string }) {
   const currentIdx = PIPELINE_STATES.indexOf(state as IssueState)
 
@@ -134,11 +118,6 @@ function IssueSteps({ state }: { state: string }) {
           <li
             key={s}
             className={`step${reached ? ' step-secondary' : ''}`}
-            // style={
-            //   reached
-            //     ? ({ '--step-color': stateColor(s) } as React.CSSProperties)
-            //     : undefined
-            // }
             data-content={STATE_EMOJI[s]}
           >
             {STATE_LABELS[s]}
@@ -151,68 +130,68 @@ function IssueSteps({ state }: { state: string }) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function EditorSidebar() {
+export function IssuePanel({ onClose }: { onClose: () => void }) {
   const id = selectedId.value
   const allIssues = issues.value
   const running = runningId.value
 
   const issue = id ? allIssues.find((i) => i.id === id) : undefined
 
-  const [activeTab, setActiveTab] = useState<TabId>('preview')
+  const [section, setSection] = useState<SectionId>('issue')
+  const [subTab, setSubTab] = useState<SubTabId>('preview')
   const [dirty, setDirty] = useState(false)
+  const [planDirty, setPlanDirty] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
+  const [planContent, setPlanContent] = useState<string | null>(null)
 
-  const previewRef = useRef<HTMLDivElement>(null)
   const cmContainerRef = useRef<HTMLDivElement>(null)
   const metadataRef = useRef<HTMLDivElement>(null)
+  const planCmContainerRef = useRef<HTMLDivElement>(null)
   const editorViewRef = useRef<EditorView | null>(null)
+  const planEditorViewRef = useRef<EditorView | null>(null)
   const bodyRef = useRef<string>('')
+  const planBodyRef = useRef<string>('')
 
   // Reset state when issue changes
   useEffect(() => {
-    setActiveTab('preview')
+    setSection('issue')
+    setSubTab('preview')
     setDirty(false)
+    setPlanDirty(false)
     setSaveStatus('')
+    setPlanContent(null)
     bodyRef.current = issue?.body ?? ''
+    planBodyRef.current = ''
 
-    // Destroy existing CodeMirror
     if (editorViewRef.current) {
       editorViewRef.current.destroy()
       editorViewRef.current = null
     }
-  }, [id])
+    if (planEditorViewRef.current) {
+      planEditorViewRef.current.destroy()
+      planEditorViewRef.current = null
+    }
 
-  // Toggle sidebar grid layout on #app
-  useEffect(() => {
-    const app = document.getElementById('app')
-    if (!app) return
-    if (id === null) {
-      app.classList.add('no-sidebar', 'grid-cols-[1fr]')
-      app.classList.remove('grid-cols-[1fr_30vw]')
-      app.style.gridTemplateColumns = ''
-      app.style.gridTemplateAreas = "'header' 'statusbar' 'main' 'bottom'"
-    } else {
-      app.classList.remove('no-sidebar', 'grid-cols-[1fr]')
-      app.classList.add('grid-cols-[1fr_30vw]')
-      app.style.gridTemplateAreas =
-        "'header header' 'statusbar statusbar' 'main sidebar' 'bottom bottom'"
+    if (id) {
+      api.fetchPlan(id).then((content) => {
+        setPlanContent(content)
+        planBodyRef.current = content ?? ''
+      }).catch(() => setPlanContent(null))
     }
   }, [id])
 
-  // Render preview HTML
-  useEffect(() => {
-    if (activeTab !== 'preview' || !previewRef.current) return
-    const content = editorViewRef.current
-      ? editorViewRef.current.state.doc.toString()
-      : bodyRef.current
-    const htmlString = marked.parse(content) as string
-    safeRenderHTML(previewRef.current, htmlString)
-  }, [activeTab, id])
+  // Derive preview content — reads from editor if mounted, else from ref
+  const issuePreviewContent = editorViewRef.current
+    ? editorViewRef.current.state.doc.toString()
+    : bodyRef.current
+  const planPreviewContent = planEditorViewRef.current
+    ? planEditorViewRef.current.state.doc.toString()
+    : planBodyRef.current
 
-  // Mount CodeMirror lazily when Edit tab is selected
+  // Mount issue CodeMirror lazily when Issue > Edit is selected
   useEffect(() => {
-    if (activeTab !== 'edit' || !cmContainerRef.current) return
-    if (editorViewRef.current) return // already mounted
+    if (section !== 'issue' || subTab !== 'edit' || !cmContainerRef.current) return
+    if (editorViewRef.current) return
 
     const parent = cmContainerRef.current
     parent.textContent = ''
@@ -245,16 +224,54 @@ export function EditorSidebar() {
         editorViewRef.current = null
       }
     }
-  }, [activeTab, id])
+  }, [section, subTab, id])
+
+  // Mount plan CodeMirror lazily when Plan > Edit is selected
+  useEffect(() => {
+    if (section !== 'plan' || subTab !== 'edit' || !planCmContainerRef.current) return
+    if (planEditorViewRef.current) return
+
+    const parent = planCmContainerRef.current
+    parent.textContent = ''
+
+    const state = EditorState.create({
+      doc: planBodyRef.current,
+      extensions: [
+        basicSetup,
+        markdown(),
+        oneDark,
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            setPlanDirty(true)
+            setSaveStatus('unsaved')
+          }
+        }),
+        EditorView.theme({
+          '&': { height: '100%', fontSize: '0.75rem' },
+          '.cm-scroller': { overflow: 'auto' },
+          '.cm-content': { fontFamily: "'SF Mono', 'Fira Code', monospace" },
+        }),
+      ],
+    })
+
+    planEditorViewRef.current = new EditorView({ state, parent })
+
+    return () => {
+      if (planEditorViewRef.current) {
+        planEditorViewRef.current.destroy()
+        planEditorViewRef.current = null
+      }
+    }
+  }, [section, subTab, id, planContent])
 
   // Render metadata HTML
   useEffect(() => {
-    if (activeTab !== 'metadata' || !metadataRef.current || !issue) return
+    if (section !== 'issue' || subTab !== 'metadata' || !metadataRef.current || !issue) return
     const htmlString = renderMetadataJSON(issue)
     safeRenderHTML(metadataRef.current, htmlString)
-  }, [activeTab, id, issue])
+  }, [section, subTab, id, issue])
 
-  // Save handler
+  // Save issue body handler
   const handleSave = useCallback(async () => {
     if (!id) return
     const body = editorViewRef.current
@@ -275,29 +292,44 @@ export function EditorSidebar() {
     }
   }, [id])
 
-  // Close handler
-  const handleClose = useCallback(() => {
-    selectedId.value = null
-  }, [])
+  // Save plan handler
+  const handleSavePlan = useCallback(async () => {
+    if (!id) return
+    const content = planEditorViewRef.current
+      ? planEditorViewRef.current.state.doc.toString()
+      : planBodyRef.current
+    try {
+      setSaveStatus('saving...')
+      await api.savePlan(id, content)
+      setPlanDirty(false)
+      planBodyRef.current = content
+      setSaveStatus('saved')
+      setTimeout(() => {
+        setSaveStatus((prev) => (prev === 'saved' ? '' : prev))
+      }, 2000)
+    } catch (e) {
+      setSaveStatus(
+        `save failed: ${e instanceof Error ? e.message : String(e)}`,
+      )
+    }
+  }, [id])
 
   if (!id || !issue) return null
 
-  // const color = stateColor(issue.state)
-  // const transitions = VALID_TRANSITIONS[issue.state as IssueState] ?? []
   const hasParent = !!issue.parent?.trim()
   const hasChildren = issue.children && issue.children.length > 0
   const isRunningThis = running === issue.id
+  const EXPECTS_PLAN: Set<string> = new Set(['PLANNED', 'BUILT'])
+  const missingPlan = planContent === null && EXPECTS_PLAN.has(issue.state)
   const actions =
-    issue.state === 'NEW'
-      ? getNewIssueActions(issue)
-      : (CMD_ACTIONS[issue.state as IssueState] ?? [])
+    missingPlan
+      ? ['plan']
+      : issue.state === 'NEW'
+        ? getNewIssueActions(issue)
+        : (CMD_ACTIONS[issue.state as IssueState] ?? [])
 
   return (
-    <div
-      id="sidebar"
-      className="relative flex flex-col h-full bg-base-200 border-l border-neutral min-w-[30vw] overflow-hidden"
-      style={{ gridArea: 'sidebar' }}
-    >
+    <>
       {/* Header */}
       <div className="flex items-center gap-md px-2xl py-lg border-b border-neutral shrink-0">
         <span className="text-md text-base-content/50">#{issue.id}</span>
@@ -307,7 +339,7 @@ export function EditorSidebar() {
         <button
           type="button"
           className="btn btn-ghost btn-sm btn-circle"
-          onClick={handleClose}
+          onClick={onClose}
           aria-label="Close sidebar"
         >
           &times;
@@ -316,25 +348,10 @@ export function EditorSidebar() {
 
       {/* State row */}
       <div className="px-2xl py-md border-b border-neutral flex items-center gap-md flex-wrap shrink-0">
-        <span
-          className="badge badge-soft font-bold tracking-[0.06em]"
-          // style={{ color, borderColor: color }}
-        >
+        <span className="badge badge-soft font-bold tracking-[0.06em]">
           {STATE_EMOJI[issue.state as IssueState]}{' '}
           {STATE_LABELS[issue.state as IssueState] ?? issue.state}
         </span>
-        {/* <span className="flex gap-sm flex-wrap">
-          {transitions.map((to) => (
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost border border-neutral"
-              key={to}
-              onClick={() => doTransition(issue.id, to)}
-            >
-              {'\u2192'} {STATE_LABELS[to] ?? to}
-            </button>
-          ))}
-        </span> */}
       </div>
 
       {/* Relationships */}
@@ -370,15 +387,43 @@ export function EditorSidebar() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Missing plan warning */}
+      {missingPlan && (
+        <div className="px-2xl py-md border-b border-neutral bg-warning/10 text-warning text-xs font-medium shrink-0">
+          No plan found — run plan before other actions
+        </div>
+      )}
+
+      {/* Section selector (Issue / Plan) */}
+      <div className="flex border-b border-neutral shrink-0">
+        {(planContent !== null ? ['issue', 'plan'] as const : ['issue'] as const).map((s) => (
+          <button
+            type="button"
+            key={s}
+            className={`flex-1 py-sm text-xs font-bold uppercase tracking-[0.08em] transition-colors ${
+              section === s
+                ? 'text-primary border-b-2 border-primary bg-base-300/50'
+                : 'text-base-content/40 hover:text-base-content/70'
+            }`}
+            onClick={() => {
+              setSection(s)
+              setSubTab('preview')
+            }}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {/* Sub-tabs */}
       <div className="tabs tabs-border shrink-0">
-        {(['preview', 'edit', 'metadata'] as const).map((tab) => (
+        {SECTION_TABS[section].map((tab) => (
           <button
             type="button"
             key={tab}
-            className={`tab tab-sm ${activeTab === tab ? 'tab-active' : ''}`}
+            className={`tab tab-sm ${subTab === tab ? 'tab-active' : ''}`}
             data-tab={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => setSubTab(tab)}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
@@ -387,36 +432,53 @@ export function EditorSidebar() {
 
       {/* Content area */}
       <div className="flex-1 overflow-hidden flex flex-col min-w-0">
-        <div
-          id="editor-preview"
-          ref={previewRef}
-          className="flex-1 overflow-y-auto px-3xl py-2xl text-base leading-[1.7]"
-          style={{ display: activeTab === 'preview' ? 'block' : 'none' }}
+        <MarkdownPreview
+          content={issuePreviewContent}
+          visible={section === 'issue' && subTab === 'preview'}
         />
         <div
           id="editor-cm"
           ref={cmContainerRef}
           className="flex-1 overflow-auto"
-          style={{ display: activeTab === 'edit' ? '' : 'none' }}
+          style={{ display: section === 'issue' && subTab === 'edit' ? '' : 'none' }}
         />
         <div
           id="editor-metadata"
           ref={metadataRef}
           className="h-full overflow-auto"
-          style={{ display: activeTab === 'metadata' ? 'block' : 'none' }}
+          style={{ display: section === 'issue' && subTab === 'metadata' ? 'block' : 'none' }}
+        />
+        <MarkdownPreview
+          content={planPreviewContent}
+          visible={section === 'plan' && subTab === 'preview'}
+        />
+        <div
+          id="plan-cm"
+          ref={planCmContainerRef}
+          className="flex-1 overflow-auto"
+          style={{ display: section === 'plan' && subTab === 'edit' ? '' : 'none' }}
         />
       </div>
       {/* Progress steps */}
       <IssueSteps state={issue.state} />
       {/* Actions */}
       <div className="px-2xl py-lg border-t border-neutral flex gap-md flex-wrap shrink-0">
-        {dirty && (
+        {dirty && section === 'issue' && (
           <button
             type="button"
             className="btn btn-primary btn-sm"
             onClick={handleSave}
           >
             Save
+          </button>
+        )}
+        {planDirty && section === 'plan' && (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={handleSavePlan}
+          >
+            Save Plan
           </button>
         )}
 
@@ -460,6 +522,6 @@ export function EditorSidebar() {
           </span>
         )}
       </div>
-    </div>
+    </>
   )
 }

@@ -105,7 +105,7 @@ describe('verifyIssue', () => {
   it('skips issue with is_verify_fix=true', async () => {
     const issue = makeIssue({
       id: '001',
-      state: 'COMPLETED',
+      state: 'BUILT',
       is_verify_fix: true,
     })
     let transitionCalled = false
@@ -124,8 +124,8 @@ describe('verifyIssue', () => {
     expect(transitionCalled).toBe(false)
   })
 
-  it('transitions to VERIFIED when all checks pass', async () => {
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 0 })
+  it('transitions to COMPLETE when all checks pass', async () => {
+    const issue = makeIssue({ id: '001', state: 'BUILT', verify_count: 0 })
     let transitionTarget = ''
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
@@ -139,11 +139,11 @@ describe('verifyIssue', () => {
       execFn: okExec(),
     })
     expect(result.isOk()).toBe(true)
-    expect(transitionTarget).toBe('VERIFIED')
+    expect(transitionTarget).toBe('COMPLETE')
   })
 
   it('creates fix sub-issue and increments verify_count on failure', async () => {
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 0 })
+    const issue = makeIssue({ id: '001', state: 'BUILT', verify_count: 0 })
     let createdIssueTitle = ''
     let wroteOnParent: Partial<typeof issue> | null = null
     let wroteOnChild: Partial<typeof issue> | null = null
@@ -178,7 +178,7 @@ describe('verifyIssue', () => {
   })
 
   it('includes parent issueId in fix sub-issue', async () => {
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 0 })
+    const issue = makeIssue({ id: '001', state: 'BUILT', verify_count: 0 })
     let createInput: { title?: string; body?: string; parent?: string } = {}
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
@@ -196,7 +196,7 @@ describe('verifyIssue', () => {
 
   it('sets verify_exhausted and skips sub-issue when retries exhausted', async () => {
     const config = { ...defaultConfig(), maxVerifyRetries: 3 }
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 3 })
+    const issue = makeIssue({ id: '001', state: 'BUILT', verify_count: 3 })
     let createdIssue = false
     let wroteFields: Partial<typeof issue> | null = null
     const provider = makeProvider({
@@ -232,7 +232,7 @@ describe('verifyIssue', () => {
   })
 
   it('returns err when transition fails', async () => {
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 0 })
+    const issue = makeIssue({ id: '001', state: 'BUILT', verify_count: 0 })
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       transition: () => errAsync(new Error('transition blocked')),
@@ -246,7 +246,7 @@ describe('verifyIssue', () => {
   })
 
   it('returns err when createIssue fails on verify failure', async () => {
-    const issue = makeIssue({ id: '001', state: 'COMPLETED', verify_count: 0 })
+    const issue = makeIssue({ id: '001', state: 'BUILT', verify_count: 0 })
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
       createIssue: () => errAsync(new Error('cannot create')),

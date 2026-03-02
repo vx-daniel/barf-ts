@@ -263,7 +263,7 @@ it('isLocked returns false after process dies (stale lock recovery)', async () =
   mkdirSync(join(dir, '.barf'), { recursive: true })
   writeFileSync(
     join(dir, '.barf', '001.lock'),
-    JSON.stringify({ pid: 999999999, acquiredAt: new Date().toISOString(), state: 'IN_PROGRESS', mode: 'build' })
+    JSON.stringify({ pid: 999999999, acquiredAt: new Date().toISOString(), state: 'PLANNED', mode: 'build' })
   )
   const result = await provider.isLocked('001')
   expect(result._unsafeUnwrap()).toBe(false)
@@ -296,7 +296,7 @@ When a barf process crashes mid-run:
 2. `issues/<id>.md` is in whatever state was last written (atomic writes guarantee no partial state)
 3. On the next `barf build` or `barf auto`, `autoSelect()` calls `isLocked()` for each issue
 4. `isLocked()` finds the lock file, checks `process.kill(pid, 0)` → `ESRCH` → deletes lock file → returns `false`
-5. The issue is now available; `autoSelect()` picks it up in its current state (`IN_PROGRESS` → immediately resumed in build mode)
+5. The issue is now available; `autoSelect()` picks it up in its current state (`PLANNED` → immediately resumed in build mode)
 
 No manual intervention required.
 
@@ -315,7 +315,7 @@ ls -la .barf/                    # should show 001.lock with JSON content
 cat .barf/001.lock               # verify { pid, acquiredAt, state, mode }
 
 # 4. Stale lock recovery
-echo '{"pid":999999999,"acquiredAt":"2026-01-01T00:00:00.000Z","state":"IN_PROGRESS","mode":"build"}' > .barf/001.lock
+echo '{"pid":999999999,"acquiredAt":"2026-01-01T00:00:00.000Z","state":"PLANNED","mode":"build"}' > .barf/001.lock
 bun run dev build --issue 001   # should auto-clear stale lock and proceed
 ```
 

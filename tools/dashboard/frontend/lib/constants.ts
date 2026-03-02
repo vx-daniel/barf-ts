@@ -19,9 +19,8 @@ export const STATE_ORDER: readonly IssueState[] = [
   'NEW',
   'GROOMED',
   'PLANNED',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'VERIFIED',
+  'BUILT',
+  'COMPLETE',
   'STUCK',
 ]
 
@@ -34,9 +33,8 @@ export const STATE_COLORS: Record<IssueState, string> = {
   NEW: 'var(--color-state-new)',
   GROOMED: 'var(--color-state-groomed)',
   PLANNED: 'var(--color-state-planned)',
-  IN_PROGRESS: 'var(--color-state-in-progress)',
-  COMPLETED: 'var(--color-state-completed)',
-  VERIFIED: 'var(--color-state-verified)',
+  BUILT: 'var(--color-state-built)',
+  COMPLETE: 'var(--color-state-complete)',
   STUCK: 'var(--color-state-stuck)',
   SPLIT: 'var(--color-state-split)',
 }
@@ -49,9 +47,8 @@ export const PIPELINE_STATES: readonly IssueState[] = [
   'NEW',
   'GROOMED',
   'PLANNED',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'VERIFIED',
+  'BUILT',
+  'COMPLETE',
 ]
 
 /** Human-readable label for each {@link IssueState} value. */
@@ -59,9 +56,8 @@ export const STATE_LABELS: Record<IssueState, string> = {
   NEW: 'NEW',
   GROOMED: 'GROOMED',
   PLANNED: 'PLANNED',
-  IN_PROGRESS: 'IN PROGRESS',
-  COMPLETED: 'COMPLETED',
-  VERIFIED: 'VERIFIED',
+  BUILT: 'BUILT',
+  COMPLETE: 'COMPLETE',
   STUCK: 'STUCK',
   SPLIT: 'SPLIT',
 }
@@ -71,9 +67,8 @@ export const STATE_EMOJI: Record<IssueState, string> = {
   NEW: '🆕',
   GROOMED: '💇',
   PLANNED: '📋',
-  IN_PROGRESS: '🔨',
-  COMPLETED: '✅',
-  VERIFIED: '🏆',
+  BUILT: '✅',
+  COMPLETE: '🏆',
   STUCK: '🚧',
   SPLIT: '🪓',
 }
@@ -132,9 +127,8 @@ export const CMD_ACTIONS: Record<IssueState, string[]> = {
   NEW: [],
   GROOMED: ['plan'],
   PLANNED: ['plan', 'build'],
-  IN_PROGRESS: ['build'],
-  COMPLETED: ['audit'],
-  VERIFIED: [],
+  BUILT: ['audit'],
+  COMPLETE: [],
   STUCK: ['plan'],
   SPLIT: [],
 }
@@ -173,7 +167,7 @@ export function stateEmoji(state: IssueState | string): string {
  */
 export function contextBarColor(pct: number): string {
   if (pct > 80) return 'var(--color-danger)'
-  if (pct > 60) return 'var(--color-state-in-progress)'
+  if (pct > 60) return 'var(--color-warning)'
   return 'var(--color-success)'
 }
 

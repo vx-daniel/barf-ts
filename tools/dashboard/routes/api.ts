@@ -3,8 +3,8 @@
  */
 
 import type { IssueService } from '@dashboard/services/issue-service'
-import { readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { join, resolve } from 'path'
 import {
   cancelAuditGate,
   readAuditGate,
@@ -13,8 +13,11 @@ import {
 } from '@/core/batch'
 import { injectTemplateVars } from '@/core/context'
 import { VALID_TRANSITIONS } from '@/core/issue'
-import { resolvePromptTemplate } from '@/core/prompts'
+import { BUILTIN_TEMPLATES, resolvePromptTemplate } from '@/core/prompts'
+import type { PromptMode } from '@/core/prompts'
 import { IssueStateSchema } from '@/types'
+import { PromptModeSchema } from '@/types/schema/mode-schema'
+import { unlinkSync } from 'fs'
 import { execFileNoThrow } from '@/utils/execFileNoThrow'
 
 function json(data: unknown, status = 200): Response {
@@ -274,6 +277,49 @@ export async function handleInterview(
   return json({ status: 'complete', issue: writeResult.value })
 }
 
+/**
+ * Returns the plan file content for an issue, or 404 if no plan exists.
+ * Plan files live at `{planDir}/{issueId}.md`.
+ */
+export function handleGetPlan(svc: IssueService, id: string): Response {
+  const planPath = resolve(svc.projectCwd, svc.config.planDir, `${id}.md`)
+  if (!existsSync(planPath)) {
+    return jsonError('No plan found', 404)
+  }
+  const content = readFileSync(planPath, 'utf-8')
+  return json({ content })
+}
+
+/**
+ * Saves plan file content for an issue via `PUT /api/issues/:id/plan`.
+ * Creates the plan directory if it doesn't exist.
+ */
+export async function handleSavePlan(
+  svc: IssueService,
+  id: string,
+  req: Request,
+): Promise<Response> {
+  let body: { content?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+  if (typeof body.content !== 'string') return jsonError('content is required')
+  const planDir = resolve(svc.projectCwd, svc.config.planDir)
+  const planPath = join(planDir, `${id}.md`)
+  try {
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, body.content)
+    return json({ ok: true })
+  } catch (e) {
+    return jsonError(
+      `Failed to save plan: ${e instanceof Error ? e.message : String(e)}`,
+      500,
+    )
+  }
+}
+
 export async function handleSaveConfig(
   svc: IssueService,
   req: Request,
@@ -384,4 +430,87 @@ export function handleCancelAuditGate(svc: IssueService): Response {
   }
   writeAuditGateEvent(svc.config.barfDir, 'cancelled')
   return json({ ok: true, state: 'running' })
+}
+
+// ── Prompt Templates ────────────────────────────────────────────────────────
+
+/** Returns the list of all prompt mode names. */
+export function handleListPrompts(): Response {
+  return json(PromptModeSchema.options)
+}
+
+/**
+ * Returns builtin, custom, and active content for a given prompt mode.
+ * Auto-creates `PROMPT_DIR` if not configured.
+ */
+export function handleGetPrompt(svc: IssueService, mode: string): Response {
+  const parsed = PromptModeSchema.safeParse(mode)
+  if (!parsed.success) return jsonError(`Invalid prompt mode: ${mode}`)
+  const promptMode = parsed.data
+
+  const builtin = BUILTIN_TEMPLATES[promptMode]
+  const promptDir = resolvePromptDir(svc)
+  const customPath = join(promptDir, `PROMPT_${promptMode}.md`)
+  const custom = existsSync(customPath) ? readFileSync(customPath, 'utf-8') : null
+  const active = custom ?? builtin
+
+  return json({ mode: promptMode, builtin, custom, active })
+}
+
+/** Saves custom prompt content to `PROMPT_DIR/PROMPT_{mode}.md`. */
+export async function handleSavePrompt(
+  svc: IssueService,
+  mode: string,
+  req: Request,
+): Promise<Response> {
+  const parsed = PromptModeSchema.safeParse(mode)
+  if (!parsed.success) return jsonError(`Invalid prompt mode: ${mode}`)
+
+  let body: { content?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return jsonError('Invalid JSON body')
+  }
+  if (typeof body.content !== 'string') return jsonError('content is required')
+
+  const promptDir = resolvePromptDir(svc)
+  const promptPath = join(promptDir, `PROMPT_${parsed.data}.md`)
+  try {
+    mkdirSync(promptDir, { recursive: true })
+    writeFileSync(promptPath, body.content)
+    return json({ ok: true })
+  } catch (e) {
+    return jsonError(
+      `Failed to save prompt: ${e instanceof Error ? e.message : String(e)}`,
+      500,
+    )
+  }
+}
+
+/** Deletes a custom prompt override, reverting to the builtin template. */
+export function handleDeletePrompt(svc: IssueService, mode: string): Response {
+  const parsed = PromptModeSchema.safeParse(mode)
+  if (!parsed.success) return jsonError(`Invalid prompt mode: ${mode}`)
+
+  const promptDir = resolvePromptDir(svc)
+  const promptPath = join(promptDir, `PROMPT_${parsed.data}.md`)
+  try {
+    if (existsSync(promptPath)) unlinkSync(promptPath)
+    return json({ ok: true })
+  } catch (e) {
+    return jsonError(
+      `Failed to delete prompt: ${e instanceof Error ? e.message : String(e)}`,
+      500,
+    )
+  }
+}
+
+/**
+ * Resolves the prompt directory, defaulting to `.barf/prompts/` and
+ * auto-creating it if needed.
+ */
+function resolvePromptDir(svc: IssueService): string {
+  if (svc.config.promptDir) return resolve(svc.projectCwd, svc.config.promptDir)
+  return resolve(svc.projectCwd, '.barf', 'prompts')
 }

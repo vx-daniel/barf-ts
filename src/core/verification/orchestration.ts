@@ -1,8 +1,8 @@
 /**
- * Verification orchestration — post-COMPLETED verification workflow.
+ * Verification orchestration — post-BUILT verification workflow.
  *
- * After an issue reaches COMPLETED, this module orchestrates the verification
- * flow: run checks, and based on the outcome either transition to VERIFIED,
+ * After an issue reaches BUILT, this module orchestrates the verification
+ * flow: run checks, and based on the outcome either transition to COMPLETE,
  * create a fix sub-issue, or mark the issue as verify-exhausted.
  *
  * @module Verification
@@ -19,20 +19,20 @@ import { buildFixBody } from './format'
 const logger = createLogger('verification')
 
 /**
- * Runs verification for an issue after it reaches COMPLETED.
+ * Runs verification for an issue after it reaches BUILT.
  *
  * The verification workflow has three possible outcomes:
  *
- * 1. **All checks pass** → transition to VERIFIED (terminal state)
+ * 1. **All checks pass** → transition to COMPLETE (terminal state)
  * 2. **Checks fail, retries remaining** → create a fix sub-issue with failure
  *    details, increment `verify_count` on the parent
  * 3. **Checks fail, retries exhausted** → set `verify_exhausted=true`, leave
- *    as COMPLETED (no further automatic attempts)
+ *    as BUILT (no further automatic attempts)
  *
  * Issues with `is_verify_fix=true` are skipped to prevent recursive verification
  * of issues that were themselves created to fix parent verification failures.
  *
- * @param issueId - ID of the COMPLETED issue to verify.
+ * @param issueId - ID of the BUILT issue to verify.
  * @param config - Loaded barf configuration (`maxVerifyRetries` controls retry cap).
  * @param provider - Issue provider for reading, writing, and transitioning issues.
  * @param deps - Injectable dependencies; pass `{ execFn: mockFn }` in tests.
@@ -68,9 +68,9 @@ export function verifyIssue(
     if (outcome.passed) {
       logger.info(
         { issueId },
-        'verification passed — transitioning to VERIFIED',
+        'verification passed — transitioning to COMPLETE',
       )
-      const transitionResult = await provider.transition(issueId, 'VERIFIED', {
+      const transitionResult = await provider.transition(issueId, 'COMPLETE', {
         durationInStageSeconds: 0,
         inputTokens: 0,
         outputTokens: 0,
@@ -96,7 +96,7 @@ export function verifyIssue(
     if (verifyCount >= config.maxVerifyRetries) {
       logger.warn(
         { issueId, verifyCount, maxVerifyRetries: config.maxVerifyRetries },
-        'verify retries exhausted — leaving as COMPLETED',
+        'verify retries exhausted — leaving as BUILT',
       )
       const writeResult = await provider.writeIssue(issueId, {
         verify_exhausted: true,

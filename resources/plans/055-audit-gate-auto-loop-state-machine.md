@@ -7,7 +7,7 @@ Currently, the `audit` command runs as a standalone CLI action *after* builds co
 This feature adds an **audit gate** — a state machine inside the auto loop that:
 1. Blocks new build sessions from starting
 2. Waits for active sessions to drain
-3. Runs the audit agent on all COMPLETED issues
+3. Runs the audit agent on all BUILT issues
 4. Creates fix issues from audit findings
 5. Builds ONLY the fix issues (global build block)
 6. Auto-resumes normal operation once all fixes are done
@@ -15,7 +15,7 @@ This feature adds an **audit gate** — a state machine inside the auto loop tha
 ### Triggers
 - **Dashboard button**: On-demand "Start Audit" button in the UI
 - **CLI flag**: `barf auto --audit-gate` to enable periodic audits
-- **Config auto-trigger**: `AUDIT_AFTER_N_COMPLETED=10` — after N issues complete, auto-trigger
+- **Config auto-trigger**: `AUDIT_AFTER_N_BUILT=10` — after N issues complete, auto-trigger
 - **Cancellation**: Dashboard button or CLI to cancel an in-progress audit gate
 
 ---
@@ -36,7 +36,7 @@ running → draining → auditing → fixing → running
 |-------|----------|
 | `running` | Normal auto loop — triage, plan, build, verify as usual |
 | `draining` | No new build/plan sessions start. Wait for all active sessions to finish. |
-| `auditing` | Run `auditIssue()` on all COMPLETED issues. Create fix issues from findings. |
+| `auditing` | Run `auditIssue()` on all BUILT issues. Create fix issues from findings. |
 | `fixing` | Only audit-fix issues can build. All other issues are blocked globally. |
 
 ### 2. Gate File: `.barf/audit-gate.json`
@@ -92,14 +92,14 @@ each iteration:
       → if no active sessions: transition to 'auditing'
 
     case 'auditing':
-      → run auditIssue() on all COMPLETED issues
+      → run auditIssue() on all BUILT issues
       → collect created fix issue IDs into gate.auditFixIssueIds
       → if no findings: transition to 'running', reset counter
       → if findings: transition to 'fixing'
 
     case 'fixing':
       → only build issues where id ∈ gate.auditFixIssueIds
-      → after each fix completes, check if ALL fix issues are COMPLETED/VERIFIED
+      → after each fix completes, check if ALL fix issues are BUILT/COMPLETE
       → if all done: transition to 'running', reset counter, clear auditFixIssueIds
 
     case 'cancelled':
@@ -167,7 +167,7 @@ New events in session-index for dashboard tracking:
 In `src/index.ts`, add to the `auto` command:
 
 ```typescript
-.option('--audit-gate', 'Enable periodic audit gate (uses AUDIT_AFTER_N_COMPLETED config)')
+.option('--audit-gate', 'Enable periodic audit gate (uses AUDIT_AFTER_N_BUILT config)')
 ```
 
 When `--audit-gate` is passed but `config.auditAfterNCompleted === 0`, default to 10.
@@ -215,7 +215,7 @@ When `--audit-gate` is passed but `config.auditAfterNCompleted === 0`, default t
 1. **Unit tests**: Gate state transitions, auto-trigger logic, counter reset
 2. **Integration test**: `auto` command with mocked deps — verify draining → auditing → fixing → running flow
 3. **Manual test**:
-   - Run `barf auto --audit-gate` with `AUDIT_AFTER_N_COMPLETED=2`
+   - Run `barf auto --audit-gate` with `AUDIT_AFTER_N_BUILT=2`
    - Complete 2 issues → verify audit triggers automatically
    - Dashboard: click "Start Audit" → verify gate activates
    - Dashboard: click "Cancel Audit" → verify gate resets

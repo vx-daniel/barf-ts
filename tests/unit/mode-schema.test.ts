@@ -33,12 +33,10 @@ describe('PromptModeSchema', () => {
     'split',
     'audit',
     'triage',
+    'interview',
+    'interview_eval',
   ])('accepts "%s"', (mode) => {
     expect(PromptModeSchema.safeParse(mode).success).toBe(true)
-  })
-
-  it('rejects "interview" (removed)', () => {
-    expect(PromptModeSchema.safeParse('interview').success).toBe(false)
   })
 
   it('rejects invalid mode', () => {

@@ -27,7 +27,7 @@ describe('auditCommand', () => {
     expect(process.exitCode).toBe(1)
   })
 
-  it('does nothing when no COMPLETED issues exist', async () => {
+  it('does nothing when no BUILT issues exist', async () => {
     const provider = makeProvider({
       listIssues: () => okAsync([]),
     })
@@ -47,8 +47,8 @@ describe('auditCommand', () => {
     expect(process.exitCode).toBe(1)
   })
 
-  it('skips non-COMPLETED issues when --issue targets wrong state', async () => {
-    const issue = makeIssue({ state: 'IN_PROGRESS' })
+  it('skips non-BUILT issues when --issue targets wrong state', async () => {
+    const issue = makeIssue({ state: 'PLANNED' })
     const provider = makeProvider({
       fetchIssue: () => okAsync(issue),
     })
@@ -59,19 +59,19 @@ describe('auditCommand', () => {
       defaultConfig(),
     )
 
-    // Not COMPLETED — should warn but not set exitCode=1
+    // Not BUILT — should warn but not set exitCode=1
     expect(process.exitCode).toBe(0)
   })
 
-  it('iterates over all COMPLETED issues in --all mode', async () => {
+  it('iterates over all BUILT issues in --all mode', async () => {
     const issues = [makeIssue({ id: '001' }), makeIssue({ id: '002' })]
     let fetchCount = 0
     const provider = makeProvider({
       listIssues: () => okAsync(issues),
-      // Return IN_PROGRESS so auditIssue skips (avoids spawning Claude)
+      // Return PLANNED so auditIssue skips (avoids spawning Claude)
       fetchIssue: () => {
         fetchCount++
-        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+        return okAsync(makeIssue({ state: 'PLANNED' }))
       },
     })
 
@@ -84,10 +84,10 @@ describe('auditCommand', () => {
   it('routes --issue to single-issue audit', async () => {
     let fetchedId = ''
     const provider = makeProvider({
-      // Return IN_PROGRESS so auditIssue skips (avoids spawning Claude)
+      // Return PLANNED so auditIssue skips (avoids spawning Claude)
       fetchIssue: (id) => {
         fetchedId = id
-        return okAsync(makeIssue({ id, state: 'IN_PROGRESS' }))
+        return okAsync(makeIssue({ id, state: 'PLANNED' }))
       },
     })
 

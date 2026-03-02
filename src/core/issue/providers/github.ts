@@ -172,7 +172,7 @@ export class GitHubIssueProvider extends IssueProvider {
       if (fields.body !== undefined) {
         patchArgs.push('-f', `body=${fields.body}`)
       }
-      if (fields.state === 'COMPLETED') {
+      if (fields.state === 'BUILT') {
         patchArgs.push('-f', 'state=closed')
       }
       return ResultAsync.combine(steps).andThen(() =>

@@ -80,7 +80,7 @@ describe('LocalIssueProvider', () => {
   })
 
   it('transition() returns Err on invalid state change', async () => {
-    const result = await provider.transition('001', 'COMPLETED')
+    const result = await provider.transition('001', 'BUILT')
     expect(result.isErr()).toBe(true)
   })
 
@@ -110,7 +110,7 @@ describe('LocalIssueProvider', () => {
       JSON.stringify({
         pid: 999999999,
         acquiredAt: new Date().toISOString(),
-        state: 'IN_PROGRESS',
+        state: 'PLANNED',
         mode: 'build',
       }),
     )
@@ -126,7 +126,7 @@ describe('LocalIssueProvider', () => {
       JSON.stringify({
         pid: 999999999,
         acquiredAt: new Date().toISOString(),
-        state: 'IN_PROGRESS',
+        state: 'PLANNED',
         mode: 'build',
       }),
     )

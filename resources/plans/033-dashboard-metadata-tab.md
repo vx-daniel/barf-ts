@@ -321,7 +321,7 @@ Open http://localhost:3000 in browser and test:
 6. **Different issue types:**
    - [ ] NEW issue with needs_interview=true
    - [ ] GROOMED issue with context_usage_percent
-   - [ ] COMPLETED issue with verify_count
+   - [ ] BUILT issue with verify_count
    - [ ] Issue with parent/children relationships
 
 **Step 4: Record any issues found**

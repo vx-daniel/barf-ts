@@ -37,6 +37,7 @@ export const PromptModeSchema = z.enum([
   'split',
   'audit',
   'triage',
+  'interview',
   'interview_eval',
 ])
 /** A prompt resolution mode. Derived from {@link PromptModeSchema}. */

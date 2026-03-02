@@ -98,7 +98,7 @@ barf audit --all  # Review completed work
 **Flow**:
 1. Developer creates issues in `issues/` directory with acceptance criteria
 2. Runs `barf auto`
-3. barf triages issues (NEW → GROOMED), writes plans (GROOMED → PLANNED), implements features (PLANNED → COMPLETED), verifies results (COMPLETED → VERIFIED)
+3. barf triages issues (NEW → GROOMED), writes plans (GROOMED → PLANNED), implements features (PLANNED → BUILT), verifies results (BUILT → COMPLETE)
 4. Developer reviews verified issues and merges changes
 
 **Success Outcome**: 80%+ of issues complete verification without manual intervention
@@ -123,7 +123,7 @@ barf audit --all  # Review completed work
 1. barf runs verification commands after Claude marks issue complete
 2. On failure: creates fix sub-issue with `is_verify_fix=true` and error output
 3. Claude attempts fix (up to `MAX_VERIFY_RETRIES` times)
-4. If all retries exhausted: issue stays `COMPLETED` with `verify_exhausted=true`, logs failure
+4. If all retries exhausted: issue stays `BUILT` with `verify_exhausted=true`, logs failure
 
 **Success Outcome**: Most verification failures self-heal; persistent failures flagged for manual review
 
@@ -178,7 +178,7 @@ barf audit --all  # Review completed work
 **Description**: Validated state transitions prevent invalid states
 
 **States**:
-- `NEW` → `GROOMED` → `PLANNED` → `IN_PROGRESS` → `COMPLETED` → `VERIFIED`
+- `NEW` → `GROOMED` → `PLANNED` → `BUILT` → `COMPLETE`
 - Side-states: `STUCK`, `SPLIT` (terminal)
 
 **Acceptance Criteria**:
@@ -228,12 +228,12 @@ barf audit --all  # Review completed work
 - Uses `BUILD_MODEL` via Claude Agent SDK
 - Reads plan file, implements changes iteratively
 - Checks acceptance criteria after each iteration
-- Transitions `PLANNED → IN_PROGRESS → COMPLETED` when all criteria met
+- Transitions `PLANNED → BUILT` when all criteria met (stays PLANNED while building)
 - Runs pre-complete fix commands and test command before completion
 
 **Acceptance Criteria**:
 - Acceptance criteria checkboxes (`- [ ]`) tracked
-- Issue marked `COMPLETED` only when all become `- [x]`
+- Issue marked `BUILT` only when all become `- [x]`
 - Max iterations configurable via `MAX_ITERATIONS`
 
 #### F-5: Automated Verification
@@ -242,10 +242,10 @@ barf audit --all  # Review completed work
 **Description**: Run build, lint, and tests after completion; fix or fail
 
 **Behavior**:
-- After `COMPLETED`, runs `bun run build`, `bun run check`, `bun test`
-- If all pass: `COMPLETED → VERIFIED`
+- After `BUILT`, runs `bun run build`, `bun run check`, `bun test`
+- If all pass: `BUILT → COMPLETE`
 - If any fail: creates fix sub-issue with `is_verify_fix=true`, retries up to `MAX_VERIFY_RETRIES`
-- If retries exhausted: stays `COMPLETED` with `verify_exhausted=true`
+- If retries exhausted: stays `BUILT` with `verify_exhausted=true`
 
 **Acceptance Criteria**:
 - Verification runs after every completion

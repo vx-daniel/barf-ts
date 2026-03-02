@@ -333,12 +333,12 @@ describe('validateTransition', () => {
     expect(validateTransition('GROOMED', 'SPLIT').isOk()).toBe(true)
   })
 
-  it('returns Ok for valid transition PLANNED → IN_PROGRESS', () => {
-    expect(validateTransition('PLANNED', 'IN_PROGRESS').isOk()).toBe(true)
+  it('returns Ok for valid transition PLANNED → BUILT', () => {
+    expect(validateTransition('PLANNED', 'BUILT').isOk()).toBe(true)
   })
 
-  it('returns Ok for valid transition COMPLETED → VERIFIED', () => {
-    expect(validateTransition('COMPLETED', 'VERIFIED').isOk()).toBe(true)
+  it('returns Ok for valid transition BUILT → COMPLETE', () => {
+    expect(validateTransition('BUILT', 'COMPLETE').isOk()).toBe(true)
   })
 
   it('returns Ok for valid transition STUCK → GROOMED', () => {
@@ -351,17 +351,17 @@ describe('validateTransition', () => {
   })
 
   it('returns Err(InvalidTransitionError) for invalid transition', () => {
-    const result = validateTransition('NEW', 'COMPLETED')
+    const result = validateTransition('NEW', 'BUILT')
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(InvalidTransitionError)
   })
 
-  it('returns Err for transition from terminal VERIFIED state', () => {
-    expect(validateTransition('VERIFIED', 'PLANNED').isErr()).toBe(true)
+  it('returns Err for transition from terminal COMPLETE state', () => {
+    expect(validateTransition('COMPLETE', 'PLANNED').isErr()).toBe(true)
   })
 
-  it('returns Err for COMPLETED → PLANNED (not a valid transition)', () => {
-    expect(validateTransition('COMPLETED', 'PLANNED').isErr()).toBe(true)
+  it('returns Err for BUILT → PLANNED (not a valid transition)', () => {
+    expect(validateTransition('BUILT', 'PLANNED').isErr()).toBe(true)
   })
 })
 
@@ -385,8 +385,8 @@ describe('parseAcceptanceCriteria', () => {
 
 describe('InvalidTransitionError', () => {
   it('sets message describing the invalid transition', () => {
-    const err = new InvalidTransitionError('NEW', 'COMPLETED')
-    expect(err.message).toBe('Invalid transition: NEW → COMPLETED')
+    const err = new InvalidTransitionError('NEW', 'BUILT')
+    expect(err.message).toBe('Invalid transition: NEW → BUILT')
     expect(err.name).toBe('InvalidTransitionError')
     expect(err).toBeInstanceOf(Error)
   })

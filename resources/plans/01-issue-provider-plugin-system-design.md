@@ -57,7 +57,7 @@ abstract class IssueProvider {
     // then delegates to writeIssue()
 
   async autoSelect(mode: 'plan' | 'build'): Promise<Issue | null>
-    // listIssues() then applies priority: IN_PROGRESS > PLANNED > NEW
+    // listIssues() then applies priority: PLANNED > PLANNED > NEW
 
   async checkAcceptanceCriteria(id: string): Promise<boolean>
     // fetchIssue() then parseAcceptanceCriteria(issue.body)
@@ -94,10 +94,10 @@ and handles errors cleanly. Token obtained once via `gh auth token` at provider 
 |--------------------|----------------------------------------------|
 | `NEW`              | Label `barf:new`                             |
 | `PLANNED`          | Label `barf:planned`                         |
-| `IN_PROGRESS`      | Label `barf:in-progress`                     |
+| `PLANNED`      | Label `barf:built`                     |
 | `STUCK`            | Label `barf:stuck`                           |
 | `SPLIT`            | Label `barf:split`                           |
-| `COMPLETED`        | Label `barf:completed` + issue **closed**    |
+| `BUILT`        | Label `barf:complete` + issue **closed**    |
 
 ### Other Mappings
 
@@ -174,8 +174,8 @@ program.command('status').action(() => statusCommand(issues, config))
 ## `barf init` Changes
 
 When `ISSUE_PROVIDER=github`, init calls GitHub API to create the `barf:*` labels
-(`barf:new`, `barf:planned`, `barf:in-progress`, `barf:stuck`, `barf:split`,
-`barf:completed`, `barf:locked`) in the configured repo if they don't exist.
+(`barf:new`, `barf:planned`, `barf:built`, `barf:stuck`, `barf:split`,
+`barf:complete`, `barf:locked`) in the configured repo if they don't exist.
 
 ---
 

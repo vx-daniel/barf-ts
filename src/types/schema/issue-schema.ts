@@ -2,7 +2,7 @@
  * Issue model schemas — the core data structure of barf.
  *
  * An issue represents a unit of work tracked by barf. Issues move through a
- * state machine ({@link IssueStateSchema}) from `NEW` to `VERIFIED`, with
+ * state machine ({@link IssueStateSchema}) from `NEW` to `COMPLETE`, with
  * side-states `STUCK` and `SPLIT` for exceptional flows.
  *
  * All issue data is stored as frontmatter markdown files under `issuesDir`.
@@ -17,17 +17,16 @@ import { z } from 'zod'
  *
  * The state machine enforces this progression:
  * ```
- * NEW → GROOMED → PLANNED → IN_PROGRESS → COMPLETED → VERIFIED
- *                                ↘                         ↑
- *                                 STUCK ←→ SPLIT    (via fix sub-issues)
+ * NEW → GROOMED → PLANNED → BUILT → COMPLETE
+ *                    ↘                    ↑
+ *                     STUCK ←→ SPLIT (via fix sub-issues)
  * ```
  *
  * - `NEW` — freshly created, may need triage (`needs_interview=true`)
  * - `GROOMED` — triaged and refined; ready for planning
- * - `PLANNED` — a plan file exists; ready for build
- * - `IN_PROGRESS` — Claude is actively working on this issue
- * - `COMPLETED` — Claude finished; pending automated verification
- * - `VERIFIED` — verification passed; true terminal state
+ * - `PLANNED` — a plan file exists; ready for build (stays PLANNED while building)
+ * - `BUILT` — Claude finished building; pending automated verification
+ * - `COMPLETE` — verification passed; true terminal state
  * - `STUCK` — Claude hit a blocker it cannot resolve alone
  * - `SPLIT` — issue was too large and was broken into children
  *
@@ -41,11 +40,10 @@ export const IssueStateSchema = z.enum([
   'NEW',
   'GROOMED',
   'PLANNED',
-  'IN_PROGRESS',
   'STUCK',
   'SPLIT',
-  'COMPLETED',
-  'VERIFIED',
+  'BUILT',
+  'COMPLETE',
 ])
 
 /**
@@ -61,8 +59,8 @@ export type IssueState = z.infer<typeof IssueStateSchema>
  * The allowed state transitions in the barf issue lifecycle.
  *
  * Used by `validateTransition` in `core/issue/index.ts` to reject illegal moves.
- * Terminal states (`SPLIT`, `VERIFIED`) have empty arrays — no further transitions allowed.
- * `COMPLETED` is an intermediate state; only `VERIFIED` is the true terminal after verification.
+ * Terminal states (`SPLIT`, `COMPLETE`) have empty arrays — no further transitions allowed.
+ * `BUILT` is an intermediate state; only `COMPLETE` is the true terminal after verification.
  *
  * Defined here (rather than in `core/issue`) so that browser consumers (dashboard)
  * can import it without pulling in `neverthrow`.
@@ -72,12 +70,11 @@ export type IssueState = z.infer<typeof IssueStateSchema>
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
   NEW: ['GROOMED', 'STUCK'],
   GROOMED: ['PLANNED', 'STUCK', 'SPLIT'],
-  PLANNED: ['IN_PROGRESS', 'STUCK', 'SPLIT'],
-  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
+  PLANNED: ['BUILT', 'STUCK', 'SPLIT'],
   STUCK: ['PLANNED', 'NEW', 'GROOMED', 'SPLIT'],
   SPLIT: [],
-  COMPLETED: ['VERIFIED'],
-  VERIFIED: [],
+  BUILT: ['COMPLETE'],
+  COMPLETE: [],
 }
 
 /**
@@ -122,7 +119,7 @@ export const IssueSchema = z.object({
   verify_count: z.number().int().nonnegative().default(0),
   /** When `true`, this issue was created by `verifyIssue` to fix a parent's failures — skip re-verifying it. */
   is_verify_fix: z.boolean().optional(),
-  /** When `true`, `verify_count` exceeded `maxVerifyRetries`; issue is left as COMPLETED without VERIFIED. */
+  /** When `true`, `verify_count` exceeded `maxVerifyRetries`; issue is left as BUILT without COMPLETE. */
   verify_exhausted: z.boolean().optional(),
   /** Cumulative input tokens (base + cache) across all runs. */
   total_input_tokens: z.number().nonnegative().default(0),

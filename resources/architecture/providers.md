@@ -70,9 +70,8 @@ Issues mapped to GitHub Issues via the `gh` CLI.
 NEW          → barf:new
 GROOMED      → barf:groomed
 PLANNED      → barf:planned
-IN_PROGRESS  → barf:in-progress
-COMPLETED    → barf:completed
-VERIFIED     → barf:verified
+BUILT        → barf:built
+COMPLETE     → barf:complete
 STUCK        → barf:stuck
 SPLIT        → barf:split
 ```
@@ -91,7 +90,7 @@ isLocked:     check for "barf:locked" label
 
 ### Constraints vs Local
 
-- Cannot `deleteIssue` — transitions to COMPLETED instead
+- Cannot `deleteIssue` — transitions to BUILT instead
 - Locking is not atomic; designed for single-agent use
 - Issue body = markdown content; frontmatter stored in issue body header
 - `initProject()` creates barf labels in the GitHub repo (idempotent)
@@ -113,7 +112,7 @@ const LockInfoSchema = z.object({
 Picks the next issue to work on based on priority ordering:
 
 ```
-build mode:   IN_PROGRESS → PLANNED → (nothing)
+build mode:   PLANNED → (nothing)
 plan mode:    GROOMED → (nothing)
 triage mode:  NEW (needs_interview=undefined) → (nothing)
 ```

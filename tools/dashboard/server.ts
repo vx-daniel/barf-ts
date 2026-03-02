@@ -12,11 +12,17 @@ import {
   handleCancelAuditGate,
   handleCreateIssue,
   handleDeleteIssue,
+  handleDeletePrompt,
   handleGetAuditGate,
   handleGetConfig,
   handleGetIssue,
+  handleGetPlan,
+  handleGetPrompt,
+  handleSavePlan,
+  handleSavePrompt,
   handleInterview,
   handleListIssues,
+  handleListPrompts,
   handleSaveConfig,
   handleTransition,
   handleTriggerAuditGate,
@@ -103,6 +109,16 @@ async function router(req: Request): Promise<Response> {
   if (method === 'POST' && path === '/api/audit-gate/cancel')
     return handleCancelAuditGate(svc)
 
+  // Prompt template routes
+  if (method === 'GET' && path === '/api/prompts') return handleListPrompts()
+  const promptMatch = path.match(/^\/api\/prompts\/([^/]+)$/)
+  if (promptMatch) {
+    const mode = promptMatch[1]
+    if (method === 'GET') return handleGetPrompt(svc, mode)
+    if (method === 'PUT') return handleSavePrompt(svc, mode, req)
+    if (method === 'DELETE') return handleDeletePrompt(svc, mode)
+  }
+
   // Session routes
   if (method === 'GET' && path === '/api/sessions')
     return handleListSessions(svc)
@@ -126,6 +142,10 @@ async function router(req: Request): Promise<Response> {
     if (method === 'PUT') return handleUpdateIssue(svc, id, req)
     if (method === 'DELETE') return handleDeleteIssue(svc, id)
   }
+
+  const planMatch = path.match(/^\/api\/issues\/([^/]+)\/plan$/)
+  if (planMatch && method === 'GET') return handleGetPlan(svc, planMatch[1])
+  if (planMatch && method === 'PUT') return handleSavePlan(svc, planMatch[1], req)
 
   const transitionMatch = path.match(/^\/api\/issues\/([^/]+)\/transition$/)
   if (transitionMatch && method === 'PUT')

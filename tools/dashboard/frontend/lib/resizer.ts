@@ -72,14 +72,17 @@ export function mountSidebarResizer(): void {
     mounted = false
   }
 
-  // Try immediately, then watch for sidebar appear/disappear
+  // Try immediately, then watch #app for sidebar appear/disappear
   attach()
-  const observer = new MutationObserver(() => {
-    const sidebar = document.getElementById('sidebar')
-    if (sidebar && !mounted) attach()
-    else if (!sidebar && mounted) detach()
-  })
-  observer.observe(document.body, { childList: true, subtree: true })
+  const app = document.getElementById('app')
+  if (app) {
+    const observer = new MutationObserver(() => {
+      const sidebar = document.getElementById('sidebar')
+      if (sidebar && !mounted) attach()
+      else if (!sidebar && mounted) detach()
+    })
+    observer.observe(app, { childList: true })
+  }
 }
 
 /**
@@ -142,10 +145,13 @@ export function mountBottomResizer(): void {
   }
 
   attach()
-  const observer = new MutationObserver(() => {
-    const bottom = document.getElementById('bottom')
-    if (bottom && !mounted) attach()
-    else if (!bottom && mounted) detach()
-  })
-  observer.observe(document.body, { childList: true, subtree: true })
+  const app = document.getElementById('app')
+  if (app) {
+    const observer = new MutationObserver(() => {
+      const bottom = document.getElementById('bottom')
+      if (bottom && !mounted) attach()
+      else if (!bottom && mounted) detach()
+    })
+    observer.observe(app, { childList: true })
+  }
 }

@@ -6,7 +6,7 @@
  * re-rendering only affected subtrees on change.
  */
 
-import { openCard, runCommand } from '@dashboard/frontend/lib/actions'
+import { openCard, runCommand, stopAndReset } from '@dashboard/frontend/lib/actions'
 import {
   CMD_ACTIONS,
   CMD_CLASS,
@@ -41,7 +41,7 @@ function KanbanCard({ issue }: { issue: Issue }) {
   return (
     // biome-ignore lint/a11y/useSemanticElements: card is a complex container, not a simple button
     <div
-      className={`card card-border card-xs bg-base-300 border-l-[3px] cursor-pointer transition-[border-color,transform] duration-[0.15s,0.1s] hover:translate-y-[-1px] ${running ? 'opacity-70' : ''}`}
+      className={`card card-border card-xs bg-base-300 border-l-[3px] cursor-pointer transition-[border-color,transform] duration-[0.15s,0.1s] hover:translate-y-[-1px] ${running ? 'animate-pulse-border' : ''}`}
       id={`card-${issue.id}`}
       style={
         { '--sc': color, borderLeftColor: 'var(--sc)' } as Record<
@@ -59,6 +59,7 @@ function KanbanCard({ issue }: { issue: Issue }) {
       <div className="card-body p-md pr-[0.5625rem]">
         <div className="flex items-center gap-xs">
           <span className="text-xs text-base-content/50">#{issue.id}</span>
+          {running && <span className="loading loading-spinner loading-xs text-primary" />}
           {(issue.state === 'STUCK' || issue.state === 'SPLIT') && (
             <span
               className="badge badge-xs font-bold border-0"
@@ -103,13 +104,24 @@ function KanbanCard({ issue }: { issue: Issue }) {
             )}
           </div>
         )}
-        {actions.length > 0 && (
-          <div className="flex gap-xs mt-[0.4375rem] flex-wrap">
-            {actions.map((cmd) => (
+        <div className="flex gap-xs mt-[0.4375rem] flex-wrap">
+          {running ? (
+            <button
+              type="button"
+              className="btn btn-outline btn-xs btn-error"
+              onClick={(e: MouseEvent) => {
+                e.stopPropagation()
+                stopAndReset()
+              }}
+            >
+              {'\u25A0'} Stop
+            </button>
+          ) : (
+            actions.map((cmd) => (
               <button
                 type="button"
                 key={cmd}
-                className={`btn btn-outline  btn-xs ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
+                className={`btn btn-outline btn-xs ${CMD_CLASS[cmd as keyof typeof CMD_CLASS] ?? ''}`}
                 disabled={
                   interviewTarget.value !== null ||
                   (runningId.value !== null && cmd !== 'interview')
@@ -121,9 +133,9 @@ function KanbanCard({ issue }: { issue: Issue }) {
               >
                 {cmd}
               </button>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   )

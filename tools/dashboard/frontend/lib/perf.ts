@@ -9,7 +9,7 @@ import { track, untrack } from 'preact-perf-profiler'
 import { ActivityLog } from '@dashboard/frontend/components/ActivityLog'
 import { App } from '@dashboard/frontend/components/App'
 import { ConfigPanel } from '@dashboard/frontend/components/ConfigPanel'
-import { EditorSidebar } from '@dashboard/frontend/components/EditorSidebar'
+import { Sidebar } from '@dashboard/frontend/components/Sidebar'
 import { Header } from '@dashboard/frontend/components/Header'
 import { InterviewModal } from '@dashboard/frontend/components/InterviewModal'
 import { KanbanBoard } from '@dashboard/frontend/components/KanbanBoard'
@@ -22,7 +22,7 @@ const COMPONENTS = [
   ActivityLog,
   App,
   ConfigPanel,
-  EditorSidebar,
+  Sidebar,
   Header,
   InterviewModal,
   KanbanBoard,

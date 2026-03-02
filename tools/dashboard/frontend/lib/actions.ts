@@ -710,6 +710,7 @@ export async function selectSession(sessionId: string): Promise<void> {
  * Deselects the current session and restores the live command stream view.
  */
 export function deselectSession(): void {
+  logSSE.close()
   selectedSessionId.value = null
   activityEntries.value = liveEntries
   activityTitle.value = activeCommand.value

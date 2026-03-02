@@ -113,7 +113,7 @@ function formatFindings(findings: AuditFinding[]): string {
 }
 
 /**
- * Audits a single COMPLETED issue by running deterministic checks and an AI review.
+ * Audits a single BUILT issue by running deterministic checks and an AI review.
  *
  * Phase 1: runs tests, lint, and format check via `execFileNoThrow`.
  * Phase 2: sends prompt to the configured audit provider and parses structured JSON response.
@@ -142,10 +142,10 @@ export async function auditIssue(
   }
 
   const issue = issueResult.value
-  if (issue.state !== 'COMPLETED') {
+  if (issue.state !== 'BUILT') {
     logger.warn(
       { issueId, state: issue.state },
-      'skipping — issue is not COMPLETED',
+      'skipping — issue is not BUILT',
     )
     return
   }
@@ -252,13 +252,13 @@ export async function auditIssue(
 }
 
 /**
- * Audits one or all COMPLETED issues.
+ * Audits one or all BUILT issues.
  *
- * Default behaviour (`--all` or no flags): audits all COMPLETED issues.
+ * Default behaviour (`--all` or no flags): audits all BUILT issues.
  * `--issue <id>`: audits only the named issue.
  *
  * @param provider - Issue provider for listing and reading issues.
- * @param opts - `issue`: explicit issue ID; `all`: audit all COMPLETED issues.
+ * @param opts - `issue`: explicit issue ID; `all`: audit all BUILT issues.
  * @param config - Loaded barf configuration.
  */
 export async function auditCommand(
@@ -272,8 +272,8 @@ export async function auditCommand(
     return
   }
 
-  // Default: audit all COMPLETED issues
-  const listResult = await provider.listIssues({ state: 'COMPLETED' })
+  // Default: audit all BUILT issues
+  const listResult = await provider.listIssues({ state: 'BUILT' })
   if (listResult.isErr()) {
     logger.error({ err: listResult.error }, listResult.error.message)
     process.exitCode = 1
@@ -282,11 +282,11 @@ export async function auditCommand(
 
   const completed = listResult.value
   if (completed.length === 0) {
-    logger.info('No COMPLETED issues to audit.')
+    logger.info('No BUILT issues to audit.')
     return
   }
 
-  logger.info({ count: completed.length }, 'auditing COMPLETED issues')
+  logger.info({ count: completed.length }, 'auditing BUILT issues')
 
   for (const issue of completed) {
     await auditIssue(issue.id, config, provider, deps)

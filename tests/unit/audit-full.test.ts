@@ -51,7 +51,7 @@ describe('auditCommand (full flow)', () => {
     process.exitCode = 0
   })
 
-  it('audits a COMPLETED issue end-to-end (pass)', async () => {
+  it('audits a BUILT issue end-to-end (pass)', async () => {
     const dirs = mkdtempSync(join(tmpdir(), 'barf-audit-'))
     const config = {
       ...defaultConfig(),
@@ -62,7 +62,7 @@ describe('auditCommand (full flow)', () => {
     mkdirSync(config.issuesDir, { recursive: true })
     mkdirSync(config.planDir, { recursive: true })
 
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(provider, { issue: '001', all: false }, config, {
@@ -74,7 +74,7 @@ describe('auditCommand (full flow)', () => {
 
   it('sets exitCode 1 when provider API returns error', async () => {
     mockState.error = new Error('API failure')
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
     const config = {
       ...defaultConfig(),
@@ -116,7 +116,7 @@ describe('auditCommand (full flow)', () => {
       null
     const issue = makeIssue({
       id: '001',
-      state: 'COMPLETED',
+      state: 'BUILT',
       title: 'Add feature X',
     })
     const provider = makeProvider({
@@ -140,7 +140,7 @@ describe('auditCommand (full flow)', () => {
 
   it('sets exitCode 1 when provider is not configured', async () => {
     mockState.isConfigured = false
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
     const config = {
       ...defaultConfig(),
@@ -166,7 +166,7 @@ describe('auditCommand (full flow)', () => {
     mkdirSync(config.issuesDir, { recursive: true })
     mkdirSync(config.planDir, { recursive: true })
 
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(provider, { issue: '001', all: false }, config, {

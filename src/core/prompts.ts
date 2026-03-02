@@ -16,6 +16,9 @@ import buildPromptTemplate from '@/prompts/PROMPT_build.md' with {
 import interviewEvalPromptTemplate from '@/prompts/PROMPT_interview_eval.md' with {
   type: 'text',
 }
+import interviewPromptTemplate from '@/prompts/PROMPT_interview.md' with {
+  type: 'text',
+}
 // Built-in prompt templates — embedded at compile time via Bun import attributes
 import planPromptTemplate from '@/prompts/PROMPT_plan.md' with { type: 'text' }
 import splitPromptTemplate from '@/prompts/PROMPT_split.md' with {
@@ -27,12 +30,13 @@ import triagePromptTemplate from '@/prompts/PROMPT_triage.md' with {
 
 const logger = createLogger('prompts')
 
-const BUILTIN_TEMPLATES: Record<PromptMode, string> = {
+export const BUILTIN_TEMPLATES: Record<PromptMode, string> = {
   plan: planPromptTemplate,
   build: buildPromptTemplate,
   split: splitPromptTemplate,
   audit: auditPromptTemplate,
   triage: triagePromptTemplate,
+  interview: interviewPromptTemplate,
   interview_eval: interviewEvalPromptTemplate,
 }
 

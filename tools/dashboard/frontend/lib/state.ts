@@ -75,6 +75,9 @@ export const selectedSessionId = signal<string | null>(null)
 /** Whether to show archived sessions in the session browser. */
 export const showArchived = signal(false)
 
+/** Which panel the sidebar shows: issue detail or prompt editor. */
+export const sidebarMode = signal<'issue' | 'prompts'>('issue')
+
 /** Whether render profiling is active. */
 export const profiling = signal(false)
 

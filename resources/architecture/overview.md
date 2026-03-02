@@ -38,7 +38,7 @@ src/
     claude/                 SDK wrapper, stream consumer, context management
     issue/                  state machine, provider interface, local+github providers
     triage/                 one-shot triage call
-    verification/           post-COMPLETED build/check/test gates
+    verification/           post-BUILT build/check/test gates
     config.ts               .barfrc parser
     context.ts              ContextOverflowError, RateLimitError, template var injection
     prompts.ts              prompt template resolution
@@ -70,7 +70,7 @@ flowchart LR
     CLI --> build --> runLoop_build["runLoop(id, 'build')\n--batch N for parallel"]
     CLI --> auto --> auto_loop["triage → plan → build → verify\nloop until quiescent"]
     CLI --> triage --> triageIssue["triageIssue\none-shot subprocess"]
-    CLI --> audit --> auditCommand["auditCommand\nCOMPLETED → AuditResponse"]
+    CLI --> audit --> auditCommand["auditCommand\nBUILT → AuditResponse"]
 ```
 
 ## Error Handling Layers

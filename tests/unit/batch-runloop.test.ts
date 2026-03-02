@@ -147,30 +147,20 @@ describe('runLoop', () => {
   // ── Build mode ─────────────────────────────────────────────────────────────
 
   describe('build mode', () => {
-    it('transitions to IN_PROGRESS on first iteration', async () => {
+    it('transitions to BUILT when acceptance criteria met', async () => {
       let transitionTargets: string[] = []
       const issue = makeIssue({ id: '001', state: 'PLANNED' })
       const provider = makeProvider({
         lockIssue: () => okAsync(undefined),
         unlockIssue: () => okAsync(undefined),
-        fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
+        fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
         transition: (_id, to) => {
           transitionTargets.push(to)
           return okAsync(makeIssue({ state: to }))
         },
         writeIssue: () => okAsync(issue),
-        checkAcceptanceCriteria: () => okAsync(false),
+        checkAcceptanceCriteria: () => okAsync(true),
       })
-
-      // Return PLANNED on first fetch (for transition check), COMPLETED on iteration fetch
-      let fetchCount = 0
-      provider.fetchIssue = () => {
-        fetchCount++
-        if (fetchCount <= 2) {
-          return okAsync(makeIssue({ state: 'PLANNED' }))
-        }
-        return okAsync(makeIssue({ state: 'COMPLETED' }))
-      }
 
       const result = await runLoop(
         '001',
@@ -180,14 +170,14 @@ describe('runLoop', () => {
         deps,
       )
       expect(result.isOk()).toBe(true)
-      expect(transitionTargets).toContain('IN_PROGRESS')
+      expect(transitionTargets).toContain('BUILT')
     })
 
-    it('breaks loop when issue is COMPLETED', async () => {
+    it('breaks loop when issue is BUILT', async () => {
       const provider = makeProvider({
         lockIssue: () => okAsync(undefined),
         unlockIssue: () => okAsync(undefined),
-        fetchIssue: () => okAsync(makeIssue({ state: 'COMPLETED' })),
+        fetchIssue: () => okAsync(makeIssue({ state: 'BUILT' })),
       })
 
       const result = await runLoop(
@@ -200,7 +190,7 @@ describe('runLoop', () => {
       expect(result.isOk()).toBe(true)
     })
 
-    it('checks acceptance criteria and transitions to COMPLETED', async () => {
+    it('checks acceptance criteria and transitions to BUILT', async () => {
       let fetchCount = 0
       let transitionTargets: string[] = []
       const provider = makeProvider({
@@ -209,16 +199,16 @@ describe('runLoop', () => {
         fetchIssue: () => {
           fetchCount++
           if (fetchCount <= 3) {
-            return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+            return okAsync(makeIssue({ state: 'PLANNED' }))
           }
-          return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+          return okAsync(makeIssue({ state: 'PLANNED' }))
         },
         transition: (_id, to) => {
           transitionTargets.push(to)
           return okAsync(makeIssue({ state: to }))
         },
         checkAcceptanceCriteria: () => okAsync(true),
-        writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+        writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       })
 
       const result = await runLoop(
@@ -229,7 +219,7 @@ describe('runLoop', () => {
         deps,
       )
       expect(result.isOk()).toBe(true)
-      expect(transitionTargets).toContain('COMPLETED')
+      expect(transitionTargets).toContain('BUILT')
     })
 
     it('continues when acceptance criteria not met', async () => {
@@ -240,11 +230,11 @@ describe('runLoop', () => {
         unlockIssue: () => okAsync(undefined),
         fetchIssue: () => {
           fetchCount++
-          return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+          return okAsync(makeIssue({ state: 'PLANNED' }))
         },
-        transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+        transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
         checkAcceptanceCriteria: () => okAsync(false),
-        writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+        writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       })
 
       const result = await runLoop('001', 'build', config, provider, deps)
@@ -262,19 +252,19 @@ describe('runLoop', () => {
         unlockIssue: () => okAsync(undefined),
         fetchIssue: () => {
           fetchCount++
-          return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+          return okAsync(makeIssue({ state: 'PLANNED' }))
         },
         transition: (_id, to) => {
           transitionTargets.push(to)
           return okAsync(makeIssue({ state: to }))
         },
         checkAcceptanceCriteria: () => okAsync(true),
-        writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+        writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       })
 
       const result = await runLoop('001', 'build', config, provider, deps)
       expect(result.isOk()).toBe(true)
-      expect(transitionTargets).toContain('COMPLETED')
+      expect(transitionTargets).toContain('BUILT')
     })
 
     it('continues build when tests fail', async () => {
@@ -286,10 +276,10 @@ describe('runLoop', () => {
       const provider = makeProvider({
         lockIssue: () => okAsync(undefined),
         unlockIssue: () => okAsync(undefined),
-        fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-        transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+        fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+        transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
         checkAcceptanceCriteria: () => okAsync(true),
-        writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+        writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       })
 
       const result = await runLoop('001', 'build', config, provider, deps)
@@ -322,8 +312,8 @@ describe('runLoop', () => {
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const result = await runLoop(
@@ -345,8 +335,8 @@ describe('runLoop', () => {
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const result = await runLoop(
@@ -376,10 +366,10 @@ describe('runLoop', () => {
       fetchIssue: () => {
         fetchCount++
         if (fetchCount <= 5) {
-          return okAsync(makeIssue({ state: 'IN_PROGRESS', split_count: 0 }))
+          return okAsync(makeIssue({ state: 'PLANNED', split_count: 0 }))
         }
         if (fetchCount === 6) {
-          return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+          return okAsync(makeIssue({ state: 'PLANNED' }))
         }
         return okAsync(makeIssue({ state: 'SPLIT', children: [] }))
       },
@@ -388,7 +378,7 @@ describe('runLoop', () => {
         return okAsync(makeIssue({ state: to }))
       },
       writeIssue: () =>
-        okAsync(makeIssue({ state: 'IN_PROGRESS', split_count: 1 })),
+        okAsync(makeIssue({ state: 'PLANNED', split_count: 1 })),
     })
 
     const result = await runLoop(
@@ -415,9 +405,9 @@ describe('runLoop', () => {
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
       fetchIssue: () =>
-        okAsync(makeIssue({ state: 'IN_PROGRESS', split_count: 5 })),
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+        okAsync(makeIssue({ state: 'PLANNED', split_count: 5 })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const result = await runLoop('001', 'build', config, provider, deps)
@@ -435,7 +425,7 @@ describe('runLoop', () => {
       fetchIssue: () =>
         okAsync(
           makeIssue({
-            state: 'IN_PROGRESS',
+            state: 'PLANNED',
             force_split: true,
             split_count: 0,
           }),
@@ -447,7 +437,7 @@ describe('runLoop', () => {
       writeIssue: () =>
         okAsync(
           makeIssue({
-            state: 'IN_PROGRESS',
+            state: 'PLANNED',
             force_split: false,
             split_count: 1,
           }),
@@ -476,13 +466,13 @@ describe('runLoop', () => {
       fetchIssue: () =>
         okAsync(
           makeIssue({
-            state: 'IN_PROGRESS',
+            state: 'PLANNED',
             force_split: true,
             split_count: 5,
           }),
         ),
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const result = await runLoop('001', 'build', config, provider, deps)
@@ -504,7 +494,7 @@ describe('runLoop', () => {
           return okAsync(
             makeIssue({
               id,
-              state: 'IN_PROGRESS',
+              state: 'PLANNED',
               force_split: true,
               split_count: 0,
             }),
@@ -526,7 +516,7 @@ describe('runLoop', () => {
       },
       transition: () => okAsync(makeIssue({ state: 'SPLIT' })),
       writeIssue: () =>
-        okAsync(makeIssue({ state: 'IN_PROGRESS', split_count: 1 })),
+        okAsync(makeIssue({ state: 'PLANNED', split_count: 1 })),
     })
 
     const result = await runLoop(
@@ -539,9 +529,9 @@ describe('runLoop', () => {
     expect(result.isOk()).toBe(true)
   })
 
-  // ── verifyIssue called after COMPLETED ────────────────────────────
+  // ── verifyIssue called after BUILT ────────────────────────────
 
-  it('calls verifyIssue after transitioning to COMPLETED', async () => {
+  it('calls verifyIssue after transitioning to BUILT', async () => {
     let verifyIssueCalled = false
     const mockVerifyIssue = () => {
       verifyIssueCalled = true
@@ -553,11 +543,11 @@ describe('runLoop', () => {
       unlockIssue: () => okAsync(undefined),
       fetchIssue: () => {
         fetchCount++
-        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+        return okAsync(makeIssue({ state: 'PLANNED' }))
       },
       transition: (_id, to) => okAsync(makeIssue({ state: to })),
       checkAcceptanceCriteria: () => okAsync(true),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const depsWithVerify = {
@@ -590,11 +580,11 @@ describe('runLoop', () => {
       unlockIssue: () => okAsync(undefined),
       fetchIssue: () => {
         fetchCount++
-        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+        return okAsync(makeIssue({ state: 'PLANNED' }))
       },
       transition: (_id, to) => okAsync(makeIssue({ state: to })),
       checkAcceptanceCriteria: () => okAsync(true),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const depsWithErr = {
@@ -619,8 +609,8 @@ describe('runLoop', () => {
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const result = await runLoop(
@@ -645,11 +635,11 @@ describe('runLoop', () => {
         fetchCount++
         // First 2 fetches succeed (build mode setup), third fails (iteration loop)
         if (fetchCount <= 2) {
-          return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+          return okAsync(makeIssue({ state: 'PLANNED' }))
         }
         return errAsync(new Error('disk error'))
       },
-      transition: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      transition: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     const result = await runLoop(
@@ -672,12 +662,12 @@ describe('runLoop', () => {
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
       fetchIssue: () =>
-        okAsync(makeIssue({ state: 'IN_PROGRESS', total_input_tokens: 0, total_output_tokens: 0, total_iterations: 0, run_count: 0 })),
+        okAsync(makeIssue({ state: 'PLANNED', total_input_tokens: 0, total_output_tokens: 0, total_iterations: 0, run_count: 0 })),
       transition: (_id, to) => okAsync(makeIssue({ state: to })),
       checkAcceptanceCriteria: () => okAsync(true),
       writeIssue: (_id, patch) => {
         writeIssueCalls.push(patch as Record<string, unknown>)
-        return okAsync(makeIssue({ state: 'IN_PROGRESS' }))
+        return okAsync(makeIssue({ state: 'PLANNED' }))
       },
     })
 
@@ -695,7 +685,7 @@ describe('runLoop', () => {
 
   // ── Pre-complete integration ──────────────────────────────────────
 
-  it('runs pre-complete before COMPLETED transition', async () => {
+  it('runs pre-complete before BUILT transition', async () => {
     let preCompleteRan = false
     const customDeps = {
       ...deps,
@@ -707,10 +697,10 @@ describe('runLoop', () => {
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
-      transition: () => okAsync(makeIssue({ state: 'COMPLETED' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
+      transition: () => okAsync(makeIssue({ state: 'BUILT' })),
       checkAcceptanceCriteria: () => okAsync(true),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     await runLoop('001', 'build', defaultConfig(), provider, customDeps)
@@ -733,16 +723,16 @@ describe('runLoop', () => {
     const provider = makeProvider({
       lockIssue: () => okAsync(undefined),
       unlockIssue: () => okAsync(undefined),
-      fetchIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      fetchIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
       transition: (_id: string, to: string) => {
         transitionTargets.push(to)
         return okAsync(makeIssue({ state: to as any }))
       },
       checkAcceptanceCriteria: () => okAsync(true),
-      writeIssue: () => okAsync(makeIssue({ state: 'IN_PROGRESS' })),
+      writeIssue: () => okAsync(makeIssue({ state: 'PLANNED' })),
     })
 
     await runLoop('001', 'build', config, provider, customDeps)
-    expect(transitionTargets).not.toContain('COMPLETED')
+    expect(transitionTargets).not.toContain('BUILT')
   })
 })

@@ -111,7 +111,7 @@ import { z } from 'zod';
 // ── Issue ─────────────────────────────────────────────────────────────────────
 
 export const IssueStateSchema = z.enum([
-  'NEW', 'PLANNED', 'IN_PROGRESS', 'STUCK', 'SPLIT', 'COMPLETED',
+  'NEW', 'PLANNED', 'PLANNED', 'STUCK', 'SPLIT', 'BUILT',
 ]);
 export type IssueState = z.infer<typeof IssueStateSchema>;
 
@@ -561,13 +561,13 @@ describe('validateTransition', () => {
   });
 
   it('returns Err(InvalidTransitionError) for invalid transition', () => {
-    const result = validateTransition('NEW', 'COMPLETED');
+    const result = validateTransition('NEW', 'BUILT');
     expect(result.isErr()).toBe(true);
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(InvalidTransitionError);
   });
 
-  it('returns Err for transition from terminal COMPLETED state', () => {
-    expect(validateTransition('COMPLETED', 'PLANNED').isErr()).toBe(true);
+  it('returns Err for transition from terminal BUILT state', () => {
+    expect(validateTransition('BUILT', 'PLANNED').isErr()).toBe(true);
   });
 });
 
@@ -601,11 +601,11 @@ import { IssueSchema, type Issue, type IssueState, InvalidTransitionError } from
 
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
   NEW:         ['PLANNED'],
-  PLANNED:     ['IN_PROGRESS', 'STUCK', 'SPLIT'],
-  IN_PROGRESS: ['COMPLETED', 'STUCK', 'SPLIT'],
+  PLANNED:     ['PLANNED', 'STUCK', 'SPLIT'],
+  PLANNED: ['BUILT', 'STUCK', 'SPLIT'],
   STUCK:       ['PLANNED', 'SPLIT'],
   SPLIT:       [],
-  COMPLETED:   [],
+  BUILT:   [],
 };
 
 export function parseIssue(content: string): Result<Issue, z.ZodError | Error> {
@@ -687,7 +687,7 @@ export type AutoSelectMode = 'plan' | 'build';
 
 const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
   plan:  ['NEW'],
-  build: ['IN_PROGRESS', 'PLANNED', 'NEW'],
+  build: ['PLANNED', 'PLANNED', 'NEW'],
 };
 
 export abstract class IssueProvider {
@@ -837,7 +837,7 @@ describe('LocalIssueProvider', () => {
   });
 
   it('transition() returns Err on invalid state change', async () => {
-    const result = await provider.transition('001', 'COMPLETED');
+    const result = await provider.transition('001', 'BUILT');
     expect(result.isErr()).toBe(true);
   });
 
@@ -1061,13 +1061,13 @@ describe('GitHubIssueProvider', () => {
     expect(result._unsafeUnwrap().state).toBe('NEW');
   });
 
-  it('maps closed issue to COMPLETED', async () => {
-    const closed = { ...GH_ISSUE_NEW, state: 'closed', labels: [{ name: 'barf:completed' }] };
+  it('maps closed issue to BUILT', async () => {
+    const closed = { ...GH_ISSUE_NEW, state: 'closed', labels: [{ name: 'barf:complete' }] };
     mockExec
       .mockResolvedValueOnce({ stdout: 'ghp_token\n', stderr: '', status: 0 })
       .mockResolvedValueOnce({ stdout: JSON.stringify(closed), stderr: '', status: 0 });
     const result = await provider.fetchIssue('1');
-    expect(result._unsafeUnwrap().state).toBe('COMPLETED');
+    expect(result._unsafeUnwrap().state).toBe('BUILT');
   });
 
   it('returns Err when gh auth fails', async () => {
@@ -1108,8 +1108,8 @@ import type { Issue, IssueState } from '../../types/index.js';
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js';
 
 const STATE_TO_LABEL: Record<IssueState, string> = {
-  NEW: 'barf:new', PLANNED: 'barf:planned', IN_PROGRESS: 'barf:in-progress',
-  STUCK: 'barf:stuck', SPLIT: 'barf:split', COMPLETED: 'barf:completed',
+  NEW: 'barf:new', PLANNED: 'barf:planned', PLANNED: 'barf:built',
+  STUCK: 'barf:stuck', SPLIT: 'barf:split', BUILT: 'barf:complete',
 };
 const LABEL_TO_STATE: Record<string, IssueState> = Object.fromEntries(
   (Object.entries(STATE_TO_LABEL) as [IssueState, string][]).map(([s, l]) => [l, s])
@@ -1128,7 +1128,7 @@ type GHIssue = z.infer<typeof GHIssueSchema>;
 function ghToIssue(gh: GHIssue): Issue {
   const stateLabel = gh.labels.find((l) => LABEL_TO_STATE[l.name]);
   const state: IssueState =
-    gh.state === 'closed' ? 'COMPLETED'
+    gh.state === 'closed' ? 'BUILT'
     : stateLabel ? LABEL_TO_STATE[stateLabel.name]
     : 'NEW';
   return {
@@ -1219,7 +1219,7 @@ export class GitHubIssueProvider extends IssueProvider {
       const patchArgs = ['api', '--method', 'PATCH', `/repos/${this.repo}/issues/${id}`];
       if (fields.title) patchArgs.push('-f', `title=${fields.title}`);
       if (fields.body !== undefined) patchArgs.push('-f', `body=${fields.body}`);
-      if (fields.state === 'COMPLETED') patchArgs.push('-f', 'state=closed');
+      if (fields.state === 'BUILT') patchArgs.push('-f', 'state=closed');
       return ResultAsync.combine(steps).andThen(() =>
         this.ghApi(GHIssueSchema, patchArgs.slice(1)).map(ghToIssue)
       );
@@ -1228,7 +1228,7 @@ export class GitHubIssueProvider extends IssueProvider {
 
   deleteIssue(_id: string): ResultAsync<void, Error> {
     return new ResultAsync(Promise.resolve(err(
-      new Error('GitHub Issues cannot be deleted via API. Transition to COMPLETED instead.')
+      new Error('GitHub Issues cannot be deleted via API. Transition to BUILT instead.')
     )));
   }
 
@@ -1369,10 +1369,10 @@ import { mkdirSync, writeFileSync, existsSync } from 'fs';
 const BARF_LABELS = [
   { name: 'barf:new',         color: 'e4e669', description: 'Issue not yet planned' },
   { name: 'barf:planned',     color: 'bfd4f2', description: 'Issue planned, ready for build' },
-  { name: 'barf:in-progress', color: 'fef2c0', description: 'Issue being worked on by barf' },
+  { name: 'barf:built', color: 'fef2c0', description: 'Issue being worked on by barf' },
   { name: 'barf:stuck',       color: 'e11d48', description: 'Issue blocked, needs intervention' },
   { name: 'barf:split',       color: 'c5def5', description: 'Issue split into child issues' },
-  { name: 'barf:completed',   color: '0e8a16', description: 'Issue complete' },
+  { name: 'barf:complete',   color: '0e8a16', description: 'Issue complete' },
   { name: 'barf:locked',      color: 'd93f0b', description: 'Issue currently being processed' },
 ];
 

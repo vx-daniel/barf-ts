@@ -9,7 +9,7 @@ The EditorSidebar currently shows issue state as a single badge + transition but
 ### The "happy path" pipeline
 
 ```
-NEW → GROOMED → PLANNED → IN_PROGRESS → COMPLETED → VERIFIED
+NEW → GROOMED → PLANNED → BUILT → COMPLETE
 ```
 
 Side-states `STUCK` and `SPLIT` are not part of the linear pipeline — they'll be shown as a special indicator alongside the steps (e.g., a badge or icon on the current step).
@@ -23,7 +23,7 @@ Insert **between** the header and the existing state/transition row (lines 283�
 Define a constant for the linear pipeline:
 
 ```ts
-const PIPELINE: IssueState[] = ['NEW', 'GROOMED', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED']
+const PIPELINE: IssueState[] = ['NEW', 'GROOMED', 'PLANNED', 'PLANNED', 'BUILT', 'COMPLETE']
 ```
 
 For each step:
@@ -55,7 +55,7 @@ DaisyUI Steps should work out of the box since the dashboard already uses DaisyU
 ```ts
 /** Linear issue lifecycle for progress display (excludes side-states STUCK/SPLIT). */
 export const PIPELINE_STATES: readonly IssueState[] = [
-  'NEW', 'GROOMED', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED',
+  'NEW', 'GROOMED', 'PLANNED', 'BUILT', 'COMPLETE',
 ]
 ```
 

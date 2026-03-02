@@ -4,7 +4,7 @@
 
 When `barf build` runs and Claude completes the issue in a single iteration, all stats
 fields (`total_input_tokens`, `total_output_tokens`, `total_iterations`, `run_count`)
-remain 0. The issue correctly transitions to COMPLETED but the observability data is lost.
+remain 0. The issue correctly transitions to BUILT but the observability data is lost.
 
 **Root cause**: `state.iteration` is incremented at the **bottom** of the while loop body.
 When `handleBuildCompletion` returns `'break'`, the `break` fires before `state.iteration++`,
@@ -30,7 +30,7 @@ In the `state` object literal: `iterationsRan: 0`
 
 ### 3. Increment early in the while loop body — `src/core/batch/loop.ts`
 
-After the `COMPLETED` early-break check and before the `logger.info('starting iteration')` call:
+After the `BUILT` early-break check and before the `logger.info('starting iteration')` call:
 ```ts
 state.iterationsRan++
 ```

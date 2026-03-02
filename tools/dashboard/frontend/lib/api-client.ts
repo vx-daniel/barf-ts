@@ -78,7 +78,7 @@ export async function deleteIssue(id: string): Promise<void> {
  * The server validates the transition against the state machine.
  *
  * @param id - The issue ID to transition.
- * @param to - Target state string (e.g. `'PLANNED'`, `'IN_PROGRESS'`).
+ * @param to - Target state string (e.g. `'PLANNED'`, `'BUILT'`).
  * @returns The updated issue with the new state applied.
  */
 export async function transitionIssue(id: string, to: string): Promise<Issue> {
@@ -92,6 +92,39 @@ export async function transitionIssue(id: string, to: string): Promise<Issue> {
     throw new Error(e.error ?? 'Transition failed')
   }
   return r.json()
+}
+
+/**
+ * Fetches the plan file for an issue via `GET /api/issues/:id/plan`.
+ * Returns `null` if no plan exists (404).
+ *
+ * @param id - The issue ID.
+ * @returns The plan markdown content, or `null`.
+ */
+export async function fetchPlan(id: string): Promise<string | null> {
+  const r = await fetch(`/api/issues/${id}/plan`)
+  if (r.status === 404) return null
+  if (!r.ok) throw new Error(`fetchPlan: ${r.status}`)
+  const data: { content: string } = await r.json()
+  return data.content
+}
+
+/**
+ * Saves the plan file for an issue via `PUT /api/issues/:id/plan`.
+ *
+ * @param id - The issue ID.
+ * @param content - The plan markdown content.
+ */
+export async function savePlan(id: string, content: string): Promise<void> {
+  const r = await fetch(`/api/issues/${id}/plan`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+  if (!r.ok) {
+    const e: { error?: string } = await r.json()
+    throw new Error(e.error ?? 'Save plan failed')
+  }
 }
 
 /**
@@ -121,6 +154,71 @@ export async function saveConfig(
   if (!r.ok) {
     const e = await r.json()
     throw new Error(e.error ?? 'Save failed')
+  }
+}
+
+// ── Prompt Templates ────────────────────────────────────────────────────────
+
+/** Shape returned by `GET /api/prompts/:mode`. */
+export interface PromptData {
+  mode: string
+  builtin: string
+  custom: string | null
+  active: string
+}
+
+/**
+ * Fetches the list of all prompt mode names via `GET /api/prompts`.
+ *
+ * @returns Array of prompt mode strings (e.g. `['plan', 'build', ...]`).
+ */
+export async function fetchPromptModes(): Promise<string[]> {
+  const r = await fetch('/api/prompts')
+  if (!r.ok) throw new Error(`fetchPromptModes: ${r.status}`)
+  return r.json()
+}
+
+/**
+ * Fetches builtin + custom content for a prompt mode via `GET /api/prompts/:mode`.
+ *
+ * @param mode - The prompt mode to fetch.
+ * @returns Prompt data with builtin, custom, and active content.
+ */
+export async function fetchPrompt(mode: string): Promise<PromptData> {
+  const r = await fetch(`/api/prompts/${mode}`)
+  if (!r.ok) throw new Error(`fetchPrompt: ${r.status}`)
+  return r.json()
+}
+
+/**
+ * Saves a custom prompt override via `PUT /api/prompts/:mode`.
+ *
+ * @param mode - The prompt mode to save.
+ * @param content - The custom prompt template content.
+ */
+export async function savePrompt(mode: string, content: string): Promise<void> {
+  const r = await fetch(`/api/prompts/${mode}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  })
+  if (!r.ok) {
+    const e: { error?: string } = await r.json()
+    throw new Error(e.error ?? 'Save prompt failed')
+  }
+}
+
+/**
+ * Deletes a custom prompt override via `DELETE /api/prompts/:mode`,
+ * reverting to the built-in default.
+ *
+ * @param mode - The prompt mode to revert.
+ */
+export async function deletePrompt(mode: string): Promise<void> {
+  const r = await fetch(`/api/prompts/${mode}`, { method: 'DELETE' })
+  if (!r.ok) {
+    const e: { error?: string } = await r.json()
+    throw new Error(e.error ?? 'Delete prompt failed')
   }
 }
 

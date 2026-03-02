@@ -111,7 +111,7 @@ No new tests — this is pure documentation. Verification: TypeScript still comp
 Replace:
 ```typescript
 export const IssueStateSchema = z.enum([
-  'NEW', 'PLANNED', 'IN_PROGRESS', 'STUCK', 'SPLIT', 'COMPLETED',
+  'NEW', 'PLANNED', 'PLANNED', 'STUCK', 'SPLIT', 'BUILT',
 ]);
 export type IssueState = z.infer<typeof IssueStateSchema>;
 ```
@@ -122,7 +122,7 @@ With:
  * All valid states an issue can occupy.
  *
  * ```
- * NEW → PLANNED → IN_PROGRESS → COMPLETED
+ * NEW → PLANNED → PLANNED → BUILT
  *          ↘           ↘
  *           STUCK ←→ SPLIT
  * ```
@@ -130,7 +130,7 @@ With:
  * Transitions are enforced by `validateTransition` — never mutate state directly.
  */
 export const IssueStateSchema = z.enum([
-  'NEW', 'PLANNED', 'IN_PROGRESS', 'STUCK', 'SPLIT', 'COMPLETED',
+  'NEW', 'PLANNED', 'PLANNED', 'STUCK', 'SPLIT', 'BUILT',
 ]);
 /** A barf issue state. Derived from {@link IssueStateSchema}. */
 export type IssueState = z.infer<typeof IssueStateSchema>;
@@ -278,7 +278,7 @@ With:
  * The allowed state transitions in the barf issue lifecycle.
  *
  * Used by `validateTransition` to reject illegal moves.
- * Terminal states (`SPLIT`, `COMPLETED`) have empty arrays — no further transitions allowed.
+ * Terminal states (`SPLIT`, `BUILT`) have empty arrays — no further transitions allowed.
  */
 export const VALID_TRANSITIONS: Record<IssueState, IssueState[]> = {
 ```
@@ -478,7 +478,7 @@ Replace the abstract method declarations with documented versions:
 
   /**
    * Permanently deletes an issue.
-   * GitHub provider returns `err` instead — use `transition(id, 'COMPLETED')` there.
+   * GitHub provider returns `err` instead — use `transition(id, 'BUILT')` there.
    */
   abstract deleteIssue(id: string): ResultAsync<void, Error>;
 
@@ -529,7 +529,7 @@ With:
    *
    * Priority order:
    * - `plan`: NEW
-   * - `build`: IN_PROGRESS → PLANNED → NEW
+   * - `build`: PLANNED → PLANNED → NEW
    *
    * Returns `null` if no eligible (matching state + unlocked) issue exists.
    */
@@ -661,7 +661,7 @@ With:
  * single-agent use; concurrent agents on the same repo may race.
  *
  * **Deletion:** GitHub issues cannot be deleted via the API. `deleteIssue` returns
- * `err` — transition to `COMPLETED` instead.
+ * `err` — transition to `BUILT` instead.
  *
  * **Testing:** Pass a `spawnFn` to inject a mock `gh` implementation in tests.
  * This avoids real network calls without `mock.module` process-global patching.

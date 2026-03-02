@@ -9,7 +9,7 @@ export type { AutoSelectMode } from '@/types/schema/mode-schema'
 
 const AUTO_SELECT_PRIORITY: Record<AutoSelectMode, IssueState[]> = {
   plan: ['NEW'],
-  build: ['IN_PROGRESS', 'PLANNED'],
+  build: ['PLANNED'],
 }
 
 /**
@@ -87,7 +87,7 @@ export abstract class IssueProvider {
 
   /**
    * Permanently deletes an issue.
-   * GitHub provider always returns `err` — use `transition(id, 'COMPLETED')` there.
+   * GitHub provider always returns `err` — use `transition(id, 'BUILT')` there.
    *
    * @param id - Issue to delete.
    * @returns `ok(void)` on success, `err(Error)` on I/O failure or if deletion is unsupported.
@@ -192,7 +192,7 @@ export abstract class IssueProvider {
    *
    * Priority order per {@link AutoSelectMode}:
    * - `plan`: NEW
-   * - `build`: IN_PROGRESS → PLANNED → NEW
+   * - `build`: PLANNED → NEW
    *
    * @param mode - Determines which states are considered and their priority order.
    * @returns `ok(Issue)` for the best candidate, `ok(null)` if no eligible unlocked issue exists,

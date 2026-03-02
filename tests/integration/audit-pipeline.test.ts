@@ -95,7 +95,7 @@ describe('audit-pipeline integration', () => {
     )
 
     const config = makeConfig()
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(
@@ -116,7 +116,7 @@ describe('audit-pipeline integration', () => {
     )
 
     const config = makeConfig()
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(
@@ -135,7 +135,7 @@ describe('audit-pipeline integration', () => {
     writeFileSync(join(tmpDir, 'plans', '001.md'), planContent)
 
     const config = makeConfig()
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(
@@ -153,7 +153,7 @@ describe('audit-pipeline integration', () => {
     // No plan file written — plans dir is empty
 
     const config = makeConfig()
-    const issue = makeIssue({ id: '001', state: 'COMPLETED' })
+    const issue = makeIssue({ id: '001', state: 'BUILT' })
     const provider = makeProvider({ fetchIssue: () => okAsync(issue) })
 
     await auditCommand(
@@ -189,7 +189,7 @@ describe('audit-pipeline integration', () => {
     const config = makeConfig()
     const issue = makeIssue({
       id: '001',
-      state: 'COMPLETED',
+      state: 'BUILT',
       title: 'Add feature',
     })
     let createdBody = ''
@@ -216,15 +216,15 @@ describe('audit-pipeline integration', () => {
     expect(createdBody).toContain('Found any in src/foo.ts')
   })
 
-  it('--all mode: 2 COMPLETED issues are each sent to codex', async () => {
+  it('--all mode: 2 BUILT issues are each sent to codex', async () => {
     const issue1 = makeIssue({
       id: '001',
-      state: 'COMPLETED',
+      state: 'BUILT',
       title: 'Feature A',
     })
     const issue2 = makeIssue({
       id: '002',
-      state: 'COMPLETED',
+      state: 'BUILT',
       title: 'Feature B',
     })
 

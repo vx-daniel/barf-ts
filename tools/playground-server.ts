@@ -493,18 +493,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 // ── Constants ─────────────────────────────────────────────────────────────────
 var VALID_TRANS = ${validTransitionsJson};
 var PROJECT_CWD = ${JSON.stringify(projectCwd)};
-var STATE_ORDER = ['NEW','INTERVIEWING','PLANNED','IN_PROGRESS','COMPLETED','STUCK','SPLIT'];
+var STATE_ORDER = ['NEW','INTERVIEWING','PLANNED','BUILT','COMPLETE','STUCK','SPLIT'];
 var STATE_COLORS = {
   NEW:'#6b7280', INTERVIEWING:'#3b82f6', PLANNED:'#f59e0b',
-  IN_PROGRESS:'#f97316', COMPLETED:'#22c55e', STUCK:'#ef4444', SPLIT:'#a855f7'
+  BUILT:'#22c55e', COMPLETE:'#10b981', STUCK:'#ef4444', SPLIT:'#a855f7'
 };
 var STATE_LABELS = {
   NEW:'NEW', INTERVIEWING:'INTERVIEWING', PLANNED:'PLANNED',
-  IN_PROGRESS:'IN PROGRESS', COMPLETED:'COMPLETED', STUCK:'STUCK', SPLIT:'SPLIT'
+  BUILT:'BUILT', COMPLETE:'COMPLETE', STUCK:'STUCK', SPLIT:'SPLIT'
 };
 var CMD_ACTIONS = {
   NEW:['interview'], INTERVIEWING:['plan'], PLANNED:['plan','build'],
-  IN_PROGRESS:['build'], COMPLETED:['audit'], STUCK:['plan'], SPLIT:[]
+  BUILT:['audit'], COMPLETE:[], STUCK:['plan'], SPLIT:[]
 };
 var CMD_CLASS = {plan:'abtn-plan',build:'abtn-build',audit:'abtn-audit',interview:'abtn-interview'};
 

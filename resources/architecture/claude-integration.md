@@ -90,7 +90,7 @@ Context limit is checked **during streaming** — barf interrupts the iteration 
 Writes a 2-line sticky header to stderr when attached to a terminal:
 
 ```
-▶ build  001  IN_PROGRESS  Add user authentication
+▶ build  001  PLANNED  Add user authentication
 [  ▓▓▓▓▓▓▓░░░░░░░░░░  125,000 / 200,000 tokens (62%) - tool_use: Bash ]
 ```
 

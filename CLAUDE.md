@@ -124,7 +124,7 @@ Plans saved with the wrong name must be renamed before the task is considered co
 
 ## Key Conventions
 
-- **State machine**: `IssueState` transitions are validated by `VALID_TRANSITIONS` in `types/schema/issue-schema.ts` — never mutate state directly, use `validateTransition()`. States: `NEW → GROOMED → PLANNED → IN_PROGRESS → COMPLETED → VERIFIED`, with `STUCK` and `SPLIT` as side-states. `GROOMED` is set by triage when `needs_interview=false`. `VERIFIED` is the true terminal state (post-verification). `SPLIT` is terminal (children take over).
+- **State machine**: `IssueState` transitions are validated by `VALID_TRANSITIONS` in `types/schema/issue-schema.ts` — never mutate state directly, use `validateTransition()`. States: `NEW → GROOMED → PLANNED → BUILT → COMPLETE`, with `STUCK` and `SPLIT` as side-states. Issues stay `PLANNED` while building (no separate in-progress state). `GROOMED` is set by triage when `needs_interview=false`. `BUILT` means Claude finished building; `COMPLETE` is the true terminal state (post-verification). `SPLIT` is terminal (children take over).
 - **No globals**: ISSUE_ID/MODE/ISSUE_STATE were the bash bugs; pass state as function args.
 - **Issue files**: Frontmatter markdown (`KEY=VALUE`) in `issuesDir`, not SQLite — git-trackable.
 - **Claude integration**: Main orchestration (plan/build/split) uses `@anthropic-ai/claude-agent-sdk` directly with `permissionMode: 'bypassPermissions'` and auto-compact disabled. Triage uses the `claude` CLI subprocess for one-shot calls.

@@ -7,7 +7,7 @@ import {
 describe('formatStageLogEntry', () => {
   const baseEntry: StageLogEntry = {
     fromState: 'PLANNED',
-    toState: 'IN_PROGRESS',
+    toState: 'BUILT',
     timestamp: '2026-02-27T14:01:07.000Z',
     durationInStageSeconds: 12,
     inputTokens: 1500,
@@ -20,7 +20,7 @@ describe('formatStageLogEntry', () => {
 
   it('formats a stage log entry as markdown', () => {
     const result = formatStageLogEntry(baseEntry)
-    expect(result).toContain('### IN_PROGRESS — 2026-02-27 14:01:07Z')
+    expect(result).toContain('### BUILT — 2026-02-27 14:01:07Z')
     expect(result).toContain('- **From:** PLANNED')
     expect(result).toContain('- **Duration in stage:** 12s')
     expect(result).toContain('- **Input tokens:** 1,500 (final context: 1,200)')
